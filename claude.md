@@ -1,0 +1,983 @@
+# Scrat-Backup - Projekt-Dokumentation
+
+## Projektübersicht
+
+**Name:** Scrat-Backup
+**Version:** 0.1.0 (in Entwicklung)
+**Icon:** Eichel 🌰 (Frucht der Eiche)
+**Lizenz:** GPLv3
+**Plattform:** Windows 10/11 (später evtl. Linux)
+
+### Projektziel
+
+Ein benutzerfreundliches Backup-Programm für Privatnutzer mit wenig technischen Kenntnissen.
+Sicherung von Windows-Bibliotheksordnern mit Verschlüsselung, Versionierung und flexiblen Backup-Zielen.
+
+### Zielgruppe
+
+Privatnutzer ohne tiefe IT-Kenntnisse, die eine einfache und sichere Backup-Lösung suchen.
+
+---
+
+## Kernfunktionen
+
+1. **Sicherung von Windows-Bibliotheksordnern** (selektiv wählbar)
+   - Dokumente, Bilder, Musik, Videos, Desktop, Downloads
+
+2. **Backup-Typen**
+   - Vollbackup (Full)
+   - Inkrementelles Backup (nur geänderte/neue Dateien)
+
+3. **Versionierung**
+   - 3 Versionen werden behalten (konfigurierbar)
+   - Älteste Version wird automatisch gelöscht (Rotation)
+
+4. **Verschlüsselung** (PFLICHT)
+   - AES-256-GCM für alle Backups
+   - Passwortschutz mit Master-Key-Ableitung
+   - Optional: Passwort im Windows Credential Manager
+
+5. **Wiederherstellung**
+   - Einzelne Dateien oder komplette Backups
+   - Wiederherstellung zu jedem gesicherten Zeitpunkt
+   - Unabhängig vom ursprünglichen System/User
+
+6. **Backup-Ziele**
+   - Lokale USB-Laufwerke
+   - SFTP (SSH File Transfer Protocol)
+   - WebDAV
+   - Rclone (für Cloud-Provider)
+
+7. **Automatisierung**
+   - Zeitpläne: täglich, wöchentlich, monatlich
+   - Trigger: beim Hochfahren, beim Herunterfahren
+   - Windows Task Scheduler Integration
+
+8. **Benutzerfreundliche GUI**
+   - Windows 11 Design-Stil
+   - Fortschrittsbalken für laufende Backups
+   - Toast-Benachrichtigungen
+   - Ersteinrichtungs-Assistent
+
+---
+
+## Technologie-Stack
+
+### Programmiersprache
+- **Python 3.11+** (Kompatibilität mit 3.10+)
+
+### GUI-Framework
+- **PyQt6** (moderne Qt-Bindings für Python)
+- Windows 11 Fluent Design mit QSS (Qt Stylesheets)
+
+### Komprimierung
+- **py7zr** oder **pylzma** für 7z-Archive
+- Split-Archive bei 500MB (bessere Fehlertoleranz)
+
+### Verschlüsselung
+- **cryptography** (Python-Bibliothek)
+- AES-256-GCM (Authenticated Encryption)
+- PBKDF2-HMAC-SHA256 für Key-Derivation (100.000 Iterationen)
+
+### Datenbank
+- **SQLite** (über Python sqlite3)
+- Speicherung von Metadaten, Backup-Historie, Datei-Index
+
+### Storage-Backends
+- **paramiko** für SFTP
+- **webdavclient3** für WebDAV
+- **subprocess** für Rclone-Wrapper
+- Native Python für USB/lokale Pfade
+
+### Scheduling
+- **Windows Task Scheduler** (über COM-Interface: `win32com` oder `subprocess`)
+- Zukünftig Linux: `python-crontab`
+
+### Logging
+- **logging** (Python Standard Library)
+- JSON-strukturierte Logs
+- Rotation bei 100MB
+
+### Packaging
+- **PyInstaller** für .exe-Erstellung
+- **Inno Setup** oder **NSIS** für Windows-Installer
+
+---
+
+## Architektur-Entscheidungen
+
+### 1. Schichtenarchitektur
+
+```
+┌─────────────────────────────────────────────┐
+│           GUI Layer (PyQt6)                 │
+│  (main_window, settings, notifications)     │
+└──────────────────┬──────────────────────────┘
+                   │ Events/Signals (QThread)
+┌──────────────────▼──────────────────────────┐
+│      Application Layer / Controller         │
+│   (Koordiniert Business Logic + GUI)        │
+└──────────────────┬──────────────────────────┘
+                   │
+┌──────────────────▼──────────────────────────┐
+│         Core Business Logic                 │
+│  (backup, restore, scanner, encryption)     │
+└──────────────────┬──────────────────────────┘
+                   │
+┌──────────────────▼──────────────────────────┐
+│      Storage Abstraction Layer              │
+│  (USB, SFTP, WebDAV, Rclone - Plugins)      │
+└──────────────────┬──────────────────────────┘
+                   │
+┌──────────────────▼──────────────────────────┐
+│        Metadata & Config Storage            │
+│     (SQLite für Metadaten, JSON für Config) │
+└─────────────────────────────────────────────┘
+```
+
+**Vorteile:**
+- Klare Trennung der Verantwortlichkeiten
+- Testbarkeit jeder Schicht isoliert
+- Erweiterbarkeit durch Plugin-Architektur
+- GUI-unabhängige Core-Logic (für spätere CLI möglich)
+
+### 2. Metadaten-Speicherung: SQLite
+
+**Datenbank-Schema:**
+
+```sql
+-- Backup-Versionen
+CREATE TABLE backups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp DATETIME NOT NULL,
+    type TEXT NOT NULL CHECK(type IN ('full', 'incremental')),
+    base_backup_id INTEGER,
+    destination_type TEXT NOT NULL,
+    destination_path TEXT NOT NULL,
+    status TEXT NOT NULL CHECK(status IN ('running', 'completed', 'failed', 'partial')),
+    files_total INTEGER,
+    files_processed INTEGER,
+    size_original INTEGER,
+    size_compressed INTEGER,
+    encryption_key_hash TEXT NOT NULL,
+    FOREIGN KEY (base_backup_id) REFERENCES backups(id)
+);
+
+-- Dateien in jedem Backup
+CREATE TABLE backup_files (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    backup_id INTEGER NOT NULL,
+    source_path TEXT NOT NULL,
+    relative_path TEXT NOT NULL,
+    file_size INTEGER NOT NULL,
+    modified_timestamp DATETIME NOT NULL,
+    archive_name TEXT NOT NULL,
+    archive_path TEXT NOT NULL,
+    is_deleted BOOLEAN DEFAULT 0,
+    FOREIGN KEY (backup_id) REFERENCES backups(id) ON DELETE CASCADE
+);
+
+-- Backup-Quellen
+CREATE TABLE sources (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    windows_path TEXT NOT NULL,
+    enabled BOOLEAN DEFAULT 1,
+    exclude_patterns TEXT -- JSON Array
+);
+
+-- Backup-Ziele
+CREATE TABLE destinations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    type TEXT NOT NULL CHECK(type IN ('usb', 'sftp', 'webdav', 'rclone')),
+    config TEXT NOT NULL, -- JSON Object
+    enabled BOOLEAN DEFAULT 1,
+    last_connected DATETIME
+);
+
+-- Zeitpläne
+CREATE TABLE schedules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    enabled BOOLEAN DEFAULT 1,
+    frequency TEXT NOT NULL CHECK(frequency IN ('daily', 'weekly', 'monthly', 'startup', 'shutdown')),
+    time TEXT, -- HH:MM Format
+    days TEXT, -- JSON Array [1,2,3,4,5]
+    source_ids TEXT NOT NULL, -- JSON Array
+    destination_id INTEGER NOT NULL,
+    FOREIGN KEY (destination_id) REFERENCES destinations(id)
+);
+
+-- Logs
+CREATE TABLE logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    level TEXT NOT NULL CHECK(level IN ('DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL')),
+    message TEXT NOT NULL,
+    backup_id INTEGER,
+    details TEXT, -- JSON für Stack-Traces
+    FOREIGN KEY (backup_id) REFERENCES backups(id)
+);
+```
+
+**Vorteile:**
+- Schnelle Suche nach Dateien über alle Backups
+- Backup-Vergleich und Historie
+- Wiederherstellung ohne Archiv-Scan
+- Strukturierte Logs
+
+### 3. Backup-Format auf dem Ziel
+
+```
+/BackupZiel/scrat-backup/
+  │
+  ├── metadata.db.enc               # Verschlüsselte SQLite-DB
+  │
+  ├── backups/
+  │   ├── 20250127_220015_full/
+  │   │   ├── manifest.json.enc     # Metadaten dieses Backups
+  │   │   ├── data.001.7z.enc       # Verschlüsselte Archive (je max 500MB)
+  │   │   ├── data.002.7z.enc
+  │   │   └── data.003.7z.enc
+  │   │
+  │   ├── 20250128_220015_incr/     # Inkrementell
+  │   │   ├── manifest.json.enc
+  │   │   └── data.001.7z.enc
+  │   │
+  │   └── 20250129_220015_incr/
+  │       ├── manifest.json.enc
+  │       └── data.001.7z.enc
+  │
+  └── recovery_info.txt              # Unverschlüsselt! Wiederherstellungs-Anleitung
+```
+
+**manifest.json Struktur:**
+```json
+{
+  "backup_id": "20250127_220015_full",
+  "type": "full",
+  "timestamp": "2025-01-27T22:00:15Z",
+  "base_backup": null,
+  "sources": [
+    {"name": "Dokumente", "path": "C:\\Users\\Nicole\\Documents"},
+    {"name": "Bilder", "path": "C:\\Users\\Nicole\\Pictures"}
+  ],
+  "archives": [
+    {
+      "name": "data.001.7z.enc",
+      "size": 524288000,
+      "iv": "base64_encoded_iv",
+      "auth_tag": "base64_encoded_tag",
+      "files_count": 1523
+    }
+  ],
+  "stats": {
+    "files_total": 5432,
+    "size_original": 15728640000,
+    "size_compressed": 10485760000
+  }
+}
+```
+
+### 4. Verschlüsselung (PFLICHT)
+
+**Alle Backups werden immer verschlüsselt.**
+
+#### Master-Key-Ableitung:
+
+```
+User-Passwort (min. 12 Zeichen)
+    ↓
+PBKDF2-HMAC-SHA256 (100.000 Iterationen, 32 Byte Salt)
+    ↓
+Master Key (256 Bit)
+    ↓
+    ├─→ Database Encryption Key
+    ├─→ Archive Encryption Key
+    └─→ Metadata Encryption Key
+```
+
+#### Verschlüsselungs-Format:
+
+Jede verschlüsselte Datei:
+```
+[Salt (32 Bytes)]
+[IV (16 Bytes)]
+[Encrypted Data (variabel)]
+[Auth Tag (16 Bytes)]
+```
+
+#### Passwort-Verwaltung:
+
+**Option A:** Passwort bei jedem Start eingeben (sicherer, aber unpraktisch)
+**Option B:** Passwort im Windows Credential Manager (empfohlen)
+
+- Bei Installation: User wählt Master-Passwort
+- Wird verschlüsselt in `Credential Manager` gespeichert
+- Nur dieser Windows-User hat Zugriff
+- Bei automatischen Backups: Kein User-Input nötig
+
+**Beide Optionen werden angeboten, User entscheidet.**
+
+### 5. Inkrementelle Backups
+
+**Change Detection: Timestamp + Size-basiert**
+
+**Kein Hashing, keine Deduplizierung** (User-Entscheidung für Einfachheit)
+
+1. **Erstes Backup (Full):**
+   - Alle ausgewählten Dateien werden gesichert
+   - Metadaten in DB: Pfad, Größe, Modified-Timestamp
+
+2. **Folgende Backups (Incremental):**
+   - Scanner durchläuft alle Quell-Ordner
+   - Vergleich mit letztem Backup:
+     - **Neu:** Datei existierte vorher nicht → Sichern
+     - **Geändert:** Timestamp ODER Size unterschiedlich → Sichern
+     - **Unverändert:** Überspringen (nur in manifest vermerken)
+     - **Gelöscht:** In DB markieren (`is_deleted = 1`)
+
+3. **Wiederherstellung:**
+   - User wählt Zeitpunkt (z.B. 29.01.2025 18:00)
+   - System sucht letztes Full-Backup davor
+   - Wendet alle Incrementals chronologisch an
+   - Zeigt Dateibaum wie er zum gewählten Zeitpunkt war
+
+### 6. Versionierung: 3-Versionen-Rotation
+
+**Großvater-Vater-Sohn-Prinzip:**
+
+```
+Backup 1 (Full, 27.01.)     → "Großvater"
+Backup 2 (Incr, 28.01.)     → "Vater"
+Backup 3 (Incr, 29.01.)     → "Sohn"
+---
+Backup 4 (Incr, 30.01.)     → Neu! → Backup 1 wird gelöscht
+```
+
+**Rotations-Optionen (Settings):**
+- Anzahl Versionen (Standard: 3, konfigurierbar)
+- Strategie:
+  - "Älteste automatisch löschen" (Standard)
+  - "Vor Löschen fragen"
+  - "Nie automatisch löschen"
+
+### 7. Storage-Plugin-Architektur
+
+**Abstrakte Basis-Klasse:**
+
+```python
+class StorageBackend(ABC):
+    @abstractmethod
+    def connect(self, config: dict) -> bool:
+        """Verbindung zum Storage herstellen"""
+
+    @abstractmethod
+    def disconnect(self) -> bool:
+        """Verbindung trennen"""
+
+    @abstractmethod
+    def upload_file(self, local_path: Path, remote_path: str,
+                    progress_callback: Callable) -> bool:
+        """Datei hochladen mit Progress-Callback"""
+
+    @abstractmethod
+    def download_file(self, remote_path: str, local_path: Path,
+                      progress_callback: Callable) -> bool:
+        """Datei herunterladen"""
+
+    @abstractmethod
+    def list_files(self, remote_path: str) -> List[str]:
+        """Dateien auflisten"""
+
+    @abstractmethod
+    def delete_file(self, remote_path: str) -> bool:
+        """Datei löschen"""
+
+    @abstractmethod
+    def get_available_space(self) -> int:
+        """Verfügbarer Speicherplatz in Bytes"""
+
+    @abstractmethod
+    def test_connection(self) -> bool:
+        """Verbindung testen"""
+```
+
+**Implementierungen:**
+- `USBStorage` - Lokale USB-Laufwerke
+- `SFTPStorage` - SSH File Transfer
+- `WebDAVStorage` - WebDAV-Server
+- `RcloneStorage` - Wrapper für Rclone CLI
+
+### 8. Threading-Strategie
+
+**Problem:** Backups dürfen GUI nicht blockieren
+
+**Lösung:** QThread mit Signal/Slot-Pattern
+
+```python
+class BackupWorker(QThread):
+    # Signals
+    progress_updated = pyqtSignal(int, str)  # percentage, current_file
+    backup_completed = pyqtSignal(dict)      # stats
+    backup_failed = pyqtSignal(Exception)
+
+    # Slots
+    def pause(self): ...
+    def cancel(self): ...
+    def resume(self): ...
+```
+
+**Wichtig:**
+- Nur Main-Thread manipuliert GUI
+- Worker-Thread kommuniziert via Signals
+- Cleanup bei Abbruch (keine Partial-Backups)
+
+### 9. Event-Bus für lose Kopplung
+
+```python
+class EventBus(QObject):
+    # Backup Events
+    backup_started = pyqtSignal(str)              # backup_id
+    backup_progress = pyqtSignal(str, int, str)   # id, %, current_file
+    backup_completed = pyqtSignal(str, dict)      # id, stats
+    backup_failed = pyqtSignal(str, Exception)
+
+    # Restore Events
+    restore_started = pyqtSignal(str)
+    restore_progress = pyqtSignal(str, int)
+    restore_completed = pyqtSignal(str)
+
+    # System Events
+    config_changed = pyqtSignal(dict)
+    storage_connected = pyqtSignal(str)
+    storage_disconnected = pyqtSignal(str)
+```
+
+GUI-Komponenten subscriben zu relevanten Events.
+
+### 10. Streaming-Architektur für unbegrenzte Größe
+
+**Wichtig:** Backups können Multi-TB groß sein!
+
+**Speicher-effizientes Design:**
+- Dateien werden in 8MB-Chunks verarbeitet
+- Chunk-Pipeline: Lesen → Komprimieren → Verschlüsseln → Hochladen
+- Zu keinem Zeitpunkt ganze Datei im RAM
+- Archive werden bei 500MB gesplittet
+
+**Vorteile:**
+- Geringer RAM-Verbrauch (konstant ~100MB)
+- Bessere Fehlertoleranz
+- Granulare Fortschrittsanzeige
+- Pause/Resume möglich
+
+---
+
+## Projektstruktur
+
+```
+scrat-backup/
+│
+├── LICENSE                  # GPLv3 Lizenztext
+├── README.md                # Projektbeschreibung, Installation, Nutzung
+├── requirements.txt         # Python-Abhängigkeiten
+├── setup.py                 # Package-Setup
+├── .gitignore
+│
+├── assets/                  # Icons, Bilder, Ressourcen
+│   ├── icons/
+│   │   ├── scrat.ico        # Haupticon (Eichel)
+│   │   ├── scrat.svg        # Vektorgrafik
+│   │   └── fluent/          # Fluent Design Icons
+│   └── qss/                 # Qt Stylesheets
+│       └── windows11.qss    # Windows 11 Theme
+│
+├── config/                  # Konfigurations-Vorlagen
+│   └── default_config.json
+│
+├── installer/               # Installer-Skripte
+│   ├── windows_installer.iss  # Inno Setup Skript
+│   └── build_exe.py          # PyInstaller Build-Skript
+│
+├── src/                     # Quellcode
+│   ├── __init__.py
+│   ├── main.py              # Entry Point
+│   │
+│   ├── gui/                 # GUI-Komponenten
+│   │   ├── __init__.py
+│   │   ├── main_window.py   # Hauptfenster
+│   │   ├── backup_tab.py    # Tab: Neue Sicherung
+│   │   ├── restore_tab.py   # Tab: Wiederherstellen
+│   │   ├── history_tab.py   # Tab: Backup-Verlauf
+│   │   ├── settings_window.py # Einstellungen-Dialog
+│   │   ├── wizard.py        # Ersteinrichtungs-Assistent
+│   │   └── notification.py  # Toast-Benachrichtigungen
+│   │
+│   ├── core/                # Kernfunktionen
+│   │   ├── __init__.py
+│   │   ├── backup_engine.py     # Haupt-Backup-Logik
+│   │   ├── restore_engine.py    # Haupt-Restore-Logik
+│   │   ├── scanner.py           # Datei-Scanner (Change Detection)
+│   │   ├── compressor.py        # 7z Komprimierung
+│   │   ├── encryptor.py         # AES-256-GCM Verschlüsselung
+│   │   ├── scheduler.py         # Zeitplanung
+│   │   ├── metadata_manager.py  # SQLite-Operationen
+│   │   └── logger.py            # Logging-System
+│   │
+│   ├── storage/             # Storage-Backends
+│   │   ├── __init__.py
+│   │   ├── base.py          # StorageBackend ABC
+│   │   ├── usb_storage.py   # USB-Laufwerke
+│   │   ├── sftp_storage.py  # SFTP
+│   │   ├── webdav_storage.py # WebDAV
+│   │   └── rclone_storage.py # Rclone-Wrapper
+│   │
+│   ├── utils/               # Hilfsfunktionen
+│   │   ├── __init__.py
+│   │   ├── config.py        # Konfigurations-Management
+│   │   ├── event_bus.py     # Event-System
+│   │   ├── windows_helper.py # Windows-spezifische APIs
+│   │   └── path_resolver.py  # Pfad-Auflösung (%USERNAME%)
+│   │
+│   └── models/              # Datenmodelle
+│       ├── __init__.py
+│       ├── backup_job.py    # Dataclass für Backup-Job
+│       ├── restore_job.py   # Dataclass für Restore-Job
+│       └── config_models.py # Dataclass für Configs
+│
+├── tests/                   # Unit- und Integrationstests
+│   ├── __init__.py
+│   ├── test_backup_engine.py
+│   ├── test_restore_engine.py
+│   ├── test_scanner.py
+│   ├── test_encryptor.py
+│   ├── test_storage/
+│   │   ├── test_usb_storage.py
+│   │   ├── test_sftp_storage.py
+│   │   └── test_webdav_storage.py
+│   └── fixtures/            # Test-Daten
+│
+└── docs/                    # Dokumentation
+    ├── user_guide.md        # Benutzerhandbuch
+    ├── developer_guide.md   # Entwicklerdokumentation
+    ├── architecture.md      # Architektur-Dokumentation
+    └── api_reference.md     # API-Referenz
+```
+
+---
+
+## Entwicklungsrichtlinien
+
+### Code-Style
+- **PEP 8** für Python-Code
+- **Type Hints** für alle Funktionen
+- **Docstrings** für alle öffentlichen Klassen/Methoden
+- **Kommentare** auf Deutsch (für deutschsprachige Nutzer)
+
+### Git-Workflow
+- **main** Branch: Stabile Releases
+- **develop** Branch: Aktive Entwicklung
+- **feature/** Branches: Neue Features
+- **bugfix/** Branches: Bugfixes
+
+### Testing
+- Unit-Tests für alle Core-Module (pytest)
+- Integration-Tests für Storage-Backends
+- GUI-Tests mit pytest-qt
+- Ziel: >80% Code-Coverage
+
+### Dokumentation
+- Code-Kommentare für komplexe Logik
+- README.md auf Deutsch + Englisch
+- User Guide mit Screenshots
+- Developer Guide für Contributors
+
+---
+
+## Wichtige Design-Entscheidungen & Begründungen
+
+### ✅ Verschlüsselung ist Pflicht
+**Begründung:** Vereinfacht Code, erhöht Sicherheit, keine zwei Code-Pfade
+
+### ✅ Keine Deduplizierung
+**Begründung:** Einfachere Architektur, schnellere Backups, bessere Verständlichkeit für User
+
+### ✅ SQLite für Metadaten
+**Begründung:** Schnelle Suche, strukturierte Daten, keine externe DB nötig
+
+### ✅ 7z statt ZIP
+**Begründung:** Bessere Kompression, native AES-256-Unterstützung
+
+### ✅ 500MB Split-Archive
+**Begründung:** Fehlertoleranz, bessere Progress-Anzeige, Netzwerk-freundlich
+
+### ✅ Plugin-Architektur für Storage
+**Begründung:** Erweiterbarkeit, einfaches Hinzufügen neuer Backends
+
+### ✅ PyQt6 statt Tkinter/wxPython
+**Begründung:** Modernes UI, native Windows 11 Look möglich, gute Dokumentation
+
+### ✅ Timestamp-basierte Change Detection
+**Begründung:** Schneller als Hashing, ausreichend genau für Privatnutzer
+
+---
+
+## Plattform-Abstraction für späteres Linux
+
+**Bereits beim Design berücksichtigen:**
+
+```python
+# Pfad-Auflösung
+def get_user_documents() -> Path:
+    if platform.system() == "Windows":
+        return Path(os.environ['USERPROFILE']) / 'Documents'
+    elif platform.system() == "Linux":
+        return Path.home() / 'Documents'
+
+# App-Daten
+def get_app_data_dir() -> Path:
+    if platform.system() == "Windows":
+        return Path(os.environ['APPDATA']) / 'Scrat-Backup'
+    elif platform.system() == "Linux":
+        return Path.home() / '.config' / 'scrat-backup'
+
+# Scheduler
+class SchedulerFactory:
+    @staticmethod
+    def create() -> SchedulerBackend:
+        if platform.system() == "Windows":
+            return WindowsTaskScheduler()
+        elif platform.system() == "Linux":
+            return CronScheduler()
+```
+
+---
+
+## Sicherheits-Überlegungen
+
+### 1. Passwort-Sicherheit
+- Minimum 12 Zeichen (empfohlen: 16+)
+- Passwort-Stärke-Anzeige bei Eingabe
+- PBKDF2 mit 100.000 Iterationen (gegen Brute-Force)
+- Kein Klartext-Speicherung des Passworts
+
+### 2. Verschlüsselung
+- AES-256-GCM (Authenticated Encryption)
+- Zufällige IVs (Initialization Vectors) für jedes Archiv
+- Auth-Tag verhindert Manipulation
+
+### 3. Metadaten-Schutz
+- SQLite-DB wird ebenfalls verschlüsselt
+- manifest.json verschlüsselt
+- Nur recovery_info.txt ist unverschlüsselt
+
+### 4. Netzwerk-Sicherheit
+- SFTP: SSH-Schlüssel-Authentifizierung bevorzugt
+- WebDAV: HTTPS-Pflicht (kein HTTP)
+- Zertifikats-Validierung aktiv
+
+### 5. Windows Credential Manager
+- Verwendet Windows DPAPI
+- Nur der aktuelle Windows-User hat Zugriff
+- Bei Kompromittierung des User-Accounts: Backups auch kompromittiert
+
+---
+
+## Performance-Überlegungen
+
+### 1. Streaming-Architektur
+- 8MB Chunks für Datei-Verarbeitung
+- Konstanter RAM-Verbrauch (~100MB)
+- Parallel: Lesen, Komprimieren, Verschlüsseln
+
+### 2. Multi-Threading
+- Separate Threads für I/O und CPU-intensive Aufgaben
+- Thread-Pool für parallele Datei-Verarbeitung (z.B. 4 Threads)
+- GUI-Thread bleibt responsiv
+
+### 3. Komprimierung
+- 7z Level 5 (Balance zwischen Speed und Compression)
+- Solid-Mode aus (besseres Streaming)
+
+### 4. Change Detection
+- Timestamp + Size-Vergleich (sehr schnell)
+- Optional: Windows Change Journal für NTFS (später)
+
+### 5. Datenbank-Indizes
+```sql
+CREATE INDEX idx_backup_files_backup_id ON backup_files(backup_id);
+CREATE INDEX idx_backup_files_source_path ON backup_files(source_path);
+CREATE INDEX idx_backups_timestamp ON backups(timestamp);
+```
+
+---
+
+## Fehlerbehandlung & Robustheit
+
+### 1. Transaktionale Backups
+- Backup schreibt zuerst in Temp-Ordner
+- Bei Erfolg: Atomic move zu finalem Ort
+- Bei Fehler: Temp löschen, alte Version bleibt
+
+### 2. Partial-Backup-Recovery
+- Bei Abbruch: Status = 'partial' in DB
+- Nächster Lauf erkennt partial backup
+- User-Dialog: "Fortsetzen oder neu starten?"
+
+### 3. Corrupt-Backup-Detection
+- Jedes Archiv hat Auth-Tag (GCM)
+- manifest.json enthält Checksummen
+- Bei Restore: Validierung vor Entpacken
+- Bei Fehler: Versuch ältere Version
+
+### 4. Storage-Fehler
+- Retry-Logik: 3 Versuche mit Exponential Backoff
+- Bei Netzwerk: 30s Timeout pro Versuch
+- Bei USB: "Bitte USB-Stick einstecken"-Dialog
+- Bei dauerhaftem Fehler: Backup abbrechen, Status = 'failed'
+
+### 5. Logging
+- Jeder Fehler wird geloggt (Level: ERROR)
+- Stack-Trace in `details` (JSON)
+- User bekommt Fehler-Dialog mit Log-Export-Option
+
+---
+
+## GUI-Konzept
+
+### Main Window (Tabs)
+
+**Tab 1: Backup**
+- Button "Neues Backup starten"
+- Fortschrittsbalken bei laufendem Backup
+- Letzte Backup-Info (Datum, Größe, Status)
+
+**Tab 2: Wiederherstellen**
+- Dropdown: Backup-Ziel auswählen
+- Zeitstrahl mit verfügbaren Versionen
+- Datei-Browser (Tree-View)
+- Button "Wiederherstellen"
+
+**Tab 3: Verlauf**
+- Tabelle mit allen Backups
+- Spalten: Datum, Typ, Größe, Status, Dauer
+- Rechtsklick: Details, Löschen, Verifizieren
+
+**Tab 4: Einstellungen**
+- Quellen: Welche Ordner sichern
+- Ziele: USB, SFTP, WebDAV konfigurieren
+- Zeitpläne: Wann automatisch sichern
+- Verschlüsselung: Passwort ändern
+- Erweitert: Kompression, Versionen, Logs
+
+### Wizard (Ersteinrichtung)
+
+**Schritt 1: Willkommen**
+- Intro-Text
+- "Neu einrichten" oder "Bestehendes Backup wiederherstellen"
+
+**Schritt 2: Passwort**
+- Master-Passwort festlegen
+- Passwort-Stärke-Anzeige
+- Bestätigung
+
+**Schritt 3: Quellen**
+- Checkboxen für Bibliotheksordner
+- Optional: Eigene Ordner hinzufügen
+
+**Schritt 4: Ziel**
+- Auswahl: USB, SFTP, WebDAV, Rclone
+- Konfiguration (IP, User, Pfad, etc.)
+- Verbindung testen
+
+**Schritt 5: Zeitplan**
+- Häufigkeit wählen
+- Zeit festlegen
+- Optional: Bei Hochfahren/Herunterfahren
+
+**Schritt 6: Fertig**
+- Zusammenfassung
+- Button "Erstes Backup starten"
+
+### Benachrichtigungen
+
+**Toast-Benachrichtigungen (Windows Notification Center):**
+- ✅ "Backup erfolgreich abgeschlossen (15GB in 12 Min.)"
+- ❌ "Backup fehlgeschlagen: USB-Stick nicht gefunden"
+- ⚠️ "Backup-Ziel fast voll (95% belegt)"
+- ℹ️ "Automatisches Backup in 10 Minuten"
+
+---
+
+## Nächste Schritte (Development Roadmap)
+
+### Phase 1: Projekt-Setup ✓ (Aktuell)
+- [x] Projekt-Struktur erstellen
+- [x] Architektur definieren
+- [x] Technologie-Stack festlegen
+- [x] claude.md erstellen
+- [ ] Git-Repository initialisieren
+- [ ] requirements.txt erstellen
+- [ ] Basis-Projektstruktur anlegen
+
+### Phase 2: Core-Funktionen (Sprint 1)
+- [ ] SQLite Schema implementieren
+- [ ] metadata_manager.py - CRUD-Operationen
+- [ ] encryptor.py - AES-256-GCM Verschlüsselung
+- [ ] compressor.py - 7z Integration
+- [ ] scanner.py - Datei-Scanner mit Change Detection
+- [ ] Unit-Tests für Core-Module
+
+### Phase 3: Backup-Engine (Sprint 2)
+- [ ] backup_engine.py - Vollbackup
+- [ ] backup_engine.py - Inkrementelles Backup
+- [ ] Versionierungs-Logik (3-Versionen-Rotation)
+- [ ] Streaming-Pipeline für große Dateien
+- [ ] Integration-Tests
+
+### Phase 4: Storage-Backends (Sprint 3)
+- [ ] base.py - StorageBackend ABC
+- [ ] usb_storage.py - Lokale/USB-Laufwerke
+- [ ] sftp_storage.py - SFTP-Unterstützung
+- [ ] webdav_storage.py - WebDAV-Unterstützung
+- [ ] Storage-Tests mit Mock-Servern
+
+### Phase 5: Restore-Engine (Sprint 4)
+- [ ] restore_engine.py - Wiederherstellung
+- [ ] Datei-Suche in Metadaten
+- [ ] Zeitpunkt-basierte Wiederherstellung
+- [ ] Partial-Restore (einzelne Dateien)
+- [ ] Restore-Tests
+
+### Phase 6: GUI-Grundgerüst (Sprint 5)
+- [ ] main_window.py - Hauptfenster mit Tabs
+- [ ] wizard.py - Ersteinrichtungs-Assistent
+- [ ] settings_window.py - Einstellungen
+- [ ] event_bus.py - Event-System
+- [ ] Windows 11 Theme (QSS)
+
+### Phase 7: Backup-Tab (Sprint 6)
+- [ ] backup_tab.py - UI
+- [ ] BackupWorker (QThread)
+- [ ] Fortschrittsbalken
+- [ ] Pause/Cancel-Funktionalität
+- [ ] GUI-Tests
+
+### Phase 8: Restore-Tab (Sprint 7)
+- [ ] restore_tab.py - UI
+- [ ] Zeitstrahl-Widget
+- [ ] Datei-Browser (QTreeView)
+- [ ] Vorschau-Funktion
+- [ ] Restore-Tests
+
+### Phase 9: Scheduler (Sprint 8)
+- [ ] scheduler.py - Zeitplan-Logik
+- [ ] Windows Task Scheduler Integration
+- [ ] Startup/Shutdown-Trigger
+- [ ] Missed-Backup-Detection
+- [ ] Scheduler-Tests
+
+### Phase 10: Logging & Benachrichtigungen (Sprint 9)
+- [ ] logger.py - Strukturiertes Logging
+- [ ] notification.py - Toast-Benachrichtigungen
+- [ ] history_tab.py - Backup-Verlauf
+- [ ] Log-Export-Funktion
+
+### Phase 11: Polishing (Sprint 10)
+- [ ] Icon-Design (Eichel)
+- [ ] Fehlerbehandlung verfeinern
+- [ ] Performance-Optimierung
+- [ ] User-Feedback-Integration
+- [ ] Beta-Testing
+
+### Phase 12: Packaging & Release (Sprint 11)
+- [ ] PyInstaller-Konfiguration
+- [ ] Inno Setup Installer
+- [ ] README.md (Deutsch + Englisch)
+- [ ] User Guide mit Screenshots
+- [ ] GitHub-Repository veröffentlichen
+- [ ] Release 1.0
+
+---
+
+## Dependencies (requirements.txt Entwurf)
+
+```
+# GUI
+PyQt6>=6.6.0
+PyQt6-Qt6>=6.6.0
+
+# Komprimierung
+py7zr>=0.20.0
+
+# Verschlüsselung
+cryptography>=41.0.0
+
+# Storage-Backends
+paramiko>=3.4.0          # SFTP
+webdavclient3>=3.14.6    # WebDAV
+
+# Windows-spezifisch
+pywin32>=306; platform_system=="Windows"
+
+# Utilities
+python-dateutil>=2.8.2
+pyyaml>=6.0
+
+# Testing
+pytest>=7.4.0
+pytest-qt>=4.2.0
+pytest-cov>=4.1.0
+pytest-mock>=3.12.0
+
+# Development
+black>=23.12.0
+flake8>=7.0.0
+mypy>=1.8.0
+```
+
+---
+
+## Lizenz-Hinweise
+
+**Scrat-Backup:** GPLv3
+
+**Verwendete Bibliotheken:**
+- PyQt6: Dual License (GPL/Commercial) - Wir nutzen GPL
+- py7zr: LGPL (GPL-kompatibel)
+- cryptography: Apache 2.0 / BSD (GPL-kompatibel)
+- paramiko: LGPL (GPL-kompatibel)
+- webdavclient3: MIT (GPL-kompatibel)
+
+**Alle Dependencies sind GPLv3-kompatibel ✅**
+
+---
+
+## Offene Fragen / TODOs
+
+- [ ] Rclone-Integration: Inline (subprocess) oder separate Installation?
+- [ ] Komprimierungs-Level: User-wählbar oder fest Level 5?
+- [ ] Automatische Backup-Verifizierung: Monatlich zufällige Stichprobe?
+- [ ] Cloud-Bandwidth-Limiting: Notwendig für erste Version?
+- [ ] Update-Mechanismus: Manuell oder Auto-Update?
+- [ ] Telemetrie/Crash-Reports: Opt-in für Entwicklung?
+- [ ] Mehrsprachigkeit: Nur Deutsch oder auch Englisch?
+
+---
+
+## Changelog
+
+### 2025-01-27 - Initial Setup
+- Projekt initiiert
+- Architektur definiert
+- Technology-Stack festgelegt
+- claude.md erstellt
+- Entscheidung: Verschlüsselung Pflicht, keine Deduplizierung
+
+---
+
+**Letzte Aktualisierung:** 2025-01-27
+**Version:** 0.1.0-dev
+**Status:** Planning Phase

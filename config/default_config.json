@@ -1,0 +1,99 @@
+{
+  "_comment": "Scrat-Backup Standard-Konfiguration",
+  "version": "0.1.0",
+
+  "sources": [
+    {
+      "id": 1,
+      "name": "Dokumente",
+      "windows_path": "%USERPROFILE%\\Documents",
+      "enabled": true,
+      "exclude_patterns": [
+        "*.tmp",
+        "~$*",
+        "*.log"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Bilder",
+      "windows_path": "%USERPROFILE%\\Pictures",
+      "enabled": true,
+      "exclude_patterns": []
+    },
+    {
+      "id": 3,
+      "name": "Desktop",
+      "windows_path": "%USERPROFILE%\\Desktop",
+      "enabled": false,
+      "exclude_patterns": []
+    },
+    {
+      "id": 4,
+      "name": "Downloads",
+      "windows_path": "%USERPROFILE%\\Downloads",
+      "enabled": false,
+      "exclude_patterns": []
+    },
+    {
+      "id": 5,
+      "name": "Musik",
+      "windows_path": "%USERPROFILE%\\Music",
+      "enabled": false,
+      "exclude_patterns": []
+    },
+    {
+      "id": 6,
+      "name": "Videos",
+      "windows_path": "%USERPROFILE%\\Videos",
+      "enabled": false,
+      "exclude_patterns": []
+    }
+  ],
+
+  "destinations": [],
+
+  "schedules": [],
+
+  "encryption": {
+    "algorithm": "AES-256-GCM",
+    "key_derivation": "PBKDF2-HMAC-SHA256",
+    "pbkdf2_iterations": 100000,
+    "store_password_in_credential_manager": false
+  },
+
+  "compression": {
+    "type": "7z",
+    "level": 5,
+    "split_size_mb": 500,
+    "solid_mode": false
+  },
+
+  "retention": {
+    "versions_to_keep": 3,
+    "deletion_strategy": "auto_delete_oldest"
+  },
+
+  "advanced": {
+    "chunk_size_mb": 8,
+    "max_threads": 4,
+    "network_timeout_seconds": 30,
+    "network_retry_count": 3,
+    "verify_backups_after_creation": true
+  },
+
+  "gui": {
+    "theme": "windows11",
+    "language": "de",
+    "show_notifications": true,
+    "minimize_to_tray": true
+  },
+
+  "logging": {
+    "level": "INFO",
+    "max_size_mb": 100,
+    "rotation_count": 3,
+    "log_to_file": true,
+    "log_to_console": false
+  }
+}
