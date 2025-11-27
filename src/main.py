@@ -4,7 +4,6 @@ Windows Backup-Tool für Privatnutzer
 """
 
 import sys
-from pathlib import Path
 
 
 def main() -> int:
