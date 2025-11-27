@@ -1,6 +1,20 @@
-# Scrat-Backup 🌰
+<div align="center">
 
-Ein benutzerfreundliches Backup-Programm für Windows-Privatnutzer mit Verschlüsselung und flexiblen Backup-Zielen.
+<img src="assets/icons/scrat-256.png" alt="Scrat-Backup Logo" width="128"/>
+
+# Scrat-Backup
+
+**Ein benutzerfreundliches Backup-Programm für Windows-Privatnutzer**
+
+*Wie ein Eichhörnchen seine Eicheln für den Winter sichert, so bewahren wir deine Daten.*
+
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Development Status](https://img.shields.io/badge/status-in%20development-yellow)](https://github.com/your-username/scrat-backup)
+
+</div>
+
+---
 
 ## 📋 Übersicht
 
