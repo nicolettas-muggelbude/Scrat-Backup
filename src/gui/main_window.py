@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
 
 from src.gui.backup_tab import BackupTab
 from src.gui.event_bus import get_event_bus
+from src.gui.restore_tab import RestoreTab
 
 logger = logging.getLogger(__name__)
 
@@ -99,22 +100,8 @@ class MainWindow(QMainWindow):
 
     def _create_restore_tab(self) -> None:
         """Erstellt Restore-Tab"""
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-
-        # Placeholder
-        label = QLabel("📦 Restore-Tab")
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label.setStyleSheet("font-size: 24px; color: #666;")
-        layout.addWidget(label)
-
-        info = QLabel("Wird in Phase 7 implementiert")
-        info.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        info.setStyleSheet("font-size: 14px; color: #999;")
-        layout.addWidget(info)
-
-        self.tab_widget.addTab(tab, "Wiederherstellen")
-        self.restore_tab = tab
+        self.restore_tab = RestoreTab()
+        self.tab_widget.addTab(self.restore_tab, "Wiederherstellen")
 
     def _create_settings_tab(self) -> None:
         """Erstellt Settings-Tab"""
