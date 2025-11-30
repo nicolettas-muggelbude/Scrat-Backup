@@ -813,22 +813,23 @@ CREATE INDEX idx_backups_timestamp ON backups(timestamp);
 
 ## Nächste Schritte (Development Roadmap)
 
-### Phase 1: Projekt-Setup ✓ (Aktuell)
+### Phase 1: Projekt-Setup ✅ ABGESCHLOSSEN
 - [x] Projekt-Struktur erstellen
 - [x] Architektur definieren
 - [x] Technologie-Stack festlegen
 - [x] claude.md erstellen
-- [ ] Git-Repository initialisieren
-- [ ] requirements.txt erstellen
-- [ ] Basis-Projektstruktur anlegen
+- [x] Git-Repository initialisieren
+- [x] requirements.txt erstellen
+- [x] Basis-Projektstruktur anlegen
 
-### Phase 2: Core-Funktionen (Sprint 1)
-- [ ] SQLite Schema implementieren
-- [ ] metadata_manager.py - CRUD-Operationen
-- [ ] encryptor.py - AES-256-GCM Verschlüsselung
+### Phase 2: Core-Funktionen (Sprint 1) 🔄 IN ARBEIT
+- [x] SQLite Schema implementieren (in MetadataManager)
+- [x] metadata_manager.py - CRUD-Operationen
+- [x] encryptor.py - AES-256-GCM Verschlüsselung
+- [x] Unit-Tests für MetadataManager und Encryptor
 - [ ] compressor.py - 7z Integration
 - [ ] scanner.py - Datei-Scanner mit Change Detection
-- [ ] Unit-Tests für Core-Module
+- [ ] Unit-Tests für Compressor und Scanner
 
 ### Phase 3: Backup-Engine (Sprint 2)
 - [ ] backup_engine.py - Vollbackup
@@ -969,6 +970,16 @@ mypy>=1.8.0
 
 ## Changelog
 
+### 2025-11-30 - Phase 2 Core-Module in Arbeit
+- Phase 1 abgeschlossen ✅
+- MetadataManager für SQLite-Datenbank implementiert
+- Encryptor für AES-256-GCM Verschlüsselung implementiert
+- Unit-Tests für beide Module erstellt
+- Eichel-Icon erstellt
+- Umfassende Entwickler-Dokumentation (CONTRIBUTING.md, developer_guide.md, architecture.md)
+- Development-Tools eingerichtet (black, flake8, mypy, pytest)
+- dev.sh Script für Quality-Checks
+
 ### 2025-01-27 - Initial Setup
 - Projekt initiiert
 - Architektur definiert
@@ -978,6 +989,6 @@ mypy>=1.8.0
 
 ---
 
-**Letzte Aktualisierung:** 2025-01-27
+**Letzte Aktualisierung:** 2025-11-30
 **Version:** 0.1.0-dev
-**Status:** Planning Phase
+**Status:** Phase 2 - Core-Funktionen in Entwicklung
