@@ -984,6 +984,42 @@ mypy>=1.8.0
 
 ## Changelog
 
+### 2025-11-30 - Phase 10 Scheduler-UI abgeschlossen ✅
+- **Schedule-Verwaltung im Settings-Tab:**
+  - Liste aller Zeitpläne mit Icons (📅 📆 🗓️ 🚀 🔌)
+  - Status-Anzeige (✅ aktiv, ⏸️ deaktiviert)
+  - Details-Box mit HTML-Formatierung
+  - Buttons: Hinzufügen, Bearbeiten, Löschen, Aktivieren/Deaktivieren
+- **Event-Handler:**
+  - Löschen vollständig funktionsfähig (mit Bestätigung)
+  - Aktivieren/Deaktivieren funktionsfähig
+  - Auswahl-Handler aktualisiert Details
+- **Schedule-Konvertierung:**
+  - Dict ↔ Schedule-Objekt
+  - Zeit-String-Parsing (HH:MM ↔ datetime.time)
+  - Weekday-Enum-Konvertierung
+- **TODO:**
+  - Schedule-Dialog (Hinzufügen/Bearbeiten)
+  - Config-Persistierung
+  - Nächster Lauf berechnen (Scheduler-Integration)
+
+### 2025-11-30 - Phase 10 Scheduler + System Tray ✅
+- **Scheduler-Modul (scheduler.py - 417 Zeilen):**
+  - Zeitpläne: Daily, Weekly, Monthly, Startup, Shutdown
+  - Windows Task Scheduler Integration (schtasks)
+  - Smart Scheduling mit Next-Run-Berechnung
+  - Job-Queue-Verwaltung
+  - Dataclasses: Schedule, ScheduledJob, ScheduleFrequency
+- **System Tray Icon (system_tray.py - 259 Zeilen):**
+  - QSystemTrayIcon mit Eichel-Icon
+  - Context-Menu: Hauptfenster, Backup, Restore, Einstellungen, Beenden
+  - Toast-Notifications für Backup-Events
+  - Tooltip-Updates während Backup
+- **Minimize to Tray (main_window.py):**
+  - closeEvent überschrieben: Minimiert zu Tray
+  - "Beenden" nur über Tray-Menu
+  - Tray-Event-Handler für alle Aktionen
+
 ### 2025-11-30 - Backup-Engine Test-Fixes ✅
 - **Alle Backup-Engine-Tests bestehen jetzt!** 🎉
   - 352 Tests passing, 3 skipped
