@@ -21,6 +21,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from src.gui.backup_tab import BackupTab
 from src.gui.event_bus import get_event_bus
 
 logger = logging.getLogger(__name__)
@@ -93,22 +94,8 @@ class MainWindow(QMainWindow):
 
     def _create_backup_tab(self) -> None:
         """Erstellt Backup-Tab"""
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-
-        # Placeholder
-        label = QLabel("🔒 Backup-Tab")
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label.setStyleSheet("font-size: 24px; color: #666;")
-        layout.addWidget(label)
-
-        info = QLabel("Wird in Phase 7 implementiert")
-        info.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        info.setStyleSheet("font-size: 14px; color: #999;")
-        layout.addWidget(info)
-
-        self.tab_widget.addTab(tab, "Backup")
-        self.backup_tab = tab
+        self.backup_tab = BackupTab()
+        self.tab_widget.addTab(self.backup_tab, "Backup")
 
     def _create_restore_tab(self) -> None:
         """Erstellt Restore-Tab"""
