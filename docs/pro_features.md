@@ -24,6 +24,8 @@ Scrat-Backup ist primär für **Privat-Nutzer** konzipiert. Für **Enterprise-Um
 - ✅ **SMB/CIFS** (NAS-Geräte wie Synology, QNAP, FritzBox)
   - ✅ Passwort-Authentifizierung
   - ❌ Windows-Domain (→ Pro)
+- 🚧 **WebDAV** (Nextcloud, ownCloud, SharePoint) - KOSTENLOS
+- 🚧 **Rclone** (Google Drive, OneDrive, Dropbox, S3, etc.) - KOSTENLOS
 
 ### GUI
 - ✅ Windows 11 Design
@@ -46,6 +48,7 @@ Scrat-Backup ist primär für **Privat-Nutzer** konzipiert. Für **Enterprise-Um
 - **Use Case:** Windows-Domänen in Unternehmen
 - **Code:** `domain` Parameter in `SMBStorage.__init__()`
 - **Aktivierung:** Pro-Lizenz-Check in GUI
+- **EINZIGES Storage-Pro-Feature**
 
 ```python
 # Pro-Feature: Domain-Auth
@@ -58,16 +61,7 @@ storage = SMBStorage(
 )
 ```
 
-#### WebDAV (Nextcloud, ownCloud, SharePoint)
-- **Status:** Dependency bereits vorhanden (`webdavclient3`)
-- **Use Case:** Nextcloud/ownCloud-Instanzen, SharePoint
-- **Umsetzung:** Neue Klasse `WebDAVStorage(StorageBackend)`
-
-#### Cloud-Provider via Rclone
-- **Status:** Geplant
-- **Use Case:** Google Drive, OneDrive, Dropbox, S3, etc.
-- **Umsetzung:** `RcloneStorage` als Wrapper um rclone CLI
-- **Vorteil:** Unterstützt 40+ Cloud-Provider ohne individuelle APIs
+**Hinweis:** WebDAV und Rclone bleiben in der kostenlosen Community-Version!
 
 ### 2. Advanced Backup-Features
 
@@ -134,27 +128,38 @@ storage = SMBStorage(
 
 ## Lizenzmodell (Idee)
 
-### Free (Privat)
-- ✅ Alle Core-Features
-- ✅ Bis zu 3 Backup-Ziele
-- ✅ USB, SFTP, SMB (ohne Domain)
-- ✅ Community-Support
+### Free/Community (Privat-Nutzer) - KOSTENLOS
 
-### Pro (Einmalzahlung oder Abo)
-- ✅ Alle Free-Features
-- ✅ Unbegrenzte Backup-Ziele
-- ✅ SMB mit Domain-Auth
-- ✅ WebDAV, Rclone (Cloud)
-- ✅ E-Mail-Benachrichtigungen
-- ✅ Priority-Support
+- ✅ **Alle Core-Features**
+- ✅ **Unbegrenzte Backup-Ziele**
+- ✅ **Alle Storage-Backends:**
+  - USB/Lokale Laufwerke
+  - SFTP (SSH)
+  - SMB/CIFS (NAS, ohne Domain)
+  - **WebDAV** (Nextcloud, ownCloud) ⭐
+  - **Rclone** (Google Drive, OneDrive, Dropbox, S3) ⭐
+- ✅ **Verschlüsselung, Komprimierung, Versionierung**
+- ✅ **Zeitpunkt-basierte Wiederherstellung**
+- ✅ **Community-Support** (GitHub Issues)
 
-### Enterprise (Volumen-Lizenz)
-- ✅ Alle Pro-Features
-- ✅ Zentrale Management-Konsole
-- ✅ Multi-User-Support
-- ✅ Backup-Policies
-- ✅ Audit-Logs & Compliance
-- ✅ Dedicated Support
+### Pro (Einmalzahlung oder Abo) - FÜR UNTERNEHMEN
+
+- ✅ **Alle Free-Features**
+- ✅ **SMB mit Domain-Authentifizierung** (Windows-Domänen)
+- ✅ **E-Mail-Benachrichtigungen** (SMTP)
+- ✅ **Backup-Reports** (PDF/HTML)
+- ✅ **Deduplizierung** (Speicherplatz sparen)
+- ✅ **Priority-Support**
+
+### Enterprise (Volumen-Lizenz) - FÜR IT-ABTEILUNGEN
+
+- ✅ **Alle Pro-Features**
+- ✅ **Zentrale Management-Konsole**
+- ✅ **Multi-User-Support**
+- ✅ **Backup-Policies** (Group Policy)
+- ✅ **Audit-Logs & Compliance** (DSGVO, ISO 27001)
+- ✅ **Prometheus/Grafana-Integration**
+- ✅ **Dedicated Support** (SLA)
 
 ---
 
