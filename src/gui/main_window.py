@@ -21,9 +21,11 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from src.core.config_manager import ConfigManager
 from src.gui.backup_tab import BackupTab
 from src.gui.event_bus import get_event_bus
 from src.gui.restore_tab import RestoreTab
+from src.gui.settings_tab import SettingsTab
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +47,7 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         self.event_bus = get_event_bus()
+        self.config_manager = ConfigManager()  # Lädt/erstellt Konfiguration
 
         # Setup UI
         self._setup_window()
@@ -105,22 +108,9 @@ class MainWindow(QMainWindow):
 
     def _create_settings_tab(self) -> None:
         """Erstellt Settings-Tab"""
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-
-        # Placeholder
-        label = QLabel("⚙️ Einstellungen-Tab")
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label.setStyleSheet("font-size: 24px; color: #666;")
-        layout.addWidget(label)
-
-        info = QLabel("Wird in Phase 7 implementiert")
-        info.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        info.setStyleSheet("font-size: 14px; color: #999;")
-        layout.addWidget(info)
-
-        self.tab_widget.addTab(tab, "Einstellungen")
-        self.settings_tab = tab
+        self.settings_tab = SettingsTab()
+        self.settings_tab.set_config_manager(self.config_manager)
+        self.tab_widget.addTab(self.settings_tab, "Einstellungen")
 
     def _create_logs_tab(self) -> None:
         """Erstellt Logs-Tab"""
@@ -276,13 +266,17 @@ class MainWindow(QMainWindow):
 
         contact_text = QLabel(
             "<b>GitHub Repository:</b><br>"
-            "<a href='https://github.com/scrat-backup/scrat-backup'>github.com/scrat-backup/scrat-backup</a><br><br>"
+            "<a href='https://github.com/scrat-backup/scrat-backup'>"
+            "github.com/scrat-backup/scrat-backup</a><br><br>"
             "<b>Issues & Bug Reports:</b><br>"
-            "<a href='https://github.com/scrat-backup/scrat-backup/issues'>GitHub Issues</a><br><br>"
+            "<a href='https://github.com/scrat-backup/scrat-backup/issues'>"
+            "GitHub Issues</a><br><br>"
             "<b>Diskussionen:</b><br>"
-            "<a href='https://github.com/scrat-backup/scrat-backup/discussions'>GitHub Discussions</a><br><br>"
+            "<a href='https://github.com/scrat-backup/scrat-backup/discussions'>"
+            "GitHub Discussions</a><br><br>"
             "<b>Dokumentation:</b><br>"
-            "<a href='https://scrat-backup.readthedocs.io'>scrat-backup.readthedocs.io</a><br><br>"
+            "<a href='https://scrat-backup.readthedocs.io'>"
+            "scrat-backup.readthedocs.io</a><br><br>"
             "<b>E-Mail:</b><br>"
             "scrat-backup@example.com"
         )

@@ -480,7 +480,7 @@ class BackupTab(QWidget):
                 if duration < 60:
                     duration_str = f"{duration:.0f}s"
                 else:
-                    duration_str = f"{duration/60:.1f}min"
+                    duration_str = f"{duration / 60:.1f}min"
                 self.history_table.setItem(row, 4, QTableWidgetItem(duration_str))
 
                 # Status

@@ -2,11 +2,9 @@
 Unit-Tests für Backup-Tab GUI
 """
 
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-from PyQt6.QtCore import Qt
 
 from src.core.backup_engine import BackupProgress, BackupResult
 from src.gui.backup_tab import BackupTab
@@ -179,7 +177,7 @@ class TestBackupTabCompletion:
         error_msg = "Test error"
 
         # Mock MessageBox
-        with patch("src.gui.backup_tab.QMessageBox.critical") as mock_msg:
+        with patch("src.gui.backup_tab.QMessageBox.critical"):
             backup_tab._on_backup_failed(error_msg)
 
         # Status

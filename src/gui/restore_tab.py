@@ -28,7 +28,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.core.metadata_manager import MetadataManager
-from src.core.restore_engine import RestoreConfig, RestoreEngine, RestoreProgress, RestoreResult
+from src.core.restore_engine import RestoreEngine, RestoreProgress, RestoreResult
 from src.gui.event_bus import get_event_bus
 
 logger = logging.getLogger(__name__)

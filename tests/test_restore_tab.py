@@ -2,11 +2,9 @@
 Unit-Tests für Restore-Tab GUI
 """
 
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-from PyQt6.QtCore import Qt
 
 from src.core.restore_engine import RestoreProgress, RestoreResult
 from src.gui.restore_tab import RestoreTab
@@ -234,7 +232,7 @@ class TestRestoreTabCompletion:
         error_msg = "Test error"
 
         # Mock MessageBox
-        with patch("src.gui.restore_tab.QMessageBox.critical") as mock_msg:
+        with patch("src.gui.restore_tab.QMessageBox.critical"):
             restore_tab._on_restore_failed(error_msg)
 
         # Status
