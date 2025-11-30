@@ -15,6 +15,7 @@ cryptography>=41.0.0
 # Storage-Backends
 paramiko>=3.4.0          # SFTP
 webdavclient3>=3.14.6    # WebDAV
+smbprotocol>=1.12.0      # SMB/CIFS (Windows-Freigaben, NAS)
 
 # Windows-spezifisch (nur unter Windows installiert)
 pywin32>=306; platform_system=="Windows"
