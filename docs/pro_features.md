@@ -48,7 +48,6 @@ Scrat-Backup ist primär für **Privat-Nutzer** konzipiert. Für **Enterprise-Um
 - **Use Case:** Windows-Domänen in Unternehmen
 - **Code:** `domain` Parameter in `SMBStorage.__init__()`
 - **Aktivierung:** Pro-Lizenz-Check in GUI
-- **EINZIGES Storage-Pro-Feature**
 
 ```python
 # Pro-Feature: Domain-Auth
@@ -61,7 +60,71 @@ storage = SMBStorage(
 )
 ```
 
-**Hinweis:** WebDAV und Rclone bleiben in der kostenlosen Community-Version!
+#### Native Cloud-Storage (S3-kompatibel)
+- **Status:** Geplant für Pro-Version
+- **Use Case:** Professionelle Cloud-Backups mit nativer API
+- **Vorteil:** Schneller und direkter als Rclone-Wrapper
+
+**Pro-Cloud-Backends:**
+
+##### AWS S3 (Native boto3)
+- **Use Case:** Amazon S3, Amazon Glacier
+- **Library:** `boto3` (AWS SDK)
+- **Features:** Multipart-Upload, S3 Lifecycle-Policies, Glacier-Archivierung
+- **Klasse:** `S3Storage(StorageBackend)`
+
+```python
+# Pro-Feature: Native S3
+storage = S3Storage(
+    bucket="my-backups",
+    region="eu-central-1",
+    access_key_id="...",
+    secret_access_key="...",
+    storage_class="GLACIER_IR"  # Instant Retrieval
+)
+```
+
+##### Backblaze B2 (Native API)
+- **Use Case:** Günstiger S3-kompatibler Cloud-Storage
+- **Library:** `b2sdk` (Backblaze SDK)
+- **Vorteil:** 10GB kostenlos, dann $6/TB/Monat (günstiger als S3)
+- **Klasse:** `B2Storage(StorageBackend)`
+
+```python
+# Pro-Feature: Native B2
+storage = B2Storage(
+    bucket_name="scrat-backups",
+    application_key_id="...",
+    application_key="...",
+    lifecycle_days=90  # Auto-Delete nach 90 Tagen
+)
+```
+
+##### MinIO (Self-Hosted S3)
+- **Use Case:** Selbst gehostete S3-Alternative (Open Source)
+- **Library:** `boto3` mit MinIO-Endpoint
+- **Vorteil:** Volle Kontrolle, keine Cloud-Kosten
+- **Klasse:** `MinIOStorage(S3Storage)` (Erbt von S3Storage)
+
+```python
+# Pro-Feature: MinIO
+storage = MinIOStorage(
+    endpoint="https://minio.myserver.com:9000",
+    bucket="backups",
+    access_key="minioadmin",
+    secret_key="...",
+    secure=True  # HTTPS
+)
+```
+
+**Unterschied zu Rclone (Free):**
+- **Rclone (Free):** CLI-Wrapper, einfach aber langsamer
+- **Native APIs (Pro):** Direkte Integration, schneller, mehr Features
+  - Multipart-Uploads (große Dateien effizienter)
+  - Lifecycle-Policies (Auto-Archivierung)
+  - Versioning (S3-integriert)
+  - Bessere Fehlerbehandlung
+  - Progress-Tracking (exakter)
 
 ### 2. Advanced Backup-Features
 
@@ -145,7 +208,11 @@ storage = SMBStorage(
 ### Pro (Einmalzahlung oder Abo) - FÜR UNTERNEHMEN
 
 - ✅ **Alle Free-Features**
-- ✅ **SMB mit Domain-Authentifizierung** (Windows-Domänen)
+- ✅ **Enterprise-Storage:**
+  - SMB mit Domain-Authentifizierung (Windows-Domänen)
+  - **AWS S3 (Native boto3)** - Multipart, Glacier
+  - **Backblaze B2 (Native API)** - Günstiger Cloud-Storage
+  - **MinIO (Self-Hosted S3)** - Open-Source S3-Alternative
 - ✅ **E-Mail-Benachrichtigungen** (SMTP)
 - ✅ **Backup-Reports** (PDF/HTML)
 - ✅ **Deduplizierung** (Speicherplatz sparen)
