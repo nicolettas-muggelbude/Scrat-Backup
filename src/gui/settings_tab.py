@@ -6,7 +6,7 @@ GUI für Applikations-Einstellungen
 import logging
 from typing import Optional
 
-from PyQt6.QtCore import pyqtSignal
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -16,6 +16,8 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QMessageBox,
     QPushButton,
     QScrollArea,
@@ -25,6 +27,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.core.config_manager import ConfigManager
+from src.core.scheduler import Schedule, ScheduleFrequency, Scheduler, Weekday
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +82,7 @@ class SettingsTab(QWidget):
         # Settings-Gruppen
         scroll_layout.addWidget(self._create_general_section())
         scroll_layout.addWidget(self._create_backup_section())
+        scroll_layout.addWidget(self._create_schedules_section())
         scroll_layout.addWidget(self._create_paths_section())
         scroll_layout.addWidget(self._create_advanced_section())
         scroll_layout.addStretch()
@@ -158,6 +162,69 @@ class SettingsTab(QWidget):
         form.addRow("", self.verify_checkbox)
 
         group.setLayout(form)
+        return group
+
+    def _create_schedules_section(self) -> QGroupBox:
+        """Erstellt Zeitplan-Verwaltung"""
+        group = QGroupBox("⏰ Zeitpläne")
+        layout = QVBoxLayout()
+
+        # Info-Text
+        info_label = QLabel(
+            "Automatische Backups nach Zeitplan. "
+            "Startup/Shutdown-Backups erfordern Windows Task Scheduler."
+        )
+        info_label.setWordWrap(True)
+        info_label.setStyleSheet("color: #666; font-size: 11px; margin-bottom: 10px;")
+        layout.addWidget(info_label)
+
+        # Listen-Bereich
+        list_layout = QHBoxLayout()
+
+        # Liste der Zeitpläne
+        self.schedules_list = QListWidget()
+        self.schedules_list.setMinimumHeight(150)
+        self.schedules_list.currentItemChanged.connect(self._on_schedule_selected)
+        list_layout.addWidget(self.schedules_list, 1)
+
+        # Buttons (vertikal rechts)
+        button_layout = QVBoxLayout()
+
+        self.add_schedule_btn = QPushButton("➕ Hinzufügen")
+        self.add_schedule_btn.clicked.connect(self._add_schedule)
+        button_layout.addWidget(self.add_schedule_btn)
+
+        self.edit_schedule_btn = QPushButton("✏️ Bearbeiten")
+        self.edit_schedule_btn.clicked.connect(self._edit_schedule)
+        self.edit_schedule_btn.setEnabled(False)
+        button_layout.addWidget(self.edit_schedule_btn)
+
+        self.delete_schedule_btn = QPushButton("🗑️ Löschen")
+        self.delete_schedule_btn.clicked.connect(self._delete_schedule)
+        self.delete_schedule_btn.setEnabled(False)
+        button_layout.addWidget(self.delete_schedule_btn)
+
+        button_layout.addStretch()
+
+        self.toggle_schedule_btn = QPushButton("⏸️ Deaktivieren")
+        self.toggle_schedule_btn.clicked.connect(self._toggle_schedule)
+        self.toggle_schedule_btn.setEnabled(False)
+        button_layout.addWidget(self.toggle_schedule_btn)
+
+        list_layout.addLayout(button_layout)
+        layout.addLayout(list_layout)
+
+        # Details des ausgewählten Zeitplans
+        self.schedule_details_label = QLabel("Kein Zeitplan ausgewählt")
+        self.schedule_details_label.setStyleSheet(
+            "background-color: #f0f0f0; padding: 10px; border-radius: 5px; "
+            "font-size: 11px; color: #333;"
+        )
+        self.schedule_details_label.setWordWrap(True)
+        self.schedule_details_label.setMinimumHeight(60)
+        layout.addWidget(self.schedule_details_label)
+
+        group.setLayout(layout)
         return group
 
     def _create_paths_section(self) -> QGroupBox:
@@ -343,6 +410,247 @@ class SettingsTab(QWidget):
             self.config_manager.get("advanced", "network_timeout", 300)
         )
         self.retry_count_spin.setValue(self.config_manager.get("advanced", "retry_count", 3))
+
+        # Lade Zeitpläne
+        self._load_schedules()
+
+    def _load_schedules(self) -> None:
+        """Lädt Zeitpläne aus Config"""
+        self.schedules_list.clear()
+
+        if not self.config_manager:
+            return
+
+        # Hole Zeitpläne aus Config (TODO: Config-Format erweitern)
+        schedules = self.config_manager.get("schedules", "all", [])
+
+        for schedule_dict in schedules:
+            # Erstelle Schedule-Objekt
+            try:
+                schedule = self._schedule_from_dict(schedule_dict)
+                self._add_schedule_to_list(schedule)
+            except Exception as e:
+                logger.error(f"Fehler beim Laden von Zeitplan: {e}")
+
+    def _schedule_from_dict(self, schedule_dict: dict) -> Schedule:
+        """Konvertiert Dict zu Schedule-Objekt"""
+        from datetime import time as datetime_time
+
+        # Parse Zeit-String zu datetime.time
+        time_obj = None
+        if schedule_dict.get("time"):
+            time_str = schedule_dict["time"]
+            if isinstance(time_str, str):
+                hour, minute = map(int, time_str.split(":"))
+                time_obj = datetime_time(hour, minute)
+            else:
+                time_obj = time_str
+
+        return Schedule(
+            id=schedule_dict.get("id"),
+            name=schedule_dict["name"],
+            enabled=schedule_dict.get("enabled", True),
+            frequency=ScheduleFrequency(schedule_dict["frequency"]),
+            source_ids=schedule_dict.get("source_ids", []),
+            destination_id=schedule_dict.get("destination_id", 1),
+            time=time_obj,
+            weekdays=[Weekday(wd) for wd in schedule_dict.get("weekdays", [])],
+            day_of_month=schedule_dict.get("day_of_month"),
+            backup_type=schedule_dict.get("backup_type", "incremental"),
+        )
+
+    def _schedule_to_dict(self, schedule: Schedule) -> dict:
+        """Konvertiert Schedule-Objekt zu Dict"""
+        return {
+            "id": schedule.id,
+            "name": schedule.name,
+            "enabled": schedule.enabled,
+            "frequency": schedule.frequency.value,
+            "source_ids": schedule.source_ids,
+            "destination_id": schedule.destination_id,
+            "time": schedule.time.strftime("%H:%M") if schedule.time else None,
+            "weekdays": [wd.value for wd in schedule.weekdays],
+            "day_of_month": schedule.day_of_month,
+            "backup_type": schedule.backup_type,
+        }
+
+    def _add_schedule_to_list(self, schedule: Schedule) -> None:
+        """Fügt Schedule zur Liste hinzu"""
+        # Icon basierend auf Frequenz
+        freq_icons = {
+            ScheduleFrequency.DAILY: "📅",
+            ScheduleFrequency.WEEKLY: "📆",
+            ScheduleFrequency.MONTHLY: "🗓️",
+            ScheduleFrequency.STARTUP: "🚀",
+            ScheduleFrequency.SHUTDOWN: "🔌",
+        }
+        icon = freq_icons.get(schedule.frequency, "⏰")
+
+        # Status-Icon
+        status_icon = "✅" if schedule.enabled else "⏸️"
+
+        # List-Item erstellen
+        item_text = f"{status_icon} {icon} {schedule.name}"
+        item = QListWidgetItem(item_text)
+        item.setData(Qt.ItemDataRole.UserRole, schedule)  # Schedule-Objekt speichern
+
+        self.schedules_list.addItem(item)
+
+    def _on_schedule_selected(self, current: QListWidgetItem, previous: QListWidgetItem) -> None:
+        """Handler für Schedule-Auswahl"""
+        if not current:
+            self.edit_schedule_btn.setEnabled(False)
+            self.delete_schedule_btn.setEnabled(False)
+            self.toggle_schedule_btn.setEnabled(False)
+            self.schedule_details_label.setText("Kein Zeitplan ausgewählt")
+            return
+
+        # Buttons aktivieren
+        self.edit_schedule_btn.setEnabled(True)
+        self.delete_schedule_btn.setEnabled(True)
+        self.toggle_schedule_btn.setEnabled(True)
+
+        # Schedule-Daten holen
+        schedule: Schedule = current.data(Qt.ItemDataRole.UserRole)
+
+        # Toggle-Button-Text anpassen
+        self.toggle_schedule_btn.setText("⏸️ Deaktivieren" if schedule.enabled else "▶️ Aktivieren")
+
+        # Details anzeigen
+        self._update_schedule_details(schedule)
+
+    def _update_schedule_details(self, schedule: Schedule) -> None:
+        """Aktualisiert Details-Anzeige"""
+        details = []
+
+        # Status
+        status = "✅ Aktiv" if schedule.enabled else "⏸️ Deaktiviert"
+        details.append(f"<b>Status:</b> {status}")
+
+        # Frequenz
+        freq_names = {
+            ScheduleFrequency.DAILY: "Täglich",
+            ScheduleFrequency.WEEKLY: "Wöchentlich",
+            ScheduleFrequency.MONTHLY: "Monatlich",
+            ScheduleFrequency.STARTUP: "Bei System-Start",
+            ScheduleFrequency.SHUTDOWN: "Bei System-Herunterfahren",
+        }
+        freq_name = freq_names.get(schedule.frequency, schedule.frequency.value)
+        details.append(f"<b>Häufigkeit:</b> {freq_name}")
+
+        # Zeit
+        if schedule.time:
+            details.append(f"<b>Uhrzeit:</b> {schedule.time.strftime('%H:%M')}")
+
+        # Wochentage
+        if schedule.weekdays:
+            weekday_names = {
+                Weekday.MONDAY: "Mo",
+                Weekday.TUESDAY: "Di",
+                Weekday.WEDNESDAY: "Mi",
+                Weekday.THURSDAY: "Do",
+                Weekday.FRIDAY: "Fr",
+                Weekday.SATURDAY: "Sa",
+                Weekday.SUNDAY: "So",
+            }
+            days = ", ".join([weekday_names.get(wd, str(wd.value)) for wd in schedule.weekdays])
+            details.append(f"<b>Tage:</b> {days}")
+
+        # Tag im Monat
+        if schedule.day_of_month:
+            details.append(f"<b>Tag im Monat:</b> {schedule.day_of_month}")
+
+        # Backup-Typ
+        backup_type = "Vollbackup" if schedule.backup_type == "full" else "Inkrementell"
+        details.append(f"<b>Backup-Typ:</b> {backup_type}")
+
+        # Nächster Lauf (TODO: vom Scheduler berechnen lassen)
+        # details.append(f"<b>Nächster Lauf:</b> 01.12.2025 10:00")
+
+        self.schedule_details_label.setText("<br>".join(details))
+
+    def _add_schedule(self) -> None:
+        """Handler für Zeitplan hinzufügen"""
+        # TODO: Schedule-Dialog öffnen
+        QMessageBox.information(
+            self,
+            "Zeitplan hinzufügen",
+            "Schedule-Dialog wird in Kürze implementiert.\n\n"
+            "Für jetzt: Zeitpläne können über die Config-Datei hinzugefügt werden.",
+        )
+
+    def _edit_schedule(self) -> None:
+        """Handler für Zeitplan bearbeiten"""
+        current = self.schedules_list.currentItem()
+        if not current:
+            return
+
+        schedule: Schedule = current.data(Qt.ItemDataRole.UserRole)
+
+        # TODO: Schedule-Dialog öffnen mit vorhandenen Daten
+        QMessageBox.information(
+            self,
+            "Zeitplan bearbeiten",
+            f"Bearbeite '{schedule.name}'\n\nSchedule-Dialog wird in Kürze implementiert.",
+        )
+
+    def _delete_schedule(self) -> None:
+        """Handler für Zeitplan löschen"""
+        current = self.schedules_list.currentItem()
+        if not current:
+            return
+
+        schedule: Schedule = current.data(Qt.ItemDataRole.UserRole)
+
+        # Bestätigung
+        reply = QMessageBox.question(
+            self,
+            "Zeitplan löschen",
+            f"Möchten Sie den Zeitplan '{schedule.name}' wirklich löschen?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            # Entferne aus Liste
+            row = self.schedules_list.row(current)
+            self.schedules_list.takeItem(row)
+
+            # TODO: Aus Config entfernen
+            logger.info(f"Zeitplan '{schedule.name}' gelöscht")
+
+            QMessageBox.information(self, "Gelöscht", f"Zeitplan '{schedule.name}' wurde gelöscht.")
+
+    def _toggle_schedule(self) -> None:
+        """Handler für Zeitplan aktivieren/deaktivieren"""
+        current = self.schedules_list.currentItem()
+        if not current:
+            return
+
+        schedule: Schedule = current.data(Qt.ItemDataRole.UserRole)
+
+        # Toggle enabled
+        schedule.enabled = not schedule.enabled
+
+        # Update List-Item
+        freq_icons = {
+            ScheduleFrequency.DAILY: "📅",
+            ScheduleFrequency.WEEKLY: "📆",
+            ScheduleFrequency.MONTHLY: "🗓️",
+            ScheduleFrequency.STARTUP: "🚀",
+            ScheduleFrequency.SHUTDOWN: "🔌",
+        }
+        icon = freq_icons.get(schedule.frequency, "⏰")
+        status_icon = "✅" if schedule.enabled else "⏸️"
+        current.setText(f"{status_icon} {icon} {schedule.name}")
+
+        # Update Details
+        self._update_schedule_details(schedule)
+
+        # TODO: In Config speichern
+
+        logger.info(
+            f"Zeitplan '{schedule.name}' {'aktiviert' if schedule.enabled else 'deaktiviert'}"
+        )
 
     def _save_settings(self) -> None:
         """Speichert Settings aus UI in ConfigManager"""
