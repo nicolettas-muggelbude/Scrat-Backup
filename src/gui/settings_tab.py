@@ -28,6 +28,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.core.config_manager import ConfigManager
+from src.core.metadata_manager import MetadataManager
 from src.core.scheduler import Schedule, ScheduleFrequency, Scheduler, Weekday
 from src.gui.schedule_dialog import ScheduleDialog
 
@@ -54,6 +55,7 @@ class SettingsTab(QWidget):
         super().__init__(parent)
 
         self.config_manager: Optional[ConfigManager] = None
+        self.metadata_manager: Optional[MetadataManager] = None
         self.original_config: dict = {}  # Backup für Cancel-Funktion
 
         # Setup UI
@@ -354,6 +356,16 @@ class SettingsTab(QWidget):
         self.config_manager = config_manager
         self._load_settings()
 
+    def set_metadata_manager(self, metadata_manager: MetadataManager) -> None:
+        """
+        Setzt MetadataManager
+
+        Args:
+            metadata_manager: MetadataManager-Instanz
+        """
+        self.metadata_manager = metadata_manager
+        logger.debug("MetadataManager in SettingsTab gesetzt")
+
     def _load_settings(self) -> None:
         """Lädt Settings aus ConfigManager in UI"""
         if not self.config_manager:
@@ -573,7 +585,7 @@ class SettingsTab(QWidget):
 
     def _add_schedule(self) -> None:
         """Handler für Zeitplan hinzufügen"""
-        dialog = ScheduleDialog(self)
+        dialog = ScheduleDialog(self, metadata_manager=self.metadata_manager)
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
             # Hole neuen Schedule
@@ -604,7 +616,7 @@ class SettingsTab(QWidget):
         schedule: Schedule = current.data(Qt.ItemDataRole.UserRole)
 
         # Öffne Dialog mit vorhandenen Daten
-        dialog = ScheduleDialog(self, schedule=schedule)
+        dialog = ScheduleDialog(self, schedule=schedule, metadata_manager=self.metadata_manager)
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
             # Hole aktualisierte Daten

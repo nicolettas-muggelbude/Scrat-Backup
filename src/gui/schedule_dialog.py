@@ -27,6 +27,7 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
+from src.core.metadata_manager import MetadataManager
 from src.core.scheduler import Schedule, ScheduleFrequency, Weekday
 
 logger = logging.getLogger(__name__)
@@ -49,18 +50,25 @@ class ScheduleDialog(QDialog):
     - Validierung
     """
 
-    def __init__(self, parent: Optional[QWidget] = None, schedule: Optional[Schedule] = None):
+    def __init__(
+        self,
+        parent: Optional[QWidget] = None,
+        schedule: Optional[Schedule] = None,
+        metadata_manager: Optional[MetadataManager] = None,
+    ):
         """
         Initialisiert Dialog
 
         Args:
             parent: Parent-Widget
             schedule: Zu bearbeitender Zeitplan (None = Neu erstellen)
+            metadata_manager: MetadataManager für Quellen/Ziele
         """
         super().__init__(parent)
 
         self.schedule = schedule
         self.is_edit_mode = schedule is not None
+        self.metadata_manager = metadata_manager
 
         self._setup_ui()
         self._connect_signals()
@@ -199,19 +207,19 @@ class ScheduleDialog(QDialog):
         self.sources_list = QListWidget()
         self.sources_list.setMaximumHeight(100)
 
-        # TODO: Lade Quellen aus Config
-        # Für jetzt: Beispiel-Daten
-        example_sources = [
-            (1, "C:\\Benutzer\\Documents"),
-            (2, "C:\\Benutzer\\Pictures"),
-            (3, "D:\\Projekte"),
-        ]
-
-        for source_id, source_path in example_sources:
-            item = QListWidgetItem(source_path)
-            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
-            item.setCheckState(Qt.CheckState.Checked)  # Default: alle ausgewählt
-            item.setData(Qt.ItemDataRole.UserRole, source_id)
+        # Lade Quellen aus Datenbank
+        if self.metadata_manager:
+            sources = self.metadata_manager.get_sources()
+            for source in sources:
+                item = QListWidgetItem(f"{source['name']} ({source['windows_path']})")
+                item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+                item.setCheckState(Qt.CheckState.Checked)  # Default: alle ausgewählt
+                item.setData(Qt.ItemDataRole.UserRole, source["id"])
+                self.sources_list.addItem(item)
+        else:
+            # Fallback: Platzhalter wenn kein MetadataManager
+            item = QListWidgetItem("Keine Quellen konfiguriert")
+            item.setFlags(Qt.ItemFlag.NoItemFlags)
             self.sources_list.addItem(item)
 
         layout.addWidget(self.sources_list)
@@ -226,16 +234,19 @@ class ScheduleDialog(QDialog):
 
         self.destination_combo = QComboBox()
 
-        # TODO: Lade Ziele aus Config
-        # Für jetzt: Beispiel-Daten
-        example_destinations = [
-            (1, "USB-Laufwerk E:\\Backups"),
-            (2, "NAS (SMB) - \\\\192.168.1.100\\Backups"),
-            (3, "Cloud (Rclone) - Google Drive"),
-        ]
+        # Lade Ziele aus Datenbank
+        if self.metadata_manager:
+            destinations = self.metadata_manager.get_destinations()
+            for dest in destinations:
+                # Zeige Name und Typ
+                label = f"{dest['name']} ({dest['type'].upper()})"
+                self.destination_combo.addItem(label, dest["id"])
 
-        for dest_id, dest_name in example_destinations:
-            self.destination_combo.addItem(dest_name, dest_id)
+            if not destinations:
+                self.destination_combo.addItem("Keine Ziele konfiguriert", None)
+        else:
+            # Fallback: Platzhalter wenn kein MetadataManager
+            self.destination_combo.addItem("Keine Ziele verfügbar", None)
 
         layout.addRow("Backup-Ziel:", self.destination_combo)
 
@@ -290,8 +301,15 @@ class ScheduleDialog(QDialog):
         if self.schedule.day_of_month:
             self.day_of_month_spin.setValue(self.schedule.day_of_month)
 
-        # Quellen (TODO: Markiere ausgewählte)
-        # ...
+        # Quellen: Markiere nur die ausgewählten
+        for i in range(self.sources_list.count()):
+            item = self.sources_list.item(i)
+            source_id = item.data(Qt.ItemDataRole.UserRole)
+            # Checke nur wenn ID in schedule.source_ids
+            if source_id in self.schedule.source_ids:
+                item.setCheckState(Qt.CheckState.Checked)
+            else:
+                item.setCheckState(Qt.CheckState.Unchecked)
 
         # Ziel
         for i in range(self.destination_combo.count()):

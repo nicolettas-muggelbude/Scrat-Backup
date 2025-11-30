@@ -368,30 +368,66 @@ class RestoreTab(QWidget):
             )
             return
 
-        # Restore-Config erstellen (wird später für echte Wiederherstellung verwendet)
-        # config = RestoreConfig(
-        #     destination_path=dest_path,
-        #     password=password,
-        #     overwrite_existing=self.overwrite_checkbox.isChecked(),
-        #     restore_permissions=self.restore_permissions_checkbox.isChecked(),
-        # )
-
-        # TODO: Storage-Backend aus Backup-Config auslesen
-        # Für jetzt: None (wird später implementiert)
+        # Hole Backup-Info aus Datenbank
         if not self.metadata_manager:
             QMessageBox.warning(self, "Fehler", "Keine Metadaten-Datenbank konfiguriert")
             return
 
-        # Restore-Engine erstellen (Storage-Backend wird später hinzugefügt)
-        # Für jetzt: Demo ohne echtes Storage
+        backup_id = self.selected_backup_id
+        if not backup_id:
+            QMessageBox.warning(self, "Fehler", "Kein Backup ausgewählt")
+            return
+
+        backup_info = self.metadata_manager.get_backup(backup_id)
+        if not backup_info:
+            QMessageBox.warning(self, "Fehler", f"Backup #{backup_id} nicht gefunden")
+            return
+
+        # Storage-Backend aus Backup-Config erstellen
         try:
-            # Warnung: Storage-Backend fehlt noch
-            QMessageBox.information(
-                self,
-                "Hinweis",
-                "Wiederherstellung ist noch nicht vollständig implementiert.\n"
-                "Storage-Backend-Integration folgt in einer zukünftigen Version.\n\n"
-                "Demo-Modus wird gestartet...",
+            import json
+
+            from src.storage.usb_storage import USBStorage
+
+            # Hole Destination aus Metadaten
+            dest_type = backup_info.get("destination_type", "usb")
+
+            # Für jetzt: Nur USB/Lokal unterstützt (TODO: SFTP, WebDAV, etc.)
+            if dest_type != "usb":
+                QMessageBox.warning(
+                    self,
+                    "Nicht unterstützt",
+                    f"Storage-Typ '{dest_type}' wird für Wiederherstellung noch nicht unterstützt.\n\n"
+                    "Aktuell nur USB/Lokal verfügbar.",
+                )
+                return
+
+            storage_backend = USBStorage()
+            storage_config = {"path": backup_info.get("destination_path", "")}
+            storage_backend.connect(storage_config)
+
+        except Exception as e:
+            logger.error(f"Fehler beim Erstellen des Storage-Backends: {e}", exc_info=True)
+            QMessageBox.critical(self, "Fehler", f"Storage-Backend konnte nicht initialisiert werden:\n{e}")
+            return
+
+        # Restore-Config erstellen
+        config = RestoreConfig(
+            destination_path=dest_path,
+            password=password,
+            overwrite_existing=self.overwrite_checkbox.isChecked(),
+            restore_permissions=self.restore_permissions_checkbox.isChecked(),
+        )
+
+        # Restore-Engine erstellen
+        try:
+            from src.core.restore_engine import RestoreEngine
+
+            self.restore_engine = RestoreEngine(
+                metadata_manager=self.metadata_manager,
+                storage_backend=storage_backend,
+                config=config,
+                progress_callback=self._on_progress_update,
             )
 
             # UI vorbereiten
@@ -402,41 +438,43 @@ class RestoreTab(QWidget):
             self.progress_bar.setValue(0)
             self.error_label.hide()
 
-            # Demo-Progress
-            self._simulate_restore_progress()
+            # Starte echte Wiederherstellung in Thread
+            self._start_restore_thread(backup_id)
 
         except Exception as e:
             logger.error(f"Fehler beim Starten der Wiederherstellung: {e}", exc_info=True)
             QMessageBox.critical(self, "Fehler", f"Fehler beim Starten:\n{e}")
 
-    def _simulate_restore_progress(self) -> None:
-        """Simuliert Restore-Progress (Demo)"""
-        # TODO: Echte Wiederherstellung implementieren
-        import time
+    def _start_restore_thread(self, backup_id: int) -> None:
+        """
+        Startet Wiederherstellung in eigenem Thread
 
-        def demo_restore():
-            phases = ["downloading", "decrypting", "extracting", "restoring"]
-            for i, phase in enumerate(phases):
-                progress = RestoreProgress(
-                    phase=phase,
-                    files_total=100,
-                    files_processed=(i + 1) * 25,
-                    bytes_total=10000000,
-                    bytes_processed=(i + 1) * 2500000,
-                    current_file=f"demo_file_{i}.txt",
+        Args:
+            backup_id: ID des wiederherzustellenden Backups
+        """
+
+        def run_restore():
+            try:
+                # Führe Wiederherstellung aus
+                result = self.restore_engine.restore_full_backup(backup_id)
+
+                # Emit completion signal
+                self.restore_completed.emit(result)
+
+            except Exception as e:
+                logger.error(f"Fehler bei Wiederherstellung: {e}", exc_info=True)
+
+                # Emit error result
+                result = RestoreResult(
+                    success=False,
+                    files_restored=0,
+                    bytes_restored=0,
+                    duration_seconds=0,
+                    error_message=str(e),
                 )
-                self.progress_updated.emit(progress)
-                time.sleep(1)
+                self.restore_completed.emit(result)
 
-            result = RestoreResult(
-                success=True,
-                files_restored=100,
-                bytes_restored=10000000,
-                duration_seconds=4.0,
-            )
-            self.restore_completed.emit(result)
-
-        self.restore_thread = threading.Thread(target=demo_restore, daemon=True)
+        self.restore_thread = threading.Thread(target=run_restore, daemon=True)
         self.restore_thread.start()
 
     def _on_progress_update(self, progress: RestoreProgress) -> None:

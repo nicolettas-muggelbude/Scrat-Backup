@@ -118,6 +118,7 @@ class MainWindow(QMainWindow):
         """Erstellt Settings-Tab"""
         self.settings_tab = SettingsTab()
         self.settings_tab.set_config_manager(self.config_manager)
+        self.settings_tab.set_metadata_manager(self.metadata_manager)
         self.tab_widget.addTab(self.settings_tab, "Einstellungen")
 
     def _create_logs_tab(self) -> None:

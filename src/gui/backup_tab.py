@@ -268,21 +268,68 @@ class BackupTab(QWidget):
         if self.is_backup_running:
             return
 
-        # TODO: Config aus UI auslesen
-        # Für jetzt: Demo-Config
-        config = BackupConfig(
-            sources=[Path.home() / "Documents"],
-            destination_path=Path.home() / "scrat-backups",
-            destination_type="usb",
-            password="demo123",
-            compression_level=5,
-        )
-
-        # Backup-Engine erstellen
+        # Config aus MetadataManager und UI auslesen
         if not self.metadata_manager:
             QMessageBox.warning(self, "Fehler", "Keine Metadaten-Datenbank konfiguriert")
             return
 
+        # Hole Quellen aus Datenbank (alle aktivierten)
+        sources = self.metadata_manager.get_sources()
+        enabled_sources = [Path(s["windows_path"]) for s in sources if s.get("enabled", True)]
+
+        if not enabled_sources:
+            QMessageBox.warning(
+                self,
+                "Keine Quellen",
+                "Keine Backup-Quellen konfiguriert.\n\nBitte konfiguriere zuerst Quellen in den Einstellungen.",
+            )
+            return
+
+        # Hole Ziel aus Datenbank (erste aktivierte)
+        destinations = self.metadata_manager.get_destinations()
+        enabled_dests = [d for d in destinations if d.get("enabled", True)]
+
+        if not enabled_dests:
+            QMessageBox.warning(
+                self,
+                "Kein Ziel",
+                "Kein Backup-Ziel konfiguriert.\n\nBitte konfiguriere zuerst ein Ziel in den Einstellungen.",
+            )
+            return
+
+        first_dest = enabled_dests[0]
+        import json
+
+        dest_config = json.loads(first_dest["config"])
+
+        # Backup-Typ aus UI
+        backup_type = self.type_combo.currentData()  # "full" oder "incremental"
+
+        # Passwort: Frage User (TODO: Windows Credential Manager)
+        from PyQt6.QtWidgets import QInputDialog
+
+        password, ok = QInputDialog.getText(
+            self,
+            "Verschlüsselungs-Passwort",
+            "Bitte gib das Backup-Passwort ein:",
+            echo=QLineEdit.EchoMode.Password,
+        )
+
+        if not ok or not password:
+            QMessageBox.warning(self, "Abgebrochen", "Backup abgebrochen - kein Passwort eingegeben.")
+            return
+
+        # Erstelle BackupConfig
+        config = BackupConfig(
+            sources=enabled_sources,
+            destination_path=Path(dest_config.get("path", Path.home() / "scrat-backups")),
+            destination_type=first_dest["type"],
+            password=password,
+            compression_level=5,
+            backup_type=backup_type,
+        )
+
+        # Backup-Engine erstellen
         self.backup_engine = BackupEngine(
             metadata_manager=self.metadata_manager,
             config=config,
