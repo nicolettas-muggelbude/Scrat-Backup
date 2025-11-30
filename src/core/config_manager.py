@@ -59,6 +59,8 @@ class ConfigManager:
             "webdav_servers": [],  # Liste gespeicherter WebDAV-Server
             "rclone_remotes": [],  # Liste gespeicherter Rclone-Remotes
         },
+        # Zeitpläne
+        "schedules": [],  # Liste von Schedule-Dicts
     }
 
     def __init__(self, config_file: Optional[Path] = None):
@@ -219,3 +221,89 @@ class ConfigManager:
             return [self._deep_copy(v) for v in obj]
         else:
             return obj
+
+    # Schedule-Management
+
+    def get_schedules(self) -> list:
+        """
+        Holt alle Zeitpläne
+
+        Returns:
+            Liste von Schedule-Dicts
+        """
+        return self.config.get("schedules", [])
+
+    def add_schedule(self, schedule: dict) -> None:
+        """
+        Fügt einen Zeitplan hinzu
+
+        Args:
+            schedule: Schedule-Dict
+        """
+        schedules = self.config.get("schedules", [])
+        schedules.append(schedule)
+        self.config["schedules"] = schedules
+        self.save()
+        logger.info(f"Zeitplan hinzugefügt: {schedule.get('name')}")
+
+    def update_schedule(self, schedule_id: int, schedule: dict) -> bool:
+        """
+        Aktualisiert einen Zeitplan
+
+        Args:
+            schedule_id: ID des Zeitplans
+            schedule: Neue Schedule-Daten
+
+        Returns:
+            True wenn gefunden und aktualisiert
+        """
+        schedules = self.config.get("schedules", [])
+
+        for i, s in enumerate(schedules):
+            if s.get("id") == schedule_id:
+                schedules[i] = schedule
+                self.config["schedules"] = schedules
+                self.save()
+                logger.info(f"Zeitplan aktualisiert: {schedule.get('name')}")
+                return True
+
+        logger.warning(f"Zeitplan nicht gefunden: ID={schedule_id}")
+        return False
+
+    def delete_schedule(self, schedule_id: int) -> bool:
+        """
+        Löscht einen Zeitplan
+
+        Args:
+            schedule_id: ID des Zeitplans
+
+        Returns:
+            True wenn gefunden und gelöscht
+        """
+        schedules = self.config.get("schedules", [])
+        original_count = len(schedules)
+
+        schedules = [s for s in schedules if s.get("id") != schedule_id]
+
+        if len(schedules) < original_count:
+            self.config["schedules"] = schedules
+            self.save()
+            logger.info(f"Zeitplan gelöscht: ID={schedule_id}")
+            return True
+
+        logger.warning(f"Zeitplan nicht gefunden: ID={schedule_id}")
+        return False
+
+    def get_next_schedule_id(self) -> int:
+        """
+        Generiert nächste Schedule-ID (auto-increment)
+
+        Returns:
+            Nächste verfügbare ID
+        """
+        schedules = self.config.get("schedules", [])
+        if not schedules:
+            return 1
+
+        max_id = max(s.get("id", 0) for s in schedules)
+        return max_id + 1

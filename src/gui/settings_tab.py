@@ -423,8 +423,8 @@ class SettingsTab(QWidget):
         if not self.config_manager:
             return
 
-        # Hole Zeitpläne aus Config (TODO: Config-Format erweitern)
-        schedules = self.config_manager.get("schedules", "all", [])
+        # Hole Zeitpläne aus Config
+        schedules = self.config_manager.get_schedules()
 
         for schedule_dict in schedules:
             # Erstelle Schedule-Objekt
@@ -579,19 +579,16 @@ class SettingsTab(QWidget):
             # Hole neuen Schedule
             schedule = dialog.get_schedule()
 
-            # Generiere ID (auto-increment)
-            max_id = 0
-            for i in range(self.schedules_list.count()):
-                item = self.schedules_list.item(i)
-                existing_schedule: Schedule = item.data(Qt.ItemDataRole.UserRole)
-                if existing_schedule.id and existing_schedule.id > max_id:
-                    max_id = existing_schedule.id
-            schedule.id = max_id + 1
+            # Generiere ID
+            schedule.id = self.config_manager.get_next_schedule_id()
+
+            # Speichere in Config
+            schedule_dict = self._schedule_to_dict(schedule)
+            self.config_manager.add_schedule(schedule_dict)
 
             # Füge zur Liste hinzu
             self._add_schedule_to_list(schedule)
 
-            # TODO: In Config speichern
             logger.info(f"Zeitplan '{schedule.name}' hinzugefügt")
 
             QMessageBox.information(
@@ -629,7 +626,10 @@ class SettingsTab(QWidget):
             # Aktualisiere Details
             self._update_schedule_details(updated_schedule)
 
-            # TODO: In Config speichern
+            # Speichere in Config
+            schedule_dict = self._schedule_to_dict(updated_schedule)
+            self.config_manager.update_schedule(updated_schedule.id, schedule_dict)
+
             logger.info(f"Zeitplan '{updated_schedule.name}' aktualisiert")
 
             QMessageBox.information(
@@ -653,11 +653,13 @@ class SettingsTab(QWidget):
         )
 
         if reply == QMessageBox.StandardButton.Yes:
+            # Lösche aus Config
+            self.config_manager.delete_schedule(schedule.id)
+
             # Entferne aus Liste
             row = self.schedules_list.row(current)
             self.schedules_list.takeItem(row)
 
-            # TODO: Aus Config entfernen
             logger.info(f"Zeitplan '{schedule.name}' gelöscht")
 
             QMessageBox.information(self, "Gelöscht", f"Zeitplan '{schedule.name}' wurde gelöscht.")
@@ -688,7 +690,9 @@ class SettingsTab(QWidget):
         # Update Details
         self._update_schedule_details(schedule)
 
-        # TODO: In Config speichern
+        # Speichere in Config
+        schedule_dict = self._schedule_to_dict(schedule)
+        self.config_manager.update_schedule(schedule.id, schedule_dict)
 
         logger.info(
             f"Zeitplan '{schedule.name}' {'aktiviert' if schedule.enabled else 'deaktiviert'}"
