@@ -10,6 +10,7 @@ from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QCheckBox,
     QComboBox,
+    QDialog,
     QFileDialog,
     QFormLayout,
     QGroupBox,
@@ -28,6 +29,7 @@ from PyQt6.QtWidgets import (
 
 from src.core.config_manager import ConfigManager
 from src.core.scheduler import Schedule, ScheduleFrequency, Scheduler, Weekday
+from src.gui.schedule_dialog import ScheduleDialog
 
 logger = logging.getLogger(__name__)
 
@@ -571,13 +573,30 @@ class SettingsTab(QWidget):
 
     def _add_schedule(self) -> None:
         """Handler für Zeitplan hinzufügen"""
-        # TODO: Schedule-Dialog öffnen
-        QMessageBox.information(
-            self,
-            "Zeitplan hinzufügen",
-            "Schedule-Dialog wird in Kürze implementiert.\n\n"
-            "Für jetzt: Zeitpläne können über die Config-Datei hinzugefügt werden.",
-        )
+        dialog = ScheduleDialog(self)
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            # Hole neuen Schedule
+            schedule = dialog.get_schedule()
+
+            # Generiere ID (auto-increment)
+            max_id = 0
+            for i in range(self.schedules_list.count()):
+                item = self.schedules_list.item(i)
+                existing_schedule: Schedule = item.data(Qt.ItemDataRole.UserRole)
+                if existing_schedule.id and existing_schedule.id > max_id:
+                    max_id = existing_schedule.id
+            schedule.id = max_id + 1
+
+            # Füge zur Liste hinzu
+            self._add_schedule_to_list(schedule)
+
+            # TODO: In Config speichern
+            logger.info(f"Zeitplan '{schedule.name}' hinzugefügt")
+
+            QMessageBox.information(
+                self, "Hinzugefügt", f"Zeitplan '{schedule.name}' wurde erstellt."
+            )
 
     def _edit_schedule(self) -> None:
         """Handler für Zeitplan bearbeiten"""
@@ -587,12 +606,35 @@ class SettingsTab(QWidget):
 
         schedule: Schedule = current.data(Qt.ItemDataRole.UserRole)
 
-        # TODO: Schedule-Dialog öffnen mit vorhandenen Daten
-        QMessageBox.information(
-            self,
-            "Zeitplan bearbeiten",
-            f"Bearbeite '{schedule.name}'\n\nSchedule-Dialog wird in Kürze implementiert.",
-        )
+        # Öffne Dialog mit vorhandenen Daten
+        dialog = ScheduleDialog(self, schedule=schedule)
+
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            # Hole aktualisierte Daten
+            updated_schedule = dialog.get_schedule()
+
+            # Aktualisiere Item in Liste
+            freq_icons = {
+                ScheduleFrequency.DAILY: "📅",
+                ScheduleFrequency.WEEKLY: "📆",
+                ScheduleFrequency.MONTHLY: "🗓️",
+                ScheduleFrequency.STARTUP: "🚀",
+                ScheduleFrequency.SHUTDOWN: "🔌",
+            }
+            icon = freq_icons.get(updated_schedule.frequency, "⏰")
+            status_icon = "✅" if updated_schedule.enabled else "⏸️"
+            current.setText(f"{status_icon} {icon} {updated_schedule.name}")
+            current.setData(Qt.ItemDataRole.UserRole, updated_schedule)
+
+            # Aktualisiere Details
+            self._update_schedule_details(updated_schedule)
+
+            # TODO: In Config speichern
+            logger.info(f"Zeitplan '{updated_schedule.name}' aktualisiert")
+
+            QMessageBox.information(
+                self, "Aktualisiert", f"Zeitplan '{updated_schedule.name}' wurde aktualisiert."
+            )
 
     def _delete_schedule(self) -> None:
         """Handler für Zeitplan löschen"""
