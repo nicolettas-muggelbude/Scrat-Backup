@@ -92,9 +92,7 @@ class TestSMBStorageInit:
     @patch("smbprotocol.connection.Connection", side_effect=ImportError)
     def test_connect_missing_smbprotocol(self, mock_connection, smb_storage):
         """Test Verbindung ohne smbprotocol-Installation"""
-        with pytest.raises(
-            ConnectionError, match="smbprotocol nicht installiert"
-        ):
+        with pytest.raises(ConnectionError, match="smbprotocol nicht installiert"):
             smb_storage.connect()
 
     @patch("smbprotocol.connection.Connection")
@@ -283,9 +281,7 @@ class TestSMBStorageIntegration:
         username = os.environ.get("SMB_TEST_USER", "testuser")
         password = os.environ.get("SMB_TEST_PASSWORD", "testpass")
 
-        storage = SMBStorage(
-            server=server, share=share, username=username, password=password
-        )
+        storage = SMBStorage(server=server, share=share, username=username, password=password)
 
         try:
             assert storage.connect()

@@ -218,6 +218,27 @@ class BackupEngine:
                 size_compressed=0,
             )
 
+            # Wenn keine Dateien gefunden wurden, markiere als erfolgreich und beende
+            if not all_files:
+                logger.info("Keine Dateien zum Sichern gefunden - Backup als leer markiert")
+                self.metadata_manager.mark_backup_completed(backup_id=db_backup_id, files_total=0)
+
+                end_time = datetime.now()
+                duration_seconds = (end_time - start_time).total_seconds()
+
+                result = BackupResult(
+                    success=True,
+                    backup_id=backup_id,
+                    backup_type="full",
+                    files_total=0,
+                    size_original=0,
+                    size_compressed=0,
+                    duration_seconds=duration_seconds,
+                    errors=progress.errors,
+                )
+                logger.info("Vollbackup erfolgreich abgeschlossen (leer)")
+                return result
+
             # 2. Komprimieren
             progress.phase = "compressing"
             self._report_progress(progress)
@@ -341,19 +362,19 @@ class BackupEngine:
             ValueError: Wenn kein Basis-Backup existiert
             RuntimeError: Bei Backup-Fehler
         """
+        # Prüfe Basis-Backup BEVOR try-Block (ValueError soll durchkommen)
+        base_backups = self.metadata_manager.get_all_backups()
+        completed_backups = [b for b in base_backups if b["status"] == "completed"]
+
+        if not completed_backups:
+            raise ValueError("Kein Basis-Backup gefunden. " "Erstelle zuerst ein Vollbackup.")
+
         start_time = datetime.now()
         backup_id = self._generate_backup_id("incr")
 
         logger.info(f"Starte inkrementelles Backup: {backup_id}")
 
         try:
-            # Hole letztes erfolgreiches Backup als Basis
-            base_backups = self.metadata_manager.get_all_backups()
-            completed_backups = [b for b in base_backups if b["status"] == "completed"]
-
-            if not completed_backups:
-                raise ValueError("Kein Basis-Backup gefunden. " "Erstelle zuerst ein Vollbackup.")
-
             # Neuestes Backup als Basis
             base_backup = completed_backups[0]
             base_backup_id = base_backup["id"]
@@ -381,18 +402,27 @@ class BackupEngine:
                 logger.info(f"Scanne Quelle: {source_path}")
 
                 # Hole Dateien aus letztem Backup für diesen Pfad
-                previous_files_list = self.metadata_manager.search_files(
-                    backup_id=base_backup_id, source_path=str(source_path)
-                )
+                all_previous_files = self.metadata_manager.get_backup_files(base_backup_id)
+
+                # Filtere nach source_path
+                previous_files_list = [
+                    f for f in all_previous_files
+                    if f["source_path"].startswith(str(source_path))
+                ]
 
                 # Konvertiere zu Dict für Scanner
                 previous_files = {}
                 for pf in previous_files_list:
+                    # Konvertiere Timestamp-String zu datetime, falls nötig
+                    modified_ts = pf["modified_timestamp"]
+                    if isinstance(modified_ts, str):
+                        modified_ts = datetime.fromisoformat(modified_ts)
+
                     file_info = FileInfo(
                         path=Path(pf["source_path"]),
                         relative_path=Path(pf["relative_path"]),
                         size=pf["file_size"],
-                        modified=pf["modified_timestamp"],
+                        modified=modified_ts,
                     )
                     previous_files[pf["relative_path"]] = file_info
 
@@ -439,6 +469,9 @@ class BackupEngine:
 
                 # Markiere als abgeschlossen ohne Daten
                 self.metadata_manager.mark_backup_completed(backup_id=db_backup_id, files_total=0)
+
+                # Versionierungs-Rotation
+                self._rotate_old_backups()
 
                 return BackupResult(
                     backup_id=backup_id,
@@ -613,7 +646,13 @@ class BackupEngine:
             progress: Aktuelle Progress-Informationen
         """
         if self.progress_callback:
-            self.progress_callback(progress)
+            # Sende Kopie, nicht Referenz (wichtig für korrekte Progress-Tracking)
+            from dataclasses import replace
+
+            progress_copy = replace(
+                progress, errors=progress.errors.copy()  # Auch errors kopieren
+            )
+            self.progress_callback(progress_copy)
 
         logger.debug(
             f"Progress: {progress.phase}, "

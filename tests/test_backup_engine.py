@@ -117,9 +117,7 @@ class TestFullBackup:
         encrypted_files = list(backup_dirs[0].glob("*.enc"))
         assert len(encrypted_files) > 0
 
-    def test_full_backup_with_progress_callback(
-        self, metadata_db, backup_config, temp_source_dir
-    ):
+    def test_full_backup_with_progress_callback(self, metadata_db, backup_config, temp_source_dir):
         """Test Vollbackup mit Progress-Tracking"""
         progress_updates = []
 
@@ -190,9 +188,7 @@ class TestIncrementalBackup:
         with pytest.raises(ValueError, match="Kein Basis-Backup gefunden"):
             engine.create_incremental_backup()
 
-    def test_incremental_backup_with_changes(
-        self, metadata_db, backup_config, temp_source_dir
-    ):
+    def test_incremental_backup_with_changes(self, metadata_db, backup_config, temp_source_dir):
         """Test inkrementelles Backup mit Änderungen"""
         engine = BackupEngine(metadata_db, backup_config)
 
@@ -222,9 +218,7 @@ class TestIncrementalBackup:
         assert len(backups) == 2
         assert backups[0]["type"] == "incremental"
 
-    def test_incremental_backup_no_changes(
-        self, metadata_db, backup_config, temp_source_dir
-    ):
+    def test_incremental_backup_no_changes(self, metadata_db, backup_config, temp_source_dir):
         """Test inkrementelles Backup ohne Änderungen"""
         engine = BackupEngine(metadata_db, backup_config)
 
@@ -239,9 +233,7 @@ class TestIncrementalBackup:
         assert incr_result.success is True
         assert incr_result.files_total == 0
 
-    def test_incremental_backup_with_deletion(
-        self, metadata_db, backup_config, temp_source_dir
-    ):
+    def test_incremental_backup_with_deletion(self, metadata_db, backup_config, temp_source_dir):
         """Test inkrementelles Backup mit gelöschten Dateien"""
         engine = BackupEngine(metadata_db, backup_config)
 
@@ -262,7 +254,7 @@ class TestIncrementalBackup:
         backups = metadata_db.get_all_backups()
         incr_backup_id = backups[0]["id"]
 
-        files = metadata_db.search_files(backup_id=incr_backup_id)
+        files = metadata_db.get_backup_files(incr_backup_id)
         deleted_files = [f for f in files if f.get("is_deleted")]
         assert len(deleted_files) == 1
 
@@ -289,9 +281,7 @@ class TestVersionRotation:
         completed_backups = [b for b in backups if b["status"] == "completed"]
         assert len(completed_backups) == backup_config.max_versions
 
-    def test_no_rotation_below_max_versions(
-        self, metadata_db, backup_config, temp_source_dir
-    ):
+    def test_no_rotation_below_max_versions(self, metadata_db, backup_config, temp_source_dir):
         """Test keine Rotation wenn unter max_versions"""
         engine = BackupEngine(metadata_db, backup_config)
 
