@@ -22,8 +22,10 @@ from PyQt6.QtWidgets import (
 )
 
 from src.core.config_manager import ConfigManager
+from src.core.metadata_manager import MetadataManager
 from src.gui.backup_tab import BackupTab
 from src.gui.event_bus import get_event_bus
+from src.gui.logs_tab import LogsTab
 from src.gui.restore_tab import RestoreTab
 from src.gui.settings_tab import SettingsTab
 from src.gui.system_tray import SystemTray
@@ -49,6 +51,10 @@ class MainWindow(QMainWindow):
 
         self.event_bus = get_event_bus()
         self.config_manager = ConfigManager()  # Lädt/erstellt Konfiguration
+
+        # MetadataManager für Backup-Datenbank
+        db_path = Path.home() / ".scrat-backup" / "metadata.db"
+        self.metadata_manager = MetadataManager(db_path)
 
         # Setup UI
         self._setup_window()
@@ -116,22 +122,8 @@ class MainWindow(QMainWindow):
 
     def _create_logs_tab(self) -> None:
         """Erstellt Logs-Tab"""
-        tab = QWidget()
-        layout = QVBoxLayout(tab)
-
-        # Placeholder
-        label = QLabel("📋 Logs-Tab")
-        label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label.setStyleSheet("font-size: 24px; color: #666;")
-        layout.addWidget(label)
-
-        info = QLabel("Wird in Phase 7 implementiert")
-        info.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        info.setStyleSheet("font-size: 14px; color: #999;")
-        layout.addWidget(info)
-
-        self.tab_widget.addTab(tab, "Logs")
-        self.logs_tab = tab
+        self.logs_tab = LogsTab(self.metadata_manager)
+        self.tab_widget.addTab(self.logs_tab, "Logs")
 
     def _create_info_tab(self) -> None:
         """Erstellt Info-Tab mit Copyright, Lizenz, Contributing und Kontakt"""

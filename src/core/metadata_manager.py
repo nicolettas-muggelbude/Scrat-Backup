@@ -5,7 +5,7 @@ Verwaltet SQLite-Datenbank mit Backup-Metadaten
 
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -569,6 +569,185 @@ class MetadataManager:
         stats["total_files"] = cursor.fetchone()["count"]
 
         return stats
+
+    # ==================== Log-Verwaltung ====================
+
+    def add_log(
+        self,
+        level: str,
+        message: str,
+        backup_id: Optional[int] = None,
+        details: Optional[str] = None,
+    ) -> int:
+        """
+        Fügt einen Log-Eintrag hinzu
+
+        Args:
+            level: Log-Level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+            message: Log-Nachricht
+            backup_id: Optional Backup-ID
+            details: Optional zusätzliche Details (z.B. Stack-Trace)
+
+        Returns:
+            ID des erstellten Log-Eintrags
+        """
+        cursor = self.connection.cursor()
+
+        cursor.execute(
+            """
+            INSERT INTO logs (timestamp, level, message, backup_id, details)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (datetime.now(), level, message, backup_id, details),
+        )
+
+        self.connection.commit()
+        log_id = cursor.lastrowid
+
+        logger.debug(f"Log-Eintrag hinzugefügt: ID={log_id}, Level={level}")
+        return log_id
+
+    def get_logs(
+        self,
+        level: Optional[str] = None,
+        backup_id: Optional[int] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        search_term: Optional[str] = None,
+        limit: int = 1000,
+        offset: int = 0,
+    ) -> List[Dict[str, Any]]:
+        """
+        Holt Log-Einträge mit optionalen Filtern
+
+        Args:
+            level: Filter nach Log-Level
+            backup_id: Filter nach Backup-ID
+            start_date: Filter nach Start-Datum
+            end_date: Filter nach End-Datum
+            search_term: Suche in Nachricht (LIKE)
+            limit: Maximale Anzahl Einträge
+            offset: Offset für Paginierung
+
+        Returns:
+            Liste von Log-Einträgen
+        """
+        cursor = self.connection.cursor()
+
+        # Query bauen
+        query = "SELECT * FROM logs WHERE 1=1"
+        params = []
+
+        if level:
+            query += " AND level = ?"
+            params.append(level)
+
+        if backup_id is not None:
+            query += " AND backup_id = ?"
+            params.append(backup_id)
+
+        if start_date:
+            query += " AND timestamp >= ?"
+            params.append(start_date)
+
+        if end_date:
+            query += " AND timestamp <= ?"
+            params.append(end_date)
+
+        if search_term:
+            query += " AND (message LIKE ? OR details LIKE ?)"
+            search_pattern = f"%{search_term}%"
+            params.append(search_pattern)
+            params.append(search_pattern)
+
+        # Sortierung und Limit
+        query += " ORDER BY timestamp DESC LIMIT ? OFFSET ?"
+        params.append(limit)
+        params.append(offset)
+
+        cursor.execute(query, params)
+        logs = [dict(row) for row in cursor.fetchall()]
+
+        logger.debug(f"Logs abgerufen: {len(logs)} Einträge")
+        return logs
+
+    def get_log_count(
+        self,
+        level: Optional[str] = None,
+        backup_id: Optional[int] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        search_term: Optional[str] = None,
+    ) -> int:
+        """
+        Zählt Log-Einträge mit optionalen Filtern
+
+        Args:
+            level: Filter nach Log-Level
+            backup_id: Filter nach Backup-ID
+            start_date: Filter nach Start-Datum
+            end_date: Filter nach End-Datum
+            search_term: Suche in Nachricht (LIKE)
+
+        Returns:
+            Anzahl Log-Einträge
+        """
+        cursor = self.connection.cursor()
+
+        # Query bauen
+        query = "SELECT COUNT(*) as count FROM logs WHERE 1=1"
+        params = []
+
+        if level:
+            query += " AND level = ?"
+            params.append(level)
+
+        if backup_id is not None:
+            query += " AND backup_id = ?"
+            params.append(backup_id)
+
+        if start_date:
+            query += " AND timestamp >= ?"
+            params.append(start_date)
+
+        if end_date:
+            query += " AND timestamp <= ?"
+            params.append(end_date)
+
+        if search_term:
+            query += " AND (message LIKE ? OR details LIKE ?)"
+            search_pattern = f"%{search_term}%"
+            params.append(search_pattern)
+            params.append(search_pattern)
+
+        cursor.execute(query, params)
+        count = cursor.fetchone()["count"]
+
+        return count
+
+    def clear_logs(self, older_than_days: Optional[int] = None) -> int:
+        """
+        Löscht Log-Einträge
+
+        Args:
+            older_than_days: Löscht nur Logs älter als X Tage (None = alle)
+
+        Returns:
+            Anzahl gelöschter Einträge
+        """
+        cursor = self.connection.cursor()
+
+        if older_than_days is not None:
+            cutoff_date = datetime.now() - timedelta(days=older_than_days)
+            cursor.execute("DELETE FROM logs WHERE timestamp < ?", (cutoff_date,))
+        else:
+            cursor.execute("DELETE FROM logs")
+
+        self.connection.commit()
+        deleted_count = cursor.rowcount
+
+        logger.info(f"Logs gelöscht: {deleted_count} Einträge")
+        return deleted_count
 
     def __enter__(self):
         """Context Manager: Eintritt"""

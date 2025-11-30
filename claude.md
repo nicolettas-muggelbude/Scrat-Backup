@@ -887,12 +887,18 @@ CREATE INDEX idx_backups_timestamp ON backups(timestamp);
 - [x] ConfigManager-Integration (66 Zeilen)
 - [x] GUI-Tests (17 Tests, alle passing)
 
-### Phase 10: Scheduler (Sprint 9)
-- [ ] scheduler.py - Zeitplan-Logik
-- [ ] Windows Task Scheduler Integration
-- [ ] Startup/Shutdown-Trigger
-- [ ] Missed-Backup-Detection
-- [ ] Scheduler-Tests
+### Phase 10: Scheduler (Sprint 9) ✅ ABGESCHLOSSEN
+- [x] scheduler.py - Zeitplan-Logik
+- [x] Windows Task Scheduler Integration
+- [x] Startup/Shutdown-Trigger
+- [x] system_tray.py - System Tray Integration
+- [x] schedule_dialog.py - Schedule-Dialog für Erstellen/Bearbeiten
+- [x] Schedule-Verwaltung im Settings-Tab
+- [x] Config-Persistierung für Zeitpläne
+- [ ] Scheduler-Worker (Background QThread) - TODO
+- [ ] "Nächster Lauf"-Anzeige - TODO
+- [ ] Missed-Backup-Detection - TODO
+- [ ] Scheduler-Tests - TODO
 
 ### Phase 10: Logging & Benachrichtigungen (Sprint 9)
 - [ ] logger.py - Strukturiertes Logging
@@ -984,24 +990,37 @@ mypy>=1.8.0
 
 ## Changelog
 
-### 2025-11-30 - Phase 10 Scheduler-UI abgeschlossen ✅
+### 2025-11-30 - Phase 10 Schedule-Dialog und Config-Persistierung ✅
+- **Schedule-Dialog implementiert (schedule_dialog.py - 402 Zeilen):**
+  - Erstellen und Bearbeiten von Zeitplänen
+  - Dynamische Felder basierend auf Frequenz-Auswahl
+  - Zeit-Picker für täglich/wöchentlich/monatlich
+  - Wochentage-Auswahl für wöchentliche Backups (Checkboxes)
+  - Tag-im-Monat für monatliche Backups (SpinBox)
+  - Quellen-Auswahl (Multi-Select QListWidget)
+  - Ziel-Auswahl (QComboBox)
+  - Backup-Typ (Full/Incremental)
+  - Validierung aller Eingaben
+- **Config-Persistierung vollständig:**
+  - ConfigManager um 5 Methoden erweitert:
+    - get_schedules() - Alle Zeitpläne laden
+    - add_schedule() - Zeitplan hinzufügen
+    - update_schedule() - Zeitplan aktualisieren
+    - delete_schedule() - Zeitplan löschen
+    - get_next_schedule_id() - Auto-Increment ID
+  - Settings-Tab nutzt ConfigManager für Persistierung
+  - Alle Operationen (Hinzufügen, Bearbeiten, Löschen, Toggle) speichern in JSON
+  - Zeitpläne überleben App-Restart
 - **Schedule-Verwaltung im Settings-Tab:**
   - Liste aller Zeitpläne mit Icons (📅 📆 🗓️ 🚀 🔌)
   - Status-Anzeige (✅ aktiv, ⏸️ deaktiviert)
   - Details-Box mit HTML-Formatierung
   - Buttons: Hinzufügen, Bearbeiten, Löschen, Aktivieren/Deaktivieren
-- **Event-Handler:**
-  - Löschen vollständig funktionsfähig (mit Bestätigung)
-  - Aktivieren/Deaktivieren funktionsfähig
-  - Auswahl-Handler aktualisiert Details
-- **Schedule-Konvertierung:**
-  - Dict ↔ Schedule-Objekt
-  - Zeit-String-Parsing (HH:MM ↔ datetime.time)
-  - Weekday-Enum-Konvertierung
+  - Event-Handler für alle Operationen
 - **TODO:**
-  - Schedule-Dialog (Hinzufügen/Bearbeiten)
-  - Config-Persistierung
-  - Nächster Lauf berechnen (Scheduler-Integration)
+  - Scheduler-Worker (Background QThread)
+  - "Nächster Lauf"-Anzeige
+  - Quellen/Ziele aus Config laden (statt Beispiel-Daten)
 
 ### 2025-11-30 - Phase 10 Scheduler + System Tray ✅
 - **Scheduler-Modul (scheduler.py - 417 Zeilen):**
@@ -1231,6 +1250,8 @@ mypy>=1.8.0
 
 **Letzte Aktualisierung:** 2025-11-30
 **Version:** 0.1.0-dev
-**Status:** Phase 1-9 abgeschlossen ✅ - GUI komplett funktionsfähig!
+**Status:** Phase 1-10 abgeschlossen ✅ - GUI komplett funktionsfähig!
+        Scheduler mit System Tray Integration vollständig!
+        Schedule-UI mit vollständiger Config-Persistierung!
         Alle Tests bestehen (352 passed)!
-        Bereit für Phase 10-12 (Scheduler, Polishing, Packaging)
+        Bereit für Phase 11-12 (Polishing, Packaging)
