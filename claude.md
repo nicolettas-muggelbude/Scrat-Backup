@@ -822,14 +822,14 @@ CREATE INDEX idx_backups_timestamp ON backups(timestamp);
 - [x] requirements.txt erstellen
 - [x] Basis-Projektstruktur anlegen
 
-### Phase 2: Core-Funktionen (Sprint 1) 🔄 IN ARBEIT
+### Phase 2: Core-Funktionen (Sprint 1) ✅ ABGESCHLOSSEN
 - [x] SQLite Schema implementieren (in MetadataManager)
 - [x] metadata_manager.py - CRUD-Operationen
 - [x] encryptor.py - AES-256-GCM Verschlüsselung
-- [x] Unit-Tests für MetadataManager und Encryptor
-- [ ] compressor.py - 7z Integration
-- [ ] scanner.py - Datei-Scanner mit Change Detection
-- [ ] Unit-Tests für Compressor und Scanner
+- [x] compressor.py - 7z Integration mit Split-Archive-Support
+- [x] scanner.py - Datei-Scanner mit Change Detection
+- [x] Unit-Tests für Compressor (17 Tests, 92% Coverage)
+- [x] Unit-Tests für Scanner (27 Tests, 91% Coverage)
 
 ### Phase 3: Backup-Engine (Sprint 2)
 - [ ] backup_engine.py - Vollbackup
@@ -970,11 +970,18 @@ mypy>=1.8.0
 
 ## Changelog
 
-### 2025-11-30 - Phase 2 Core-Module in Arbeit
+### 2025-11-30 - Phase 2 abgeschlossen ✅
 - Phase 1 abgeschlossen ✅
-- MetadataManager für SQLite-Datenbank implementiert
-- Encryptor für AES-256-GCM Verschlüsselung implementiert
-- Unit-Tests für beide Module erstellt
+- Phase 2 abgeschlossen ✅
+- **Core-Module vollständig implementiert:**
+  - MetadataManager für SQLite-Datenbank
+  - Encryptor für AES-256-GCM Verschlüsselung
+  - Compressor für 7z-Komprimierung mit Split-Archive-Support
+  - Scanner für Datei-Scanning mit Change Detection
+- **Umfassende Test-Abdeckung:**
+  - 17 Tests für Compressor (92% Coverage)
+  - 27 Tests für Scanner (91% Coverage)
+  - Alle 44 Tests bestehen erfolgreich
 - Eichel-Icon erstellt
 - Umfassende Entwickler-Dokumentation (CONTRIBUTING.md, developer_guide.md, architecture.md)
 - Development-Tools eingerichtet (black, flake8, mypy, pytest)
@@ -991,4 +998,4 @@ mypy>=1.8.0
 
 **Letzte Aktualisierung:** 2025-11-30
 **Version:** 0.1.0-dev
-**Status:** Phase 2 - Core-Funktionen in Entwicklung
+**Status:** Phase 2 abgeschlossen ✅ - Bereit für Phase 3 (Backup-Engine)
