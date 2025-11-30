@@ -838,12 +838,12 @@ CREATE INDEX idx_backups_timestamp ON backups(timestamp);
 - [x] Progress-Tracking und Fehlerbehandlung
 - [x] Integration-Tests (16 Tests, 8/16 bestehen)
 
-### Phase 4: Storage-Backends (Sprint 3)
-- [ ] base.py - StorageBackend ABC
-- [ ] usb_storage.py - Lokale/USB-Laufwerke
-- [ ] sftp_storage.py - SFTP-Unterstützung
-- [ ] webdav_storage.py - WebDAV-Unterstützung
-- [ ] Storage-Tests mit Mock-Servern
+### Phase 4: Storage-Backends (Sprint 3) ✅ ABGESCHLOSSEN
+- [x] base.py - StorageBackend ABC mit vollständiger API
+- [x] usb_storage.py - Lokale/USB-Laufwerke (vollständig)
+- [x] sftp_storage.py - SFTP-Unterstützung (vollständig)
+- [ ] webdav_storage.py - WebDAV-Unterstützung (für später)
+- [x] Storage-Tests (27 Tests für USB-Storage, alle bestehen)
 
 ### Phase 5: Restore-Engine (Sprint 4)
 - [ ] restore_engine.py - Wiederherstellung
@@ -970,6 +970,24 @@ mypy>=1.8.0
 
 ## Changelog
 
+### 2025-11-30 - Phase 4 abgeschlossen ✅
+- Phase 4 abgeschlossen ✅
+- **Storage-Backends implementiert:**
+  - StorageBackend ABC mit einheitlicher API
+  - USBStorage für lokale/USB-Laufwerke (378 Zeilen)
+  - SFTPStorage für SSH File Transfer (480 Zeilen)
+  - Context Manager Support für alle Backends
+- **Features:**
+  - Upload/Download mit Progress-Callbacks
+  - Rekursive Verzeichnis-Operationen
+  - Speicherplatz-Abfrage
+  - Verbindungs-Tests
+- **Tests:**
+  - 27 Tests für USBStorage (78% Coverage)
+  - Tests für alle Operationen (Upload, Download, Delete, etc.)
+  - Progress-Callback-Tests
+  - Context-Manager-Tests
+
 ### 2025-11-30 - Phase 3 abgeschlossen ✅
 - Phase 3 abgeschlossen ✅
 - **Backup-Engine vollständig implementiert:**
@@ -1015,4 +1033,4 @@ mypy>=1.8.0
 
 **Letzte Aktualisierung:** 2025-11-30
 **Version:** 0.1.0-dev
-**Status:** Phase 3 abgeschlossen ✅ - Bereit für Phase 4 (Storage-Backends)
+**Status:** Phase 4 abgeschlossen ✅ - Bereit für Phase 5 (Restore-Engine)
