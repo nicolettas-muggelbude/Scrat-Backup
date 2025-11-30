@@ -43,9 +43,13 @@ class SMBStorage(StorageBackend):
             share: Freigabe-Name (z.B. "backups")
             username: Benutzername
             password: Passwort
-            domain: Windows-Domain (optional)
+            domain: Windows-Domain (optional, PRO-FEATURE für Enterprise-Umgebungen)
             port: SMB-Port (Standard: 445)
             base_path: Basis-Pfad auf der Freigabe (z.B. "/scrat-backups")
+
+        Note:
+            Domain-Authentifizierung ist für eine zukünftige Pro-Version geplant.
+            Für Privat-Nutzer ist domain="" (Standard) ausreichend.
         """
         self.server = server
         self.share = share
