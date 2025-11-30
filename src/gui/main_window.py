@@ -10,9 +10,11 @@ from typing import Optional
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import (
+    QHBoxLayout,
     QLabel,
     QMainWindow,
     QMessageBox,
+    QScrollArea,
     QStatusBar,
     QTabWidget,
     QVBoxLayout,
@@ -29,10 +31,11 @@ class MainWindow(QMainWindow):
     Hauptfenster der Anwendung
 
     Features:
-    - Tab-basierte Navigation (Backup, Restore, Settings, Logs)
+    - Tab-basierte Navigation (Backup, Restore, Settings, Logs, Info)
     - Statusleiste mit Event-Feedback
     - Eichel-Icon
     - Windows 11 Design
+    - Info-Tab mit Copyright, Lizenz, Contributing und Kontakt
     """
 
     def __init__(self):
@@ -82,6 +85,7 @@ class MainWindow(QMainWindow):
         self._create_restore_tab()
         self._create_settings_tab()
         self._create_logs_tab()
+        self._create_info_tab()
 
         layout.addWidget(self.tab_widget)
 
@@ -162,6 +166,188 @@ class MainWindow(QMainWindow):
 
         self.tab_widget.addTab(tab, "Logs")
         self.logs_tab = tab
+
+    def _create_info_tab(self) -> None:
+        """Erstellt Info-Tab mit Copyright, Lizenz, Contributing und Kontakt"""
+        tab = QWidget()
+        main_layout = QVBoxLayout(tab)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Scroll-Area für längere Inhalte
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+
+        # Content-Widget
+        content = QWidget()
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(40, 30, 40, 30)
+        layout.setSpacing(20)
+
+        # Header mit Eichel-Icon
+        header_layout = QHBoxLayout()
+        header_layout.setSpacing(15)
+
+        icon_path = Path(__file__).parent.parent.parent / "assets" / "scrat_icon.png"
+        if icon_path.exists():
+            from PyQt6.QtGui import QPixmap
+
+            icon_label = QLabel()
+            pixmap = QPixmap(str(icon_path)).scaled(
+                64,
+                64,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            icon_label.setPixmap(pixmap)
+            header_layout.addWidget(icon_label)
+
+        title_layout = QVBoxLayout()
+        title = QLabel("Scrat-Backup")
+        title.setStyleSheet("font-size: 32px; font-weight: bold;")
+        title_layout.addWidget(title)
+
+        version = QLabel("Version 0.2.0 (Beta)")
+        version.setStyleSheet("font-size: 14px; color: #666;")
+        title_layout.addWidget(version)
+
+        header_layout.addLayout(title_layout)
+        header_layout.addStretch()
+        layout.addLayout(header_layout)
+
+        # Beschreibung
+        desc = QLabel(
+            "🐿️ <i>Wie ein Eichhörnchen seine Eicheln bewahrt,<br>"
+            "so bewahren wir deine Daten.</i>"
+        )
+        desc.setWordWrap(True)
+        desc.setStyleSheet("font-size: 14px; color: #666; margin-bottom: 20px;")
+        layout.addWidget(desc)
+
+        # Separator
+        separator1 = QLabel()
+        separator1.setStyleSheet("background-color: #E1E1E1; max-height: 1px;")
+        layout.addWidget(separator1)
+
+        # Copyright
+        copyright_title = QLabel("📝 Copyright")
+        copyright_title.setStyleSheet("font-size: 18px; font-weight: bold; margin-top: 10px;")
+        layout.addWidget(copyright_title)
+
+        copyright_text = QLabel("© 2025 Scrat-Backup Projekt<br>" "Alle Rechte vorbehalten.")
+        copyright_text.setWordWrap(True)
+        copyright_text.setStyleSheet("font-size: 13px; color: #333; margin-left: 10px;")
+        layout.addWidget(copyright_text)
+
+        # Lizenz
+        license_title = QLabel("⚖️ Lizenz")
+        license_title.setStyleSheet("font-size: 18px; font-weight: bold; margin-top: 20px;")
+        layout.addWidget(license_title)
+
+        license_text = QLabel(
+            "<b>GNU General Public License v3.0 (GPLv3)</b><br><br>"
+            "Dieses Programm ist freie Software. Sie können es unter den Bedingungen<br>"
+            "der GNU General Public License, wie von der Free Software Foundation<br>"
+            "veröffentlicht, weitergeben und/oder modifizieren, entweder gemäß Version 3<br>"
+            "der Lizenz oder (nach Ihrer Option) jeder späteren Version.<br><br>"
+            "Die Veröffentlichung dieses Programms erfolgt in der Hoffnung, dass es Ihnen<br>"
+            "von Nutzen sein wird, aber <b>OHNE IRGENDEINE GARANTIE</b>, sogar ohne die<br>"
+            "implizite Garantie der <b>MARKTREIFE</b> oder der <b>VERWENDBARKEIT FÜR EINEN<br>"
+            "BESTIMMTEN ZWECK</b>. Details finden Sie in der GNU General Public License.<br><br>"
+            "Vollständige Lizenz: "
+            "<a href='https://www.gnu.org/licenses/gpl-3.0.html'>GNU GPLv3</a>"
+        )
+        license_text.setWordWrap(True)
+        license_text.setOpenExternalLinks(True)
+        license_text.setStyleSheet("font-size: 12px; color: #333; margin-left: 10px;")
+        layout.addWidget(license_text)
+
+        # Separator
+        separator2 = QLabel()
+        separator2.setStyleSheet("background-color: #E1E1E1; max-height: 1px;")
+        layout.addWidget(separator2)
+
+        # Mitmachen
+        contribute_title = QLabel("🤝 Mitmachen")
+        contribute_title.setStyleSheet("font-size: 18px; font-weight: bold; margin-top: 10px;")
+        layout.addWidget(contribute_title)
+
+        contribute_text = QLabel(
+            "Scrat-Backup ist ein Open-Source-Projekt und freut sich über Beiträge!<br><br>"
+            "<b>Wie du mitmachen kannst:</b><br>"
+            "• 🐛 Bugs melden auf GitHub Issues<br>"
+            "• 💡 Feature-Vorschläge einreichen<br>"
+            "• 🔧 Code beitragen via Pull Requests<br>"
+            "• 📖 Dokumentation verbessern<br>"
+            "• 🌍 Übersetzungen hinzufügen<br><br>"
+            "Alle Beiträge sind willkommen -egal ob groß oder klein!<br><br>"
+            "<b>Entwickler-Dokumentation:</b><br>"
+            "• CONTRIBUTING.md - Beitrags-Richtlinien<br>"
+            "• docs/developer_guide.md - Entwickler-Handbuch<br>"
+            "• docs/architecture.md - Architektur-Dokumentation"
+        )
+        contribute_text.setWordWrap(True)
+        contribute_text.setStyleSheet("font-size: 13px; color: #333; margin-left: 10px;")
+        layout.addWidget(contribute_text)
+
+        # Separator
+        separator3 = QLabel()
+        separator3.setStyleSheet("background-color: #E1E1E1; max-height: 1px;")
+        layout.addWidget(separator3)
+
+        # Kontakt
+        contact_title = QLabel("📧 Kontakt & Links")
+        contact_title.setStyleSheet("font-size: 18px; font-weight: bold; margin-top: 10px;")
+        layout.addWidget(contact_title)
+
+        contact_text = QLabel(
+            "<b>GitHub Repository:</b><br>"
+            "<a href='https://github.com/scrat-backup/scrat-backup'>github.com/scrat-backup/scrat-backup</a><br><br>"
+            "<b>Issues & Bug Reports:</b><br>"
+            "<a href='https://github.com/scrat-backup/scrat-backup/issues'>GitHub Issues</a><br><br>"
+            "<b>Diskussionen:</b><br>"
+            "<a href='https://github.com/scrat-backup/scrat-backup/discussions'>GitHub Discussions</a><br><br>"
+            "<b>Dokumentation:</b><br>"
+            "<a href='https://scrat-backup.readthedocs.io'>scrat-backup.readthedocs.io</a><br><br>"
+            "<b>E-Mail:</b><br>"
+            "scrat-backup@example.com"
+        )
+        contact_text.setWordWrap(True)
+        contact_text.setOpenExternalLinks(True)
+        contact_text.setStyleSheet("font-size: 13px; color: #333; margin-left: 10px;")
+        layout.addWidget(contact_text)
+
+        # Separator
+        separator4 = QLabel()
+        separator4.setStyleSheet("background-color: #E1E1E1; max-height: 1px;")
+        layout.addWidget(separator4)
+
+        # Credits
+        credits_title = QLabel("🎨 Credits")
+        credits_title.setStyleSheet("font-size: 18px; font-weight: bold; margin-top: 10px;")
+        layout.addWidget(credits_title)
+
+        credits_text = QLabel(
+            "Entwickelt mit:<br>"
+            "• Python 3.11+ & PyQt6<br>"
+            "• cryptography (AES-256-GCM Verschlüsselung)<br>"
+            "• py7zr (7z Komprimierung)<br>"
+            "• paramiko (SFTP Support)<br>"
+            "• SQLite (Metadaten-Verwaltung)<br><br>"
+            "Icon: Eichel 🌰 (Frucht der Eiche) - Symbol für Vorsorge und Bewahrung"
+        )
+        credits_text.setWordWrap(True)
+        credits_text.setStyleSheet("font-size: 12px; color: #666; margin-left: 10px;")
+        layout.addWidget(credits_text)
+
+        layout.addStretch()
+
+        # Scroll-Area Setup
+        scroll.setWidget(content)
+        main_layout.addWidget(scroll)
+
+        self.tab_widget.addTab(tab, "Info")
+        self.info_tab = tab
 
     def _create_statusbar(self) -> None:
         """Erstellt Statusleiste"""

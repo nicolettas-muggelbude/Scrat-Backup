@@ -72,11 +72,12 @@ class TestMainWindow:
     def test_tabs_created(self, qapp):
         """Test dass alle Tabs erstellt wurden"""
         window = MainWindow()
-        assert window.tab_widget.count() == 4
+        assert window.tab_widget.count() == 5
         assert window.tab_widget.tabText(0) == "Backup"
         assert window.tab_widget.tabText(1) == "Wiederherstellen"
         assert window.tab_widget.tabText(2) == "Einstellungen"
         assert window.tab_widget.tabText(3) == "Logs"
+        assert window.tab_widget.tabText(4) == "Info"
 
     def test_statusbar(self, qapp):
         """Test Statusleiste"""
