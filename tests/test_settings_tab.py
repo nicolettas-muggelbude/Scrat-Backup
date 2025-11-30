@@ -166,9 +166,7 @@ class TestSettingsTabSaveSettings:
     def test_save_general_settings(self, settings_tab, config_manager):
         """Test dass Allgemeine Einstellungen gespeichert werden"""
         # Ändere UI
-        settings_tab.language_combo.setCurrentIndex(
-            settings_tab.language_combo.findData("en")
-        )
+        settings_tab.language_combo.setCurrentIndex(settings_tab.language_combo.findData("en"))
         settings_tab.theme_combo.setCurrentIndex(settings_tab.theme_combo.findData("dark"))
         settings_tab.autostart_checkbox.setChecked(True)
         settings_tab.minimize_tray_checkbox.setChecked(True)
@@ -204,9 +202,7 @@ class TestSettingsTabSaveSettings:
     def test_save_persists_to_file(self, settings_tab, config_manager):
         """Test dass Speichern in Datei schreibt"""
         # Ändere UI
-        settings_tab.language_combo.setCurrentIndex(
-            settings_tab.language_combo.findData("en")
-        )
+        settings_tab.language_combo.setCurrentIndex(settings_tab.language_combo.findData("en"))
 
         # Speichere
         settings_tab._save_settings()
@@ -254,9 +250,7 @@ class TestSettingsTabActions:
 
         # Ändere UI
         new_lang = "en" if original_lang != "en" else "de"
-        settings_tab.language_combo.setCurrentIndex(
-            settings_tab.language_combo.findData(new_lang)
-        )
+        settings_tab.language_combo.setCurrentIndex(settings_tab.language_combo.findData(new_lang))
 
         # Abbrechen
         with patch("src.gui.settings_tab.QMessageBox.information"):

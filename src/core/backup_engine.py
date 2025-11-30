@@ -406,8 +406,7 @@ class BackupEngine:
 
                 # Filtere nach source_path
                 previous_files_list = [
-                    f for f in all_previous_files
-                    if f["source_path"].startswith(str(source_path))
+                    f for f in all_previous_files if f["source_path"].startswith(str(source_path))
                 ]
 
                 # Konvertiere zu Dict für Scanner
@@ -649,9 +648,7 @@ class BackupEngine:
             # Sende Kopie, nicht Referenz (wichtig für korrekte Progress-Tracking)
             from dataclasses import replace
 
-            progress_copy = replace(
-                progress, errors=progress.errors.copy()  # Auch errors kopieren
-            )
+            progress_copy = replace(progress, errors=progress.errors.copy())  # Auch errors kopieren
             self.progress_callback(progress_copy)
 
         logger.debug(

@@ -317,12 +317,8 @@ class SettingsTab(QWidget):
         )
 
         # Backup
-        self.default_dest_edit.setText(
-            self.config_manager.get("backup", "default_destination", "")
-        )
-        self.compression_spin.setValue(
-            self.config_manager.get("backup", "compression_level", 5)
-        )
+        self.default_dest_edit.setText(self.config_manager.get("backup", "default_destination", ""))
+        self.compression_spin.setValue(self.config_manager.get("backup", "compression_level", 5))
         self.split_size_spin.setValue(
             self.config_manager.get("backup", "archive_split_size_mb", 100)
         )
@@ -356,9 +352,7 @@ class SettingsTab(QWidget):
         # Allgemein
         self.config_manager.set("general", "language", self.language_combo.currentData())
         self.config_manager.set("general", "theme", self.theme_combo.currentData())
-        self.config_manager.set(
-            "general", "start_with_system", self.autostart_checkbox.isChecked()
-        )
+        self.config_manager.set("general", "start_with_system", self.autostart_checkbox.isChecked())
         self.config_manager.set(
             "general", "minimize_to_tray", self.minimize_tray_checkbox.isChecked()
         )
@@ -402,9 +396,7 @@ class SettingsTab(QWidget):
 
         except Exception as e:
             logger.error(f"Fehler beim Speichern: {e}", exc_info=True)
-            QMessageBox.critical(
-                self, "Fehler", f"Fehler beim Speichern der Einstellungen:\n{e}"
-            )
+            QMessageBox.critical(self, "Fehler", f"Fehler beim Speichern der Einstellungen:\n{e}")
 
     def _on_cancel(self) -> None:
         """Verwirft Änderungen"""

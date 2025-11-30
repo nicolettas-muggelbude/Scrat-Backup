@@ -26,6 +26,7 @@ from src.gui.backup_tab import BackupTab
 from src.gui.event_bus import get_event_bus
 from src.gui.restore_tab import RestoreTab
 from src.gui.settings_tab import SettingsTab
+from src.gui.system_tray import SystemTray
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,7 @@ class MainWindow(QMainWindow):
         self._setup_window()
         self._create_tabs()
         self._create_statusbar()
+        self._create_system_tray()
         self._connect_events()
 
         logger.info("Hauptfenster initialisiert")
@@ -332,6 +334,22 @@ class MainWindow(QMainWindow):
 
         logger.debug("Statusleiste erstellt")
 
+    def _create_system_tray(self) -> None:
+        """Erstellt System Tray Icon"""
+        self.system_tray = SystemTray(self)
+
+        # Verbinde Tray-Signals
+        self.system_tray.show_main_window.connect(self._on_tray_show_window)
+        self.system_tray.start_backup.connect(self._on_tray_start_backup)
+        self.system_tray.start_restore.connect(self._on_tray_start_restore)
+        self.system_tray.show_settings.connect(self._on_tray_show_settings)
+        self.system_tray.quit_application.connect(self._on_tray_quit)
+
+        # Zeige Tray-Icon
+        self.system_tray.show()
+
+        logger.debug("System Tray Icon erstellt")
+
     def _connect_events(self) -> None:
         """Verbindet Event-Bus-Signals mit Slots"""
         # Backup-Events
@@ -363,12 +381,15 @@ class MainWindow(QMainWindow):
             percent = progress.progress_percentage
             phase = getattr(progress, "phase", "backup")
             self.status_label.setText(f"Backup läuft: {phase} - {percent:.1f}%")
+            self.system_tray.update_tooltip(f"Backup: {percent:.0f}%")
 
     def _on_backup_completed(self, result) -> None:
         """Handler für Backup-Completion"""
         files = getattr(result, "files_backed_up", 0)
         duration = getattr(result, "duration_seconds", 0)
         self.status_label.setText(f"Backup abgeschlossen: {files} Dateien in {duration:.1f}s")
+        self.system_tray.update_tooltip("Bereit")
+        self.system_tray.show_backup_completed(files_count=files, duration=duration)
         QMessageBox.information(
             self,
             "Backup erfolgreich",
@@ -379,7 +400,9 @@ class MainWindow(QMainWindow):
     def _on_backup_failed(self, message: str, error: Optional[Exception]) -> None:
         """Handler für Backup-Fehler"""
         self.status_label.setText(f"Backup fehlgeschlagen: {message}")
+        self.system_tray.update_tooltip("Bereit")
         error_text = str(error) if error else "Unbekannter Fehler"
+        self.system_tray.show_backup_failed(backup_name="Backup", error=error_text)
         QMessageBox.critical(self, "Backup fehlgeschlagen", f"{message}\n\nFehler: {error_text}")
 
     def _on_restore_progress(self, progress) -> None:
@@ -434,6 +457,39 @@ class MainWindow(QMainWindow):
         self.status_label.setText(f"Storage-Fehler: {message}")
         logger.error(f"Storage-Fehler: {message}", exc_info=error)
 
+    def _on_tray_show_window(self) -> None:
+        """Handler für Tray: Hauptfenster anzeigen"""
+        self.show()
+        self.raise_()
+        self.activateWindow()
+        logger.debug("Hauptfenster aus Tray wiederhergestellt")
+
+    def _on_tray_start_backup(self) -> None:
+        """Handler für Tray: Backup starten"""
+        self.show()
+        self.raise_()
+        self.tab_widget.setCurrentWidget(self.backup_tab)
+        logger.debug("Backup-Tab aus Tray geöffnet")
+
+    def _on_tray_start_restore(self) -> None:
+        """Handler für Tray: Restore starten"""
+        self.show()
+        self.raise_()
+        self.tab_widget.setCurrentWidget(self.restore_tab)
+        logger.debug("Restore-Tab aus Tray geöffnet")
+
+    def _on_tray_show_settings(self) -> None:
+        """Handler für Tray: Einstellungen anzeigen"""
+        self.show()
+        self.raise_()
+        self.tab_widget.setCurrentWidget(self.settings_tab)
+        logger.debug("Settings-Tab aus Tray geöffnet")
+
+    def _on_tray_quit(self) -> None:
+        """Handler für Tray: Anwendung beenden"""
+        self.quit_requested = True  # Flag für closeEvent
+        self.close()
+
     def show_welcome_wizard(self) -> bool:
         """
         Zeigt Setup-Wizard (bei erstem Start)
@@ -446,9 +502,27 @@ class MainWindow(QMainWindow):
         return True
 
     def closeEvent(self, event) -> None:
-        """Handler für Fenster-Schließen"""
-        # TODO: Prüfe ob laufende Operationen existieren
-        # TODO: Frage Benutzer ob wirklich beenden
+        """
+        Handler für Fenster-Schließen
 
-        logger.info("Anwendung wird beendet")
-        event.accept()
+        Minimiert zu Tray statt zu beenden (außer über Tray-Menu "Beenden")
+        """
+        # Prüfe ob wirklich beenden oder nur minimieren
+        if hasattr(self, "quit_requested") and self.quit_requested:
+            # Wirklich beenden (über Tray-Menu)
+            logger.info("Anwendung wird beendet")
+            event.accept()
+        else:
+            # Minimiere zu Tray
+            logger.debug("Hauptfenster minimiert zu Tray")
+            self.hide()
+            event.ignore()
+
+            # Zeige Notification (nur beim ersten Mal)
+            if not hasattr(self, "tray_notification_shown"):
+                self.system_tray.show_message(
+                    "Scrat-Backup läuft weiter",
+                    "Die Anwendung läuft im Hintergrund weiter.\n"
+                    "Doppelklick auf das Tray-Icon zum Öffnen.",
+                )
+                self.tray_notification_shown = True
