@@ -4,8 +4,9 @@ Führt Benutzer durch initiales Setup
 """
 
 import logging
+import platform
 from pathlib import Path
-from typing import Optional
+from typing import List, Optional
 
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
@@ -16,6 +17,8 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QPushButton,
     QSpinBox,
     QVBoxLayout,
@@ -54,6 +57,12 @@ class WelcomePage(QWizardPage):
             icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             layout.addWidget(icon_label)
 
+        # Version
+        version_label = QLabel("<b>Version 0.1.0-dev</b>")
+        version_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        version_label.setStyleSheet("color: #666; font-size: 14px; margin: 10px;")
+        layout.addWidget(version_label)
+
         # Beschreibung
         desc = QLabel(
             "<b>Scrat-Backup</b> schützt deine Daten mit verschlüsselten,\n"
@@ -81,26 +90,41 @@ class SourcesPage(QWizardPage):
         info = QLabel("Du kannst später weitere Ordner hinzufügen oder entfernen.")
         layout.addWidget(info)
 
-        # Beispiel-Ordner mit Checkboxes
-        self.home_checkbox = QCheckBox(f"Heimverzeichnis ({Path.home()})")
-        self.home_checkbox.setChecked(True)
-        layout.addWidget(self.home_checkbox)
+        # Persönliche Ordner (Bibliotheken)
+        personal_label = QLabel("<b>Persönliche Ordner:</b>")
+        layout.addWidget(personal_label)
 
-        self.documents_checkbox = QCheckBox(f"Dokumente ({Path.home() / 'Documents'})")
+        self.documents_checkbox = QCheckBox("📄 Dokumente")
         self.documents_checkbox.setChecked(True)
         layout.addWidget(self.documents_checkbox)
 
-        self.pictures_checkbox = QCheckBox(f"Bilder ({Path.home() / 'Pictures'})")
+        self.pictures_checkbox = QCheckBox("🖼️ Bilder")
         layout.addWidget(self.pictures_checkbox)
 
-        # Benutzerdefinierter Ordner
+        self.music_checkbox = QCheckBox("🎵 Musik")
+        layout.addWidget(self.music_checkbox)
+
+        self.videos_checkbox = QCheckBox("🎬 Videos")
+        layout.addWidget(self.videos_checkbox)
+
+        self.desktop_checkbox = QCheckBox("🖥️ Desktop")
+        layout.addWidget(self.desktop_checkbox)
+
+        self.downloads_checkbox = QCheckBox("📥 Downloads")
+        layout.addWidget(self.downloads_checkbox)
+
+        layout.addSpacing(15)
+
+        # Weitere Ordner
+        custom_label = QLabel("<b>Weitere Ordner:</b>")
+        layout.addWidget(custom_label)
+
         custom_layout = QHBoxLayout()
-        custom_layout.addWidget(QLabel("Eigener Ordner:"))
         self.custom_path = QLineEdit()
-        self.custom_path.setPlaceholderText("/pfad/zu/ordner")
+        self.custom_path.setPlaceholderText("Ordner-Pfad eingeben oder durchsuchen...")
         custom_layout.addWidget(self.custom_path)
 
-        browse_btn = QPushButton("Durchsuchen...")
+        browse_btn = QPushButton("📁 Durchsuchen...")
         browse_btn.clicked.connect(self._browse_source)
         custom_layout.addWidget(browse_btn)
 
@@ -109,9 +133,12 @@ class SourcesPage(QWizardPage):
         self.setLayout(layout)
 
         # Registriere Felder für Wizard
-        self.registerField("source_home", self.home_checkbox)
         self.registerField("source_documents", self.documents_checkbox)
         self.registerField("source_pictures", self.pictures_checkbox)
+        self.registerField("source_music", self.music_checkbox)
+        self.registerField("source_videos", self.videos_checkbox)
+        self.registerField("source_desktop", self.desktop_checkbox)
+        self.registerField("source_downloads", self.downloads_checkbox)
         self.registerField("source_custom", self.custom_path)
 
     def _browse_source(self):
@@ -131,30 +158,60 @@ class DestinationPage(QWizardPage):
 
         layout = QVBoxLayout()
 
-        # Storage-Typ
+        # Speicher-Ziel
         type_layout = QHBoxLayout()
-        type_layout.addWidget(QLabel("Speicher-Typ:"))
+        type_layout.addWidget(QLabel("Speicher-Ziel:"))
         self.storage_type = QComboBox()
         self.storage_type.addItems(
-            ["Lokales Laufwerk / USB", "SFTP (SSH)", "Netzwerk-Freigabe (geplant)"]
+            [
+                "Lokales Laufwerk / USB",
+                "SFTP (SSH)",
+                "WebDAV (Nextcloud, ownCloud)",
+                "Netzwerk-Freigabe (geplant)",
+            ]
         )
         self.storage_type.currentIndexChanged.connect(self._on_storage_type_changed)
         type_layout.addWidget(self.storage_type)
         layout.addLayout(type_layout)
 
-        # Lokales Laufwerk
+        # === Lokales Laufwerk ===
         self.local_widget = QWidget()
-        local_layout = QHBoxLayout(self.local_widget)
-        local_layout.addWidget(QLabel("Ziel-Ordner:"))
+        local_layout = QVBoxLayout(self.local_widget)
+
+        # Erkannte Laufwerke
+        drives = self._detect_drives()
+        if drives:
+            drives_label = QLabel("<b>Erkannte Laufwerke:</b>")
+            local_layout.addWidget(drives_label)
+
+            self.drives_list = QListWidget()
+            self.drives_list.setMaximumHeight(100)
+            for drive_path, drive_label in drives:
+                item = QListWidgetItem(f"{drive_label} ({drive_path})")
+                item.setData(Qt.ItemDataRole.UserRole, drive_path)
+                self.drives_list.addItem(item)
+            self.drives_list.itemClicked.connect(self._on_drive_selected)
+            local_layout.addWidget(self.drives_list)
+
+            local_layout.addSpacing(10)
+
+        # Manueller Pfad
+        manual_label = QLabel("<b>Oder manuell eingeben:</b>")
+        local_layout.addWidget(manual_label)
+
+        path_layout = QHBoxLayout()
+        path_layout.addWidget(QLabel("Ziel-Ordner:"))
         self.local_path = QLineEdit()
-        self.local_path.setPlaceholderText("/mnt/usb/backups oder D:\\Backups")
-        local_layout.addWidget(self.local_path)
-        browse_btn = QPushButton("Durchsuchen...")
+        self.local_path.setPlaceholderText("D:\\Backups")
+        path_layout.addWidget(self.local_path)
+        browse_btn = QPushButton("📁 Durchsuchen...")
         browse_btn.clicked.connect(self._browse_destination)
-        local_layout.addWidget(browse_btn)
+        path_layout.addWidget(browse_btn)
+        local_layout.addLayout(path_layout)
+
         layout.addWidget(self.local_widget)
 
-        # SFTP (versteckt initial)
+        # === SFTP (versteckt initial) ===
         self.sftp_widget = QWidget()
         sftp_layout = QVBoxLayout(self.sftp_widget)
 
@@ -179,12 +236,39 @@ class DestinationPage(QWizardPage):
         path_layout = QHBoxLayout()
         path_layout.addWidget(QLabel("Remote-Pfad:"))
         self.sftp_path = QLineEdit()
-        self.sftp_path.setPlaceholderText("/home/user/backups")
+        self.sftp_path.setPlaceholderText("/backups")
         path_layout.addWidget(self.sftp_path)
         sftp_layout.addLayout(path_layout)
 
         self.sftp_widget.setVisible(False)
         layout.addWidget(self.sftp_widget)
+
+        # === WebDAV (versteckt initial) ===
+        self.webdav_widget = QWidget()
+        webdav_layout = QVBoxLayout(self.webdav_widget)
+
+        url_layout = QHBoxLayout()
+        url_layout.addWidget(QLabel("WebDAV-URL:"))
+        self.webdav_url = QLineEdit()
+        self.webdav_url.setPlaceholderText("https://cloud.example.com/remote.php/dav/files/user/")
+        url_layout.addWidget(self.webdav_url)
+        webdav_layout.addLayout(url_layout)
+
+        user_layout = QHBoxLayout()
+        user_layout.addWidget(QLabel("Benutzername:"))
+        self.webdav_user = QLineEdit()
+        user_layout.addWidget(self.webdav_user)
+        webdav_layout.addLayout(user_layout)
+
+        path_layout = QHBoxLayout()
+        path_layout.addWidget(QLabel("Remote-Pfad:"))
+        self.webdav_path = QLineEdit()
+        self.webdav_path.setPlaceholderText("Backups")
+        path_layout.addWidget(self.webdav_path)
+        webdav_layout.addLayout(path_layout)
+
+        self.webdav_widget.setVisible(False)
+        layout.addWidget(self.webdav_widget)
 
         layout.addStretch()
         self.setLayout(layout)
@@ -196,6 +280,65 @@ class DestinationPage(QWizardPage):
         self.registerField("dest_sftp_port", self.sftp_port)
         self.registerField("dest_sftp_user", self.sftp_user)
         self.registerField("dest_sftp_path", self.sftp_path)
+        self.registerField("dest_webdav_url", self.webdav_url)
+        self.registerField("dest_webdav_user", self.webdav_user)
+        self.registerField("dest_webdav_path", self.webdav_path)
+
+    def _detect_drives(self) -> List[tuple]:
+        """
+        Erkennt verfügbare Laufwerke
+
+        Returns:
+            Liste von (Pfad, Label) Tupeln
+        """
+        drives = []
+
+        if platform.system() == "Windows":
+            # Windows: Laufwerksbuchstaben A-Z
+            import string
+
+            for letter in string.ascii_uppercase:
+                drive_path = f"{letter}:\\"
+                if Path(drive_path).exists():
+                    # Versuche Typ zu erkennen
+                    try:
+                        import ctypes
+
+                        drive_type = ctypes.windll.kernel32.GetDriveTypeW(drive_path)
+                        # 2 = Removable, 3 = Fixed, 4 = Network, 5 = CD-ROM
+                        if drive_type == 2:
+                            label = f"💾 {letter}: (USB/Wechseldatenträger)"
+                        elif drive_type == 3:
+                            label = f"🖴 {letter}: (Festplatte)"
+                        elif drive_type == 4:
+                            label = f"🌐 {letter}: (Netzlaufwerk)"
+                        else:
+                            label = f"{letter}:"
+                        drives.append((drive_path, label))
+                    except Exception:
+                        drives.append((drive_path, f"{letter}:"))
+        else:
+            # Linux/Unix: /media und /mnt
+            media_path = Path("/media")
+            if media_path.exists():
+                for drive in media_path.iterdir():
+                    if drive.is_dir():
+                        drives.append((str(drive), f"💾 {drive.name}"))
+
+            mnt_path = Path("/mnt")
+            if mnt_path.exists():
+                for drive in mnt_path.iterdir():
+                    if drive.is_dir() and drive.name not in ["wsl", "wslg"]:
+                        drives.append((str(drive), f"💾 {drive.name}"))
+
+        return drives
+
+    def _on_drive_selected(self, item: QListWidgetItem):
+        """Handler für Laufwerk-Auswahl"""
+        drive_path = item.data(Qt.ItemDataRole.UserRole)
+        # Füge /Backups Unterordner hinzu
+        backup_path = str(Path(drive_path) / "Backups")
+        self.local_path.setText(backup_path)
 
     def _browse_destination(self):
         """Öffnet Ordner-Auswahl-Dialog"""
@@ -208,12 +351,19 @@ class DestinationPage(QWizardPage):
         if index == 0:  # Lokal
             self.local_widget.setVisible(True)
             self.sftp_widget.setVisible(False)
+            self.webdav_widget.setVisible(False)
         elif index == 1:  # SFTP
             self.local_widget.setVisible(False)
             self.sftp_widget.setVisible(True)
-        else:
+            self.webdav_widget.setVisible(False)
+        elif index == 2:  # WebDAV
             self.local_widget.setVisible(False)
             self.sftp_widget.setVisible(False)
+            self.webdav_widget.setVisible(True)
+        else:  # Netzwerk-Freigabe
+            self.local_widget.setVisible(False)
+            self.sftp_widget.setVisible(False)
+            self.webdav_widget.setVisible(False)
 
 
 class EncryptionPage(QWizardPage):
@@ -222,7 +372,7 @@ class EncryptionPage(QWizardPage):
     def __init__(self):
         super().__init__()
         self.setTitle("Verschlüsselung einrichten")
-        self.setSubTitle("Scrat-Backup verschlüsselt ALLE Backups mit AES-256-GCM.")
+        self.setSubTitle("Scrat-Backup verschlüsselt ALLE Backups.")
 
         layout = QVBoxLayout()
 
@@ -287,6 +437,15 @@ class EncryptionPage(QWizardPage):
         else:
             self.strength_label.setText("✅ Stark")
 
+    def initializePage(self):
+        """Wird aufgerufen wenn Seite angezeigt wird - stellt Passwort wieder her"""
+        wizard = self.wizard()
+        # Stelle Passwörter wieder her (wenn vorhanden)
+        saved_password = wizard.field("password")
+        if saved_password:
+            self.password.setText(saved_password)
+            self.password_confirm.setText(saved_password)
+
     def validatePage(self) -> bool:
         """Validiert Passwort-Seite"""
         password = self.password.text()
@@ -329,14 +488,32 @@ class SchedulePage(QWizardPage):
         interval_layout.addWidget(self.interval)
         options_layout.addLayout(interval_layout)
 
-        # Retention
+        # Retention (Aufbewahrung)
+        retention_label = QLabel("<b>Wie viele alte Backups behalten?</b>")
+        options_layout.addWidget(retention_label)
+
+        retention_help = QLabel(
+            "Legt fest, wie viele Backup-Versionen gespeichert bleiben.\n"
+            "Ältere Backups werden automatisch gelöscht."
+        )
+        retention_help.setStyleSheet("color: #666; font-size: 11px;")
+        retention_help.setWordWrap(True)
+        options_layout.addWidget(retention_help)
+
         retention_layout = QHBoxLayout()
-        retention_layout.addWidget(QLabel("Alte Backups behalten:"))
+        retention_layout.addWidget(QLabel("Anzahl Versionen:"))
         self.retention = QSpinBox()
         self.retention.setRange(1, 100)
         self.retention.setValue(3)
-        self.retention.setSuffix(" Versionen")
+        self.retention.setSuffix(" Backups")
         retention_layout.addWidget(self.retention)
+        retention_layout.addStretch()
+
+        # Empfehlung
+        retention_rec = QLabel("💡 Empfohlen: 3-7 Backups")
+        retention_rec.setStyleSheet("color: #0066cc; font-size: 11px;")
+        retention_layout.addWidget(retention_rec)
+
         options_layout.addLayout(retention_layout)
 
         self.options_widget.setEnabled(False)
@@ -381,23 +558,28 @@ class SummaryPage(QWizardPage):
 
         # Quellen
         sources = []
-        if wizard.field("source_home"):
-            sources.append(str(Path.home()))
         if wizard.field("source_documents"):
-            sources.append(str(Path.home() / "Documents"))
+            sources.append("📄 Dokumente")
         if wizard.field("source_pictures"):
-            sources.append(str(Path.home() / "Pictures"))
+            sources.append("🖼️ Bilder")
+        if wizard.field("source_music"):
+            sources.append("🎵 Musik")
+        if wizard.field("source_videos"):
+            sources.append("🎬 Videos")
+        if wizard.field("source_desktop"):
+            sources.append("🖥️ Desktop")
+        if wizard.field("source_downloads"):
+            sources.append("📥 Downloads")
         custom = wizard.field("source_custom")
         if custom:
-            sources.append(custom)
+            sources.append(f"📁 {custom}")
 
-        summary_text += (
-            f"<p><b>Backup-Quellen:</b><br>{'<br>'.join(sources) if sources else 'Keine'}</p>"
-        )
+        sources_list = "<br>  • ".join(sources) if sources else "Keine"
+        summary_text += f"<p><b>Backup-Quellen:</b><br>  • {sources_list}</p>"
 
         # Ziel
         storage_type = wizard.field("storage_type")
-        summary_text += f"<p><b>Speicher-Typ:</b> {storage_type}</p>"
+        summary_text += f"<p><b>Speicher-Ziel:</b> {storage_type}</p>"
 
         if "Lokal" in storage_type:
             dest = wizard.field("dest_local")
@@ -408,12 +590,22 @@ class SummaryPage(QWizardPage):
             user = wizard.field("dest_sftp_user")
             path = wizard.field("dest_sftp_path")
             summary_text += f"<p><b>SFTP-Server:</b> {user}@{host}:{port}{path}</p>"
+        elif "WebDAV" in storage_type:
+            url = wizard.field("dest_webdav_url")
+            user = wizard.field("dest_webdav_user")
+            path = wizard.field("dest_webdav_path")
+            summary_text += (
+                f"<p><b>WebDAV-Server:</b> {url}<br>"
+                f"<b>Benutzer:</b> {user}<br><b>Pfad:</b> {path}</p>"
+            )
 
         # Auto-Backup
         if wizard.field("auto_backup"):
             interval = wizard.field("backup_interval")
             retention = wizard.field("backup_retention")
-            summary_text += f"<p><b>Automatische Backups:</b> {interval}, {retention} Versionen</p>"
+            summary_text += (
+                f"<p><b>Automatische Backups:</b> {interval}, {retention} Backups behalten</p>"
+            )
         else:
             summary_text += "<p><b>Automatische Backups:</b> Deaktiviert</p>"
 
@@ -441,6 +633,12 @@ class SetupWizard(QWizard):
         self.setOption(QWizard.WizardOption.HaveHelpButton, False)
         self.setMinimumSize(700, 500)
 
+        # Button-Texte auf Deutsch
+        self.setButtonText(QWizard.WizardButton.BackButton, "Zurück")
+        self.setButtonText(QWizard.WizardButton.NextButton, "Weiter")
+        self.setButtonText(QWizard.WizardButton.FinishButton, "Fertig")
+        self.setButtonText(QWizard.WizardButton.CancelButton, "Abbrechen")
+
         # Seiten hinzufügen
         self.addPage(WelcomePage())
         self.addPage(SourcesPage())
@@ -465,13 +663,21 @@ class SetupWizard(QWizard):
             "schedule": {},
         }
 
-        # Quellen
-        if self.field("source_home"):
-            config["sources"].append(str(Path.home()))
+        # Quellen - Persönliche Ordner
         if self.field("source_documents"):
             config["sources"].append(str(Path.home() / "Documents"))
         if self.field("source_pictures"):
             config["sources"].append(str(Path.home() / "Pictures"))
+        if self.field("source_music"):
+            config["sources"].append(str(Path.home() / "Music"))
+        if self.field("source_videos"):
+            config["sources"].append(str(Path.home() / "Videos"))
+        if self.field("source_desktop"):
+            config["sources"].append(str(Path.home() / "Desktop"))
+        if self.field("source_downloads"):
+            config["sources"].append(str(Path.home() / "Downloads"))
+
+        # Weitere Ordner
         custom = self.field("source_custom")
         if custom:
             config["sources"].append(custom)
@@ -490,6 +696,13 @@ class SetupWizard(QWizard):
                 "port": self.field("dest_sftp_port"),
                 "user": self.field("dest_sftp_user"),
                 "path": self.field("dest_sftp_path"),
+            }
+        elif "WebDAV" in storage_type:
+            config["storage"] = {
+                "type": "webdav",
+                "url": self.field("dest_webdav_url"),
+                "user": self.field("dest_webdav_user"),
+                "path": self.field("dest_webdav_path"),
             }
 
         # Verschlüsselung
