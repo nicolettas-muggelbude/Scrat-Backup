@@ -45,6 +45,45 @@
   - Lösungsvorschläge anbieten
   - "Weitere Hilfe" Button → öffnet FAQ
 
+### Barrierefreiheit (Accessibility)
+
+- [ ] **Tastatur-Navigation**
+  - Alle UI-Elemente per Tab-Taste erreichbar
+  - Tastenkombinationen für häufige Aktionen (z.B. Strg+B für Backup)
+  - Focus-Indikatoren deutlich sichtbar
+  - Keine Maus-Only-Funktionen
+
+- [ ] **Screen-Reader-Unterstützung**
+  - Alle Buttons und Felder mit aussagekräftigen Labels
+  - Alt-Texte für Icons
+  - Status-Ansagen bei langen Operationen ("Backup läuft, 45% abgeschlossen")
+  - ARIA-ähnliche Semantik in PyQt6 (wo möglich)
+
+- [ ] **Visuelle Barrierefreiheit**
+  - Kontrast-Verhältnis mindestens 4.5:1 (WCAG AA Standard)
+  - Hochkontrast-Modus (Windows-Integration)
+  - Schriftgröße anpassbar (Strg++ / Strg+-)
+  - Keine Information nur durch Farbe vermittelt
+  - Icons + Text (nicht nur Icons)
+
+- [ ] **Motorische Einschränkungen**
+  - Große Klickflächen (mindestens 44×44 Pixel)
+  - Großzügige Abstände zwischen interaktiven Elementen
+  - Kein doppelter Klick erforderlich
+  - Verzögerung vor kritischen Aktionen ("Löschen" mit Bestätigung)
+
+- [ ] **Kognitive Barrierefreiheit**
+  - Einfache, klare Sprache
+  - Konsistente Navigation
+  - Fehlertoleranz (Undo für kritische Aktionen)
+  - Fortschrittsanzeigen bei langen Vorgängen
+
+- [ ] **Testen mit Assistiven Technologien**
+  - NVDA Screen-Reader (Windows, kostenlos)
+  - Windows-Bildschirmlupe
+  - Windows-Sprachausgabe
+  - Nur-Tastatur-Navigation testen
+
 ## Priorität: Mittel
 
 ### Stabilität & Tests
