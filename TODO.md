@@ -137,6 +137,104 @@
   - "Google Drive", "Dropbox", "OneDrive" Buttons
   - Automatische rclone-Konfiguration (wenn möglich)
 
+## Nach dem Release 🚀
+
+### Marketing & Community
+
+- [ ] **Projektwebseite erstellen**
+  - Domain registrieren (z.B. scrat-backup.org)
+  - Landingpage mit Features
+    - "Schütze deine Daten wie Scrat seine Eicheln! 🐿️"
+    - Feature-Highlights mit Icons
+    - Screenshots der GUI
+    - Download-Buttons (Windows 10/11)
+  - Dokumentation online
+    - Benutzerhandbuch
+    - FAQ
+    - Entwickler-Dokumentation
+  - Blog/News-Bereich
+    - Release-Ankündigungen
+    - Tutorials
+    - Best Practices
+  - GitHub-Integration
+    - Link zu Repository
+    - Issue-Tracker
+    - Roadmap
+  - Kontakt/Support
+    - E-Mail
+    - Discord/Matrix?
+    - GitHub Discussions
+
+- [ ] **Social Media Content**
+  - **Twitter/X**
+    - Release-Ankündigung mit Screenshots
+    - Tipps & Tricks (Thread)
+    - "Feature Friday" (wöchentlich)
+    - Community-Feedback teilen
+  - **Reddit**
+    - r/selfhosted - "Scrat-Backup: Open-Source Backup für Windows"
+    - r/DataHoarder - "Einfache Backup-Lösung"
+    - r/opensource - "Neues GPLv3-Projekt"
+  - **YouTube**
+    - Projektvorstellung (5 Minuten)
+    - "Scrat-Backup einrichten" Tutorial
+    - Feature-Demos
+    - Behind-the-Scenes (Entwicklung)
+  - **LinkedIn**
+    - Professionelle Projekt-Ankündigung
+    - Tech-Blog-Posts
+  - **Mastodon**
+    - Dezentrale Alternative zu Twitter
+    - Tech-Community sehr aktiv
+
+- [ ] **Open-Source-Verzeichnisse**
+  - AlternativeTo.net
+  - SourceForge (Mirror)
+  - Softpedia
+  - GitHub Awesome-Lists (z.B. awesome-selfhosted)
+  - FossHub
+
+- [ ] **Pressearbeit**
+  - **Pressemitteilung schreiben**
+    - "Scrat-Backup: Neue Open-Source-Backup-Lösung für Windows"
+    - Feature-Liste
+    - Download-Links
+  - **Tech-Blogs kontaktieren**
+    - Heise.de (deutschsprachig)
+    - Golem.de
+    - t3n.de
+    - Netzpolitik.org (Open-Source-Fokus)
+  - **Internationale Medien**
+    - It's FOSS
+    - OMG! Ubuntu (auch für Windows relevant)
+    - ghacks.net
+
+- [ ] **Community aufbauen**
+  - GitHub Discussions aktivieren
+  - Discord/Matrix-Server (optional)
+  - Contributor-Guide schreiben
+  - "Good First Issue" Labels für Einsteiger
+  - Code of Conduct
+  - Contribution Guidelines
+
+- [ ] **Produkthunt Launch** (optional)
+  - Produkthunt-Eintrag vorbereiten
+  - Screenshots, GIFs, Video
+  - "Hunter" finden (jemand mit vielen Followern)
+  - Launch-Tag planen (Dienstag-Donnerstag am besten)
+
+### Analytics & Feedback
+
+- [ ] **Nutzungsstatistiken (opt-in, anonym)**
+  - Beliebte Features tracken
+  - Fehler-Reporting (Sentry?)
+  - Download-Zahlen
+
+- [ ] **Feedback-Kanäle**
+  - In-App Feedback-Button
+  - User-Umfragen
+  - Feature-Requests (GitHub Issues)
+
 ## Abgeschlossen ✅
 
 - [x] Setup-Wizard komplett überarbeitet (2025-12-02)
@@ -152,3 +250,4 @@
 
 **Letzte Aktualisierung:** 2025-12-02
 **Version:** 0.1.0-dev
+**Status:** Pre-Release (Phase 11: Polishing)
