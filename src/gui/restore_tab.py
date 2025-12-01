@@ -165,6 +165,22 @@ class RestoreTab(QWidget):
 
         layout.addLayout(pw_layout)
 
+        # Passwort-Speicher-Checkbox
+        from src.utils.credential_manager import get_credential_manager
+
+        self.credential_manager = get_credential_manager()
+        if self.credential_manager.available:
+            self.save_password_checkbox = QCheckBox("Passwort sicher speichern")
+            layout.addWidget(self.save_password_checkbox)
+
+            # Lade gespeichertes Passwort
+            saved_password = self.credential_manager.get_password()
+            if saved_password:
+                self.password_edit.setText(saved_password)
+                self.save_password_checkbox.setChecked(True)
+        else:
+            self.save_password_checkbox = None
+
         # Optionen
         self.overwrite_checkbox = QCheckBox("Existierende Dateien überschreiben")
         self.overwrite_checkbox.setChecked(False)
@@ -360,6 +376,13 @@ class RestoreTab(QWidget):
         if not password:
             QMessageBox.warning(self, "Fehler", "Bitte Passwort eingeben")
             return
+
+        # Passwort speichern wenn gewünscht
+        if self.save_password_checkbox and self.save_password_checkbox.isChecked():
+            self.credential_manager.save_password(password)
+        elif self.save_password_checkbox and not self.save_password_checkbox.isChecked():
+            # Passwort löschen wenn Checkbox nicht gecheckt
+            self.credential_manager.delete_password()
 
         dest_path = Path(self.dest_path_edit.text())
         if not dest_path.parent.exists():

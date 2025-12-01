@@ -305,14 +305,11 @@ class BackupTab(QWidget):
         # Backup-Typ aus UI
         backup_type = self.type_combo.currentData()  # "full" oder "incremental"
 
-        # Passwort: Frage User (TODO: Windows Credential Manager)
-        from PyQt6.QtWidgets import QInputDialog
+        # Passwort: Frage User mit Speicher-Option
+        from src.gui.password_dialog import get_password
 
-        password, ok = QInputDialog.getText(
-            self,
-            "Verschlüsselungs-Passwort",
-            "Bitte gib das Backup-Passwort ein:",
-            echo=QLineEdit.EchoMode.Password,
+        password, ok = get_password(
+            self, title="Backup-Passwort", message="Bitte gib das Backup-Passwort ein:", show_save_option=True
         )
 
         if not ok or not password:
