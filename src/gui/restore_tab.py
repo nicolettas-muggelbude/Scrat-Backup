@@ -28,7 +28,7 @@ from PyQt6.QtWidgets import (
 )
 
 from src.core.metadata_manager import MetadataManager
-from src.core.restore_engine import RestoreEngine, RestoreProgress, RestoreResult
+from src.core.restore_engine import RestoreConfig, RestoreEngine, RestoreProgress, RestoreResult
 from src.gui.event_bus import get_event_bus
 
 logger = logging.getLogger(__name__)
@@ -83,6 +83,10 @@ class RestoreTab(QWidget):
         backup_group = self._create_backup_selection()
         layout.addWidget(backup_group, 1)  # Stretch-Faktor 1
 
+        # Backup-Details
+        details_group = self._create_details_section()
+        layout.addWidget(details_group)
+
         # Restore-Konfiguration
         config_group = self._create_config_section()
         layout.addWidget(config_group)
@@ -98,9 +102,9 @@ class RestoreTab(QWidget):
 
         # Table
         self.backup_table = QTableWidget()
-        self.backup_table.setColumnCount(5)
+        self.backup_table.setColumnCount(6)
         self.backup_table.setHorizontalHeaderLabels(
-            ["Datum/Uhrzeit", "Typ", "Dateien", "Größe", "Status"]
+            ["Datum/Uhrzeit", "Typ", "Dateien", "Größe", "Dauer", "Status"]
         )
 
         # Header-Konfiguration
@@ -110,14 +114,16 @@ class RestoreTab(QWidget):
         header.setSectionResizeMode(2, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
         header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+        header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
 
         # Einzelne Zeile auswählbar
         self.backup_table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
         self.backup_table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         self.backup_table.setSelectionMode(QTableWidget.SelectionMode.SingleSelection)
 
-        # Selection-Event
+        # Events
         self.backup_table.itemSelectionChanged.connect(self._on_backup_selected)
+        self.backup_table.itemDoubleClicked.connect(self._on_backup_double_clicked)
 
         layout.addWidget(self.backup_table)
 
@@ -132,6 +138,21 @@ class RestoreTab(QWidget):
         layout.addLayout(button_layout)
 
         group.setLayout(layout)
+        return group
+
+    def _create_details_section(self) -> QGroupBox:
+        """Erstellt Backup-Details-Bereich"""
+        group = QGroupBox("Backup-Details")
+        layout = QVBoxLayout()
+
+        # Details-Label
+        self.details_label = QLabel("Wähle ein Backup aus der Liste aus, um Details anzuzeigen.")
+        self.details_label.setWordWrap(True)
+        self.details_label.setStyleSheet("color: #666; padding: 10px;")
+        layout.addWidget(self.details_label)
+
+        group.setLayout(layout)
+        group.hide()  # Initial versteckt
         return group
 
     def _create_config_section(self) -> QGroupBox:
@@ -309,6 +330,9 @@ class RestoreTab(QWidget):
             backups = self.metadata_manager.list_backups(limit=50)
             completed_backups = [b for b in backups if b.get("status") == "completed"]
 
+            # Sortiere nach Datum (neueste zuerst)
+            completed_backups.sort(key=lambda b: b.get("timestamp", ""), reverse=True)
+
             # Table füllen
             self.backup_table.setRowCount(len(completed_backups))
 
@@ -336,9 +360,26 @@ class RestoreTab(QWidget):
                 size_str = f"{size_mb:.1f} MB"
                 self.backup_table.setItem(row, 3, QTableWidgetItem(size_str))
 
+                # Dauer
+                duration_seconds = backup.get("duration_seconds", 0)
+                if duration_seconds > 0:
+                    if duration_seconds < 60:
+                        duration_str = f"{int(duration_seconds)}s"
+                    elif duration_seconds < 3600:
+                        duration_str = (
+                            f"{int(duration_seconds / 60)}m {int(duration_seconds % 60)}s"
+                        )
+                    else:
+                        hours = int(duration_seconds / 3600)
+                        minutes = int((duration_seconds % 3600) / 60)
+                        duration_str = f"{hours}h {minutes}m"
+                else:
+                    duration_str = "--"
+                self.backup_table.setItem(row, 4, QTableWidgetItem(duration_str))
+
                 # Status
                 status = "✅ Bereit"
-                self.backup_table.setItem(row, 4, QTableWidgetItem(status))
+                self.backup_table.setItem(row, 5, QTableWidgetItem(status))
 
         except Exception as e:
             logger.error(f"Fehler beim Laden der Backups: {e}", exc_info=True)
@@ -352,9 +393,73 @@ class RestoreTab(QWidget):
             self.selected_backup_id = first_item.data(Qt.ItemDataRole.UserRole)
             self.restore_button.setEnabled(True)
             logger.debug(f"Backup ausgewählt: {self.selected_backup_id}")
+
+            # Zeige Details
+            self._show_backup_details(self.selected_backup_id)
         else:
             self.selected_backup_id = None
             self.restore_button.setEnabled(False)
+            # Verstecke Details
+            self.details_label.parent().hide()
+
+    def _show_backup_details(self, backup_id: int) -> None:
+        """Zeigt Details zum ausgewählten Backup"""
+        if not self.metadata_manager:
+            return
+
+        try:
+            # Hole Backup-Details
+            backup = self.metadata_manager.get_backup(backup_id)
+            if not backup:
+                return
+
+            # Formatiere Details
+            timestamp = datetime.fromisoformat(backup["timestamp"])
+            date_str = timestamp.strftime("%d.%m.%Y %H:%M:%S")
+
+            backup_type = "Full Backup" if backup["backup_type"] == "full" else "Incremental Backup"
+            file_count = backup.get("file_count", 0)
+            size_mb = backup.get("size_original", 0) / (1024 * 1024)
+            compressed_mb = backup.get("size_compressed", 0) / (1024 * 1024)
+            compression_ratio = (
+                (1 - backup.get("size_compressed", 0) / backup.get("size_original", 1)) * 100
+                if backup.get("size_original", 0) > 0
+                else 0
+            )
+
+            # Hole Quellen
+            sources = backup.get("sources", "").split(";") if backup.get("sources") else []
+            sources_str = "\n  • ".join(sources) if sources else "Nicht verfügbar"
+
+            # Hole Ziel
+            destination = backup.get("destination_path", "Nicht verfügbar")
+            dest_type = backup.get("destination_type", "local").upper()
+
+            # Erstelle Details-Text
+            details_html = f"""
+<b>Backup vom {date_str}</b><br>
+<br>
+<b>Typ:</b> {backup_type}<br>
+<b>Dateien:</b> {file_count}<br>
+<b>Größe (Original):</b> {size_mb:.1f} MB<br>
+<b>Größe (Komprimiert):</b> {compressed_mb:.1f} MB ({compression_ratio:.1f}% Kompression)<br>
+<br>
+<b>Quellen:</b><br>
+  • {sources_str}<br>
+<br>
+<b>Ziel:</b> {destination} ({dest_type})
+"""
+
+            self.details_label.setText(details_html)
+            self.details_label.parent().show()
+
+        except Exception as e:
+            logger.error(f"Fehler beim Laden der Backup-Details: {e}", exc_info=True)
+
+    def _on_backup_double_clicked(self, item) -> None:
+        """Callback wenn Backup doppelt geklickt wurde - startet Restore"""
+        if self.selected_backup_id and not self.is_restore_running:
+            self._on_start_restore()
 
     def _browse_destination(self) -> None:
         """Öffnet Dialog für Ziel-Verzeichnis"""
@@ -408,8 +513,6 @@ class RestoreTab(QWidget):
 
         # Storage-Backend aus Backup-Config erstellen
         try:
-            import json
-
             from src.storage.usb_storage import USBStorage
 
             # Hole Destination aus Metadaten
@@ -420,8 +523,8 @@ class RestoreTab(QWidget):
                 QMessageBox.warning(
                     self,
                     "Nicht unterstützt",
-                    f"Storage-Typ '{dest_type}' wird für Wiederherstellung noch nicht unterstützt.\n\n"
-                    "Aktuell nur USB/Lokal verfügbar.",
+                    f"Storage-Typ '{dest_type}' wird für Wiederherstellung "
+                    "noch nicht unterstützt.\n\nAktuell nur USB/Lokal verfügbar.",
                 )
                 return
 
@@ -431,7 +534,9 @@ class RestoreTab(QWidget):
 
         except Exception as e:
             logger.error(f"Fehler beim Erstellen des Storage-Backends: {e}", exc_info=True)
-            QMessageBox.critical(self, "Fehler", f"Storage-Backend konnte nicht initialisiert werden:\n{e}")
+            QMessageBox.critical(
+                self, "Fehler", f"Storage-Backend konnte nicht initialisiert werden:\n{e}"
+            )
             return
 
         # Restore-Config erstellen

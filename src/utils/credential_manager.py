@@ -30,7 +30,9 @@ class CredentialManager:
         if self.available:
             logger.info("Credential Manager verfügbar")
         else:
-            logger.warning("Credential Manager nicht verfügbar - Passwörter können nicht gespeichert werden")
+            logger.warning(
+                "Credential Manager nicht verfügbar - Passwörter können nicht gespeichert werden"
+            )
 
     def _check_availability(self) -> bool:
         """

@@ -154,7 +154,9 @@ class LogsTab(QWidget):
         # Tabelle
         self.logs_table = QTableWidget()
         self.logs_table.setColumnCount(5)
-        self.logs_table.setHorizontalHeaderLabels(["ID", "Zeitstempel", "Level", "Nachricht", "Backup-ID"])
+        self.logs_table.setHorizontalHeaderLabels(
+            ["ID", "Zeitstempel", "Level", "Nachricht", "Backup-ID"]
+        )
 
         # Spaltenbreiten
         header = self.logs_table.horizontalHeader()
@@ -362,7 +364,10 @@ class LogsTab(QWidget):
         """Exportiert Logs zu Textdatei"""
         # Datei-Dialog
         file_path, _ = QFileDialog.getSaveFileName(
-            self, "Logs exportieren", str(Path.home() / "scrat-backup-logs.txt"), "Textdateien (*.txt)"
+            self,
+            "Logs exportieren",
+            str(Path.home() / "scrat-backup-logs.txt"),
+            "Textdateien (*.txt)",
         )
 
         if not file_path:
@@ -404,7 +409,9 @@ class LogsTab(QWidget):
                     f.write("-" * 80 + "\n\n")
 
             QMessageBox.information(
-                self, "Export erfolgreich", f"Logs erfolgreich exportiert:\n{file_path}\n\n{len(logs)} Einträge"
+                self,
+                "Export erfolgreich",
+                f"Logs erfolgreich exportiert:\n{file_path}\n\n{len(logs)} Einträge",
             )
 
             logger.info(f"Logs exportiert: {file_path} ({len(logs)} Einträge)")
@@ -427,7 +434,9 @@ class LogsTab(QWidget):
             try:
                 deleted_count = self.metadata_manager.clear_logs(older_than_days=30)
 
-                QMessageBox.information(self, "Logs gelöscht", f"{deleted_count} alte Logs wurden gelöscht.")
+                QMessageBox.information(
+                    self, "Logs gelöscht", f"{deleted_count} alte Logs wurden gelöscht."
+                )
 
                 # Neu laden
                 self._load_logs()

@@ -5,6 +5,7 @@ GUI für Backup-Operationen mit Progress-Tracking
 
 import logging
 import threading
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -16,6 +17,8 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QHeaderView,
     QLabel,
+    QListWidget,
+    QListWidgetItem,
     QMessageBox,
     QProgressBar,
     QPushButton,
@@ -93,24 +96,44 @@ class BackupTab(QWidget):
         group = QGroupBox("Backup-Steuerung")
         layout = QVBoxLayout()
 
-        # Konfiguration-Auswahl
-        config_layout = QHBoxLayout()
-        config_layout.addWidget(QLabel("Konfiguration:"))
+        # Quellen-Auswahl
+        sources_group = QGroupBox("📁 Quellen")
+        sources_layout = QVBoxLayout()
 
-        self.config_combo = QComboBox()
-        self.config_combo.addItem("Standard-Konfiguration")
-        self.config_combo.addItem("-- Neue Konfiguration erstellen --")
-        config_layout.addWidget(self.config_combo, 1)
+        self.sources_list = QListWidget()
+        self.sources_list.setMaximumHeight(100)
+        sources_layout.addWidget(self.sources_list)
 
-        layout.addLayout(config_layout)
+        # Reload-Button
+        reload_sources_btn = QPushButton("🔄 Neu laden")
+        reload_sources_btn.clicked.connect(self._load_sources)
+        sources_layout.addWidget(reload_sources_btn)
+
+        sources_group.setLayout(sources_layout)
+        layout.addWidget(sources_group)
+
+        # Ziel-Auswahl
+        dest_layout = QHBoxLayout()
+        dest_layout.addWidget(QLabel("💾 Ziel:"))
+
+        self.destination_combo = QComboBox()
+        dest_layout.addWidget(self.destination_combo, 1)
+
+        # Reload-Button
+        reload_dest_btn = QPushButton("🔄")
+        reload_dest_btn.setMaximumWidth(40)
+        reload_dest_btn.clicked.connect(self._load_destinations)
+        dest_layout.addWidget(reload_dest_btn)
+
+        layout.addLayout(dest_layout)
 
         # Backup-Typ-Auswahl
         type_layout = QHBoxLayout()
-        type_layout.addWidget(QLabel("Backup-Typ:"))
+        type_layout.addWidget(QLabel("📦 Backup-Typ:"))
 
         self.type_combo = QComboBox()
-        self.type_combo.addItem("📦 Vollbackup (Full)", "full")
-        self.type_combo.addItem("📝 Inkrementell (Incremental)", "incremental")
+        self.type_combo.addItem("Vollbackup (Full)", "full")
+        self.type_combo.addItem("Inkrementell (Incremental)", "incremental")
         type_layout.addWidget(self.type_combo, 1)
 
         layout.addLayout(type_layout)
@@ -261,46 +284,110 @@ class BackupTab(QWidget):
             metadata_manager: MetadataManager-Instanz
         """
         self.metadata_manager = metadata_manager
+        self._load_sources()
+        self._load_destinations()
         self._load_history()
+
+    def _load_sources(self) -> None:
+        """Lädt Quellen aus MetadataManager"""
+        if not self.metadata_manager:
+            return
+
+        self.sources_list.clear()
+
+        sources = self.metadata_manager.get_sources()
+        for source in sources:
+            item = QListWidgetItem(f"{source['name']} - {source['windows_path']}")
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+
+            # Standardmäßig aktivierte Quellen sind gecheckt
+            if source.get("enabled", True):
+                item.setCheckState(Qt.CheckState.Checked)
+            else:
+                item.setCheckState(Qt.CheckState.Unchecked)
+
+            item.setData(Qt.ItemDataRole.UserRole, source["id"])
+            self.sources_list.addItem(item)
+
+        if not sources:
+            from PyQt6.QtGui import QColor
+
+            item = QListWidgetItem("Keine Quellen konfiguriert")
+            item.setFlags(Qt.ItemFlag.NoItemFlags)
+            item.setForeground(QColor("#999"))
+            self.sources_list.addItem(item)
+
+        logger.debug(f"Quellen geladen: {len(sources)} Einträge")
+
+    def _load_destinations(self) -> None:
+        """Lädt Ziele aus MetadataManager"""
+        if not self.metadata_manager:
+            return
+
+        self.destination_combo.clear()
+
+        destinations = self.metadata_manager.get_destinations()
+        for dest in destinations:
+            label = f"{dest['name']} ({dest['type'].upper()})"
+            self.destination_combo.addItem(label, dest["id"])
+
+        if not destinations:
+            self.destination_combo.addItem("Keine Ziele konfiguriert", None)
+
+        logger.debug(f"Ziele geladen: {len(destinations)} Einträge")
 
     def _on_start_backup(self) -> None:
         """Startet Backup"""
         if self.is_backup_running:
             return
 
-        # Config aus MetadataManager und UI auslesen
+        # Config aus UI auslesen
         if not self.metadata_manager:
             QMessageBox.warning(self, "Fehler", "Keine Metadaten-Datenbank konfiguriert")
             return
 
-        # Hole Quellen aus Datenbank (alle aktivierten)
-        sources = self.metadata_manager.get_sources()
-        enabled_sources = [Path(s["windows_path"]) for s in sources if s.get("enabled", True)]
+        # Hole ausgewählte Quellen aus UI (gecheckte Items)
+        selected_sources = []
+        for i in range(self.sources_list.count()):
+            item = self.sources_list.item(i)
+            if item.checkState() == Qt.CheckState.Checked:
+                source_id = item.data(Qt.ItemDataRole.UserRole)
+                # Hole Quelle aus DB
+                source = next(
+                    (s for s in self.metadata_manager.get_sources() if s["id"] == source_id), None
+                )
+                if source:
+                    selected_sources.append(Path(source["windows_path"]))
 
-        if not enabled_sources:
+        if not selected_sources:
             QMessageBox.warning(
                 self,
                 "Keine Quellen",
-                "Keine Backup-Quellen konfiguriert.\n\nBitte konfiguriere zuerst Quellen in den Einstellungen.",
+                "Keine Backup-Quellen ausgewählt.\n\nBitte wähle mindestens eine Quelle aus.",
             )
             return
 
-        # Hole Ziel aus Datenbank (erste aktivierte)
-        destinations = self.metadata_manager.get_destinations()
-        enabled_dests = [d for d in destinations if d.get("enabled", True)]
-
-        if not enabled_dests:
+        # Hole ausgewähltes Ziel aus UI
+        dest_id = self.destination_combo.currentData()
+        if not dest_id:
             QMessageBox.warning(
                 self,
                 "Kein Ziel",
-                "Kein Backup-Ziel konfiguriert.\n\nBitte konfiguriere zuerst ein Ziel in den Einstellungen.",
+                "Kein Backup-Ziel ausgewählt.\n\nBitte wähle ein Ziel aus.",
             )
             return
 
-        first_dest = enabled_dests[0]
+        # Hole Ziel aus DB
         import json
 
-        dest_config = json.loads(first_dest["config"])
+        destination = next(
+            (d for d in self.metadata_manager.get_destinations() if d["id"] == dest_id), None
+        )
+        if not destination:
+            QMessageBox.warning(self, "Fehler", f"Ziel mit ID {dest_id} nicht gefunden")
+            return
+
+        dest_config = json.loads(destination["config"])
 
         # Backup-Typ aus UI
         backup_type = self.type_combo.currentData()  # "full" oder "incremental"
@@ -309,18 +396,23 @@ class BackupTab(QWidget):
         from src.gui.password_dialog import get_password
 
         password, ok = get_password(
-            self, title="Backup-Passwort", message="Bitte gib das Backup-Passwort ein:", show_save_option=True
+            self,
+            title="Backup-Passwort",
+            message="Bitte gib das Backup-Passwort ein:",
+            show_save_option=True,
         )
 
         if not ok or not password:
-            QMessageBox.warning(self, "Abgebrochen", "Backup abgebrochen - kein Passwort eingegeben.")
+            QMessageBox.warning(
+                self, "Abgebrochen", "Backup abgebrochen - kein Passwort eingegeben."
+            )
             return
 
         # Erstelle BackupConfig
         config = BackupConfig(
-            sources=enabled_sources,
+            sources=selected_sources,
             destination_path=Path(dest_config.get("path", Path.home() / "scrat-backups")),
-            destination_type=first_dest["type"],
+            destination_type=destination["type"],
             password=password,
             compression_level=5,
             backup_type=backup_type,
@@ -340,6 +432,9 @@ class BackupTab(QWidget):
         self.status_label.setText("Starte Backup...")
         self.progress_bar.setValue(0)
         self.error_label.hide()
+
+        # Start-Zeit für Speed/ETA-Berechnung
+        self.backup_start_time = time.time()
 
         # Backup in Thread starten
         backup_type = self.type_combo.currentData()
@@ -415,6 +510,32 @@ class BackupTab(QWidget):
             mb_processed = progress.bytes_processed / (1024 * 1024)
             mb_total = progress.bytes_total / (1024 * 1024)
             stats += f" • {mb_processed:.1f}/{mb_total:.1f} MB"
+
+            # Speed und ETA berechnen
+            if hasattr(self, "backup_start_time") and progress.bytes_processed > 0:
+                elapsed_time = time.time() - self.backup_start_time
+                if elapsed_time > 0:
+                    # Speed in MB/s
+                    speed_mb_s = mb_processed / elapsed_time
+                    stats += f" • {speed_mb_s:.1f} MB/s"
+
+                    # ETA berechnen
+                    if speed_mb_s > 0:
+                        remaining_mb = mb_total - mb_processed
+                        eta_seconds = remaining_mb / speed_mb_s
+
+                        # ETA formatieren
+                        if eta_seconds < 60:
+                            eta_str = f"{int(eta_seconds)}s"
+                        elif eta_seconds < 3600:
+                            eta_str = f"{int(eta_seconds / 60)}m {int(eta_seconds % 60)}s"
+                        else:
+                            hours = int(eta_seconds / 3600)
+                            minutes = int((eta_seconds % 3600) / 60)
+                            eta_str = f"{hours}h {minutes}m"
+
+                        stats += f" • ETA: {eta_str}"
+
         self.stats_label.setText(stats)
 
     @pyqtSlot(object)

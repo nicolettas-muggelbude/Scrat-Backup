@@ -31,7 +31,8 @@ class TestBackupTabInit:
     def test_ui_components_exist(self, backup_tab):
         """Test dass alle UI-Komponenten existieren"""
         # Steuerung
-        assert backup_tab.config_combo is not None
+        assert backup_tab.sources_list is not None
+        assert backup_tab.destination_combo is not None
         assert backup_tab.type_combo is not None
         assert backup_tab.start_button is not None
         assert backup_tab.stop_button is not None
@@ -62,10 +63,6 @@ class TestBackupTabInit:
 
 class TestBackupTabConfigSelection:
     """Tests für Konfigurations-Auswahl"""
-
-    def test_config_combo_has_items(self, backup_tab):
-        """Test dass Config-Dropdown Items hat"""
-        assert backup_tab.config_combo.count() >= 2
 
     def test_type_combo_has_items(self, backup_tab):
         """Test dass Typ-Dropdown Items hat"""
@@ -205,6 +202,8 @@ class TestBackupTabHistory:
         """Test MetadataManager setzen"""
         mock_manager = Mock()
         mock_manager.list_backups.return_value = []
+        mock_manager.get_sources.return_value = []
+        mock_manager.get_destinations.return_value = []
 
         backup_tab.set_metadata_manager(mock_manager)
 

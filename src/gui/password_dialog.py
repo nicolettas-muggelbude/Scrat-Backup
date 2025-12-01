@@ -6,7 +6,6 @@ Dialog zur Passwort-Eingabe mit Option zum Speichern
 import logging
 from typing import Optional, Tuple
 
-from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QCheckBox,
     QDialog,
@@ -107,7 +106,9 @@ class PasswordDialog(QDialog):
             self.save_checkbox = None
 
             if self.show_save_option and not self.credential_manager.available:
-                warning = QLabel("⚠️ Passwort-Speicherung nicht verfügbar (keyring nicht installiert)")
+                warning = QLabel(
+                    "⚠️ Passwort-Speicherung nicht verfügbar (keyring nicht installiert)"
+                )
                 warning.setStyleSheet("color: #ff6600; font-size: 11px; margin-top: 10px;")
                 layout.addWidget(warning)
 
