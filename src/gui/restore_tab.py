@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import (
 from src.core.metadata_manager import MetadataManager
 from src.core.restore_engine import RestoreConfig, RestoreEngine, RestoreProgress, RestoreResult
 from src.gui.event_bus import get_event_bus
+from src.utils.validators import Validators
 
 logger = logging.getLogger(__name__)
 
@@ -476,10 +477,29 @@ class RestoreTab(QWidget):
         if self.is_restore_running or not self.selected_backup_id:
             return
 
-        # Validierung
+        # Validiere Passwort
         password = self.password_edit.text()
-        if not password:
-            QMessageBox.warning(self, "Fehler", "Bitte Passwort eingeben")
+        is_valid, error_msg = Validators.validate_password(
+            password, min_length=1, allow_empty=False
+        )
+        if not is_valid:
+            QMessageBox.critical(
+                self,
+                "Validierungsfehler",
+                f"Ungültiges Passwort:\n\n{error_msg}",
+            )
+            return
+
+        # Validiere Ziel-Pfad
+        dest_path = Path(self.dest_path_edit.text())
+        is_valid, error_msg = Validators.validate_path(dest_path, must_be_writable=True)
+        if not is_valid:
+            QMessageBox.critical(
+                self,
+                "Validierungsfehler",
+                f"Ungültiges Wiederherstellungs-Ziel:\n\n{error_msg}\n\n"
+                "Bitte wähle ein anderes Verzeichnis.",
+            )
             return
 
         # Passwort speichern wenn gewünscht
@@ -488,13 +508,6 @@ class RestoreTab(QWidget):
         elif self.save_password_checkbox and not self.save_password_checkbox.isChecked():
             # Passwort löschen wenn Checkbox nicht gecheckt
             self.credential_manager.delete_password()
-
-        dest_path = Path(self.dest_path_edit.text())
-        if not dest_path.parent.exists():
-            QMessageBox.warning(
-                self, "Fehler", f"Übergeordnetes Verzeichnis existiert nicht: {dest_path.parent}"
-            )
-            return
 
         # Hole Backup-Info aus Datenbank
         if not self.metadata_manager:

@@ -31,6 +31,7 @@ from PyQt6.QtWidgets import (
 from src.core.backup_engine import BackupConfig, BackupEngine, BackupProgress, BackupResult
 from src.core.metadata_manager import MetadataManager
 from src.gui.event_bus import get_event_bus
+from src.utils.validators import Validators
 
 logger = logging.getLogger(__name__)
 
@@ -405,6 +406,42 @@ class BackupTab(QWidget):
         if not ok or not password:
             QMessageBox.warning(
                 self, "Abgebrochen", "Backup abgebrochen - kein Passwort eingegeben."
+            )
+            return
+
+        # Validiere Eingaben
+        is_valid, error_msg = Validators.validate_paths(
+            selected_sources, must_exist=True, must_be_dir=True, min_count=1
+        )
+        if not is_valid:
+            QMessageBox.critical(
+                self,
+                "Validierungsfehler",
+                f"Ungültige Backup-Quellen:\n\n{error_msg}\n\n"
+                "Bitte überprüfe die Quellen in den Einstellungen.",
+            )
+            return
+
+        is_valid, error_msg = Validators.validate_password(
+            password, min_length=1, allow_empty=False
+        )
+        if not is_valid:
+            QMessageBox.critical(
+                self,
+                "Validierungsfehler",
+                f"Ungültiges Passwort:\n\n{error_msg}",
+            )
+            return
+
+        # Validiere Ziel-Pfad
+        dest_path = Path(dest_config.get("path", Path.home() / "scrat-backups"))
+        is_valid, error_msg = Validators.validate_path(dest_path, must_be_writable=True)
+        if not is_valid:
+            QMessageBox.critical(
+                self,
+                "Validierungsfehler",
+                f"Ungültiges Backup-Ziel:\n\n{error_msg}\n\n"
+                "Bitte überprüfe das Ziel in den Einstellungen.",
             )
             return
 
