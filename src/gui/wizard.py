@@ -167,6 +167,7 @@ class DestinationPage(QWizardPage):
                 "Lokales Laufwerk / USB",
                 "SFTP (SSH)",
                 "WebDAV (Nextcloud, ownCloud)",
+                "Rclone (40+ Cloud-Provider)",
                 "Netzwerk-Freigabe (geplant)",
             ]
         )
@@ -270,6 +271,36 @@ class DestinationPage(QWizardPage):
         self.webdav_widget.setVisible(False)
         layout.addWidget(self.webdav_widget)
 
+        # === Rclone (versteckt initial) ===
+        self.rclone_widget = QWidget()
+        rclone_layout = QVBoxLayout(self.rclone_widget)
+
+        # Info
+        rclone_info = QLabel(
+            "⚠️ <b>Hinweis:</b> Rclone muss installiert und konfiguriert sein.\n"
+            "Verwende <code>rclone config</code> um ein Remote zu erstellen."
+        )
+        rclone_info.setWordWrap(True)
+        rclone_info.setStyleSheet("background-color: #fff3cd; padding: 10px; border-radius: 5px;")
+        rclone_layout.addWidget(rclone_info)
+
+        remote_layout = QHBoxLayout()
+        remote_layout.addWidget(QLabel("Remote-Name:"))
+        self.rclone_remote = QLineEdit()
+        self.rclone_remote.setPlaceholderText("mycloud")
+        remote_layout.addWidget(self.rclone_remote)
+        rclone_layout.addLayout(remote_layout)
+
+        path_layout = QHBoxLayout()
+        path_layout.addWidget(QLabel("Remote-Pfad:"))
+        self.rclone_path = QLineEdit()
+        self.rclone_path.setPlaceholderText("Backups")
+        path_layout.addWidget(self.rclone_path)
+        rclone_layout.addLayout(path_layout)
+
+        self.rclone_widget.setVisible(False)
+        layout.addWidget(self.rclone_widget)
+
         layout.addStretch()
         self.setLayout(layout)
 
@@ -283,6 +314,8 @@ class DestinationPage(QWizardPage):
         self.registerField("dest_webdav_url", self.webdav_url)
         self.registerField("dest_webdav_user", self.webdav_user)
         self.registerField("dest_webdav_path", self.webdav_path)
+        self.registerField("dest_rclone_remote", self.rclone_remote)
+        self.registerField("dest_rclone_path", self.rclone_path)
 
     def _detect_drives(self) -> List[tuple]:
         """
@@ -352,18 +385,27 @@ class DestinationPage(QWizardPage):
             self.local_widget.setVisible(True)
             self.sftp_widget.setVisible(False)
             self.webdav_widget.setVisible(False)
+            self.rclone_widget.setVisible(False)
         elif index == 1:  # SFTP
             self.local_widget.setVisible(False)
             self.sftp_widget.setVisible(True)
             self.webdav_widget.setVisible(False)
+            self.rclone_widget.setVisible(False)
         elif index == 2:  # WebDAV
             self.local_widget.setVisible(False)
             self.sftp_widget.setVisible(False)
             self.webdav_widget.setVisible(True)
-        else:  # Netzwerk-Freigabe
+            self.rclone_widget.setVisible(False)
+        elif index == 3:  # Rclone
             self.local_widget.setVisible(False)
             self.sftp_widget.setVisible(False)
             self.webdav_widget.setVisible(False)
+            self.rclone_widget.setVisible(True)
+        else:  # Netzwerk-Freigabe (geplant)
+            self.local_widget.setVisible(False)
+            self.sftp_widget.setVisible(False)
+            self.webdav_widget.setVisible(False)
+            self.rclone_widget.setVisible(False)
 
 
 class EncryptionPage(QWizardPage):
@@ -598,6 +640,10 @@ class SummaryPage(QWizardPage):
                 f"<p><b>WebDAV-Server:</b> {url}<br>"
                 f"<b>Benutzer:</b> {user}<br><b>Pfad:</b> {path}</p>"
             )
+        elif "Rclone" in storage_type:
+            remote = wizard.field("dest_rclone_remote")
+            path = wizard.field("dest_rclone_path")
+            summary_text += f"<p><b>Rclone-Remote:</b> {remote}<br>" f"<b>Pfad:</b> {path}</p>"
 
         # Auto-Backup
         if wizard.field("auto_backup"):
@@ -703,6 +749,12 @@ class SetupWizard(QWizard):
                 "url": self.field("dest_webdav_url"),
                 "user": self.field("dest_webdav_user"),
                 "path": self.field("dest_webdav_path"),
+            }
+        elif "Rclone" in storage_type:
+            config["storage"] = {
+                "type": "rclone",
+                "remote": self.field("dest_rclone_remote"),
+                "path": self.field("dest_rclone_path"),
             }
 
         # Verschlüsselung
