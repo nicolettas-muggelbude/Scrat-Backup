@@ -168,7 +168,7 @@ class DestinationPage(QWizardPage):
                 "SFTP (SSH)",
                 "WebDAV (Nextcloud, ownCloud)",
                 "Rclone (40+ Cloud-Provider)",
-                "Netzwerk-Freigabe (geplant)",
+                "SMB/CIFS (Netzwerk-Freigabe)",
             ]
         )
         self.storage_type.currentIndexChanged.connect(self._on_storage_type_changed)
@@ -301,6 +301,45 @@ class DestinationPage(QWizardPage):
         self.rclone_widget.setVisible(False)
         layout.addWidget(self.rclone_widget)
 
+        # === SMB/CIFS (versteckt initial) ===
+        self.smb_widget = QWidget()
+        smb_layout = QVBoxLayout(self.smb_widget)
+
+        server_layout = QHBoxLayout()
+        server_layout.addWidget(QLabel("Server:"))
+        self.smb_server = QLineEdit()
+        self.smb_server.setPlaceholderText("192.168.1.100 oder nas.local")
+        server_layout.addWidget(self.smb_server)
+        server_layout.addWidget(QLabel("Port:"))
+        self.smb_port = QSpinBox()
+        self.smb_port.setRange(1, 65535)
+        self.smb_port.setValue(445)
+        server_layout.addWidget(self.smb_port)
+        smb_layout.addLayout(server_layout)
+
+        share_layout = QHBoxLayout()
+        share_layout.addWidget(QLabel("Freigabe:"))
+        self.smb_share = QLineEdit()
+        self.smb_share.setPlaceholderText("backups")
+        share_layout.addWidget(self.smb_share)
+        smb_layout.addLayout(share_layout)
+
+        user_layout = QHBoxLayout()
+        user_layout.addWidget(QLabel("Benutzername:"))
+        self.smb_user = QLineEdit()
+        user_layout.addWidget(self.smb_user)
+        smb_layout.addLayout(user_layout)
+
+        path_layout = QHBoxLayout()
+        path_layout.addWidget(QLabel("Pfad:"))
+        self.smb_path = QLineEdit()
+        self.smb_path.setPlaceholderText("/scrat-backups")
+        path_layout.addWidget(self.smb_path)
+        smb_layout.addLayout(path_layout)
+
+        self.smb_widget.setVisible(False)
+        layout.addWidget(self.smb_widget)
+
         layout.addStretch()
         self.setLayout(layout)
 
@@ -316,6 +355,11 @@ class DestinationPage(QWizardPage):
         self.registerField("dest_webdav_path", self.webdav_path)
         self.registerField("dest_rclone_remote", self.rclone_remote)
         self.registerField("dest_rclone_path", self.rclone_path)
+        self.registerField("dest_smb_server", self.smb_server)
+        self.registerField("dest_smb_port", self.smb_port)
+        self.registerField("dest_smb_share", self.smb_share)
+        self.registerField("dest_smb_user", self.smb_user)
+        self.registerField("dest_smb_path", self.smb_path)
 
     def _detect_drives(self) -> List[tuple]:
         """
@@ -381,31 +425,24 @@ class DestinationPage(QWizardPage):
 
     def _on_storage_type_changed(self, index: int):
         """Handler für Storage-Typ-Änderung"""
+        # Verstecke alle Widgets
+        self.local_widget.setVisible(False)
+        self.sftp_widget.setVisible(False)
+        self.webdav_widget.setVisible(False)
+        self.rclone_widget.setVisible(False)
+        self.smb_widget.setVisible(False)
+
+        # Zeige nur das ausgewählte Widget
         if index == 0:  # Lokal
             self.local_widget.setVisible(True)
-            self.sftp_widget.setVisible(False)
-            self.webdav_widget.setVisible(False)
-            self.rclone_widget.setVisible(False)
         elif index == 1:  # SFTP
-            self.local_widget.setVisible(False)
             self.sftp_widget.setVisible(True)
-            self.webdav_widget.setVisible(False)
-            self.rclone_widget.setVisible(False)
         elif index == 2:  # WebDAV
-            self.local_widget.setVisible(False)
-            self.sftp_widget.setVisible(False)
             self.webdav_widget.setVisible(True)
-            self.rclone_widget.setVisible(False)
         elif index == 3:  # Rclone
-            self.local_widget.setVisible(False)
-            self.sftp_widget.setVisible(False)
-            self.webdav_widget.setVisible(False)
             self.rclone_widget.setVisible(True)
-        else:  # Netzwerk-Freigabe (geplant)
-            self.local_widget.setVisible(False)
-            self.sftp_widget.setVisible(False)
-            self.webdav_widget.setVisible(False)
-            self.rclone_widget.setVisible(False)
+        elif index == 4:  # SMB/CIFS
+            self.smb_widget.setVisible(True)
 
 
 class EncryptionPage(QWizardPage):
@@ -644,6 +681,18 @@ class SummaryPage(QWizardPage):
             remote = wizard.field("dest_rclone_remote")
             path = wizard.field("dest_rclone_path")
             summary_text += f"<p><b>Rclone-Remote:</b> {remote}<br>" f"<b>Pfad:</b> {path}</p>"
+        elif "SMB" in storage_type or "CIFS" in storage_type:
+            server = wizard.field("dest_smb_server")
+            port = wizard.field("dest_smb_port")
+            share = wizard.field("dest_smb_share")
+            user = wizard.field("dest_smb_user")
+            path = wizard.field("dest_smb_path")
+            summary_text += (
+                f"<p><b>SMB-Server:</b> \\\\{server}\\{share}<br>"
+                f"<b>Benutzer:</b> {user}<br>"
+                f"<b>Port:</b> {port}<br>"
+                f"<b>Pfad:</b> {path}</p>"
+            )
 
         # Auto-Backup
         if wizard.field("auto_backup"):
@@ -755,6 +804,15 @@ class SetupWizard(QWizard):
                 "type": "rclone",
                 "remote": self.field("dest_rclone_remote"),
                 "path": self.field("dest_rclone_path"),
+            }
+        elif "SMB" in storage_type or "CIFS" in storage_type:
+            config["storage"] = {
+                "type": "smb",
+                "server": self.field("dest_smb_server"),
+                "port": self.field("dest_smb_port"),
+                "share": self.field("dest_smb_share"),
+                "user": self.field("dest_smb_user"),
+                "path": self.field("dest_smb_path"),
             }
 
         # Verschlüsselung
