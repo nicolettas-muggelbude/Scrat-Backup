@@ -86,6 +86,56 @@
 
 ## Priorität: Mittel
 
+### Update-Funktion
+
+- [ ] **Automatische Update-Prüfung**
+  - Beim Start prüfen ob neue Version verfügbar (opt-in)
+  - GitHub Releases API abfragen
+  - Nur einmal täglich prüfen (Cache mit Zeitstempel)
+  - Im Hintergrund, blockiert nicht die GUI
+
+- [ ] **Update-Benachrichtigung**
+  - Dezente Benachrichtigung in der Statusbar
+  - "Neue Version verfügbar: v1.2.0"
+  - Klick öffnet Update-Dialog
+  - Changelog anzeigen (aus GitHub Release Notes)
+  - "Später erinnern" Button (24h Pause)
+  - "Nicht mehr fragen für diese Version" Option
+
+- [ ] **Update-Dialog**
+  - Aktuelle Version vs. Neue Version
+  - Release-Notes / Changelog formatiert anzeigen
+  - Download-Optionen:
+    - "Im Browser öffnen" (öffnet GitHub Releases)
+    - "Automatisch herunterladen" (optional, Phase 2)
+  - "Überspringe diese Version" Checkbox
+
+- [ ] **Automatisches Update** (Phase 2, optional)
+  - Installer herunterladen (verifiziert mit Signatur)
+  - Backup der aktuellen Installation
+  - Silent-Install starten
+  - Nach Update: Changelog anzeigen
+
+- [ ] **Update-Einstellungen**
+  - Settings → "Updates"
+    - [ ] Automatisch nach Updates suchen
+    - [ ] Beta-Versionen einbeziehen
+    - Update-Kanal: "Stable" / "Beta" / "Aus"
+  - "Jetzt nach Updates suchen" Button
+  - Letzte Prüfung: Datum/Zeit
+
+- [ ] **Versionsverwaltung**
+  - Semantic Versioning (SemVer): v1.2.3
+  - version.py mit __version__ = "1.0.0"
+  - Im GUI anzeigen (About-Dialog, Statusbar)
+  - Build-Nummer für Entwicklungs-Builds
+
+- [ ] **Sicherheit**
+  - HTTPS für Update-Prüfung (GitHub API)
+  - Signatur-Verifizierung für Downloads
+  - Keine Auto-Update ohne User-Bestätigung
+  - Privacy: Keine Telemetrie, nur Version-Check
+
 ### Stabilität & Tests
 
 - [ ] **Vollständige Test-Coverage**
