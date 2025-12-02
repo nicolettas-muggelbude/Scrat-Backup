@@ -45,6 +45,87 @@
   - Lösungsvorschläge anbieten
   - "Weitere Hilfe" Button → öffnet FAQ
 
+### Internationalisierung (i18n)
+
+- [ ] **Mehrsprachigkeit**
+  - Qt Linguist für Übersetzungen
+  - QTranslator-Klasse integrieren
+  - Sprache automatisch vom OS erkennen
+  - Fallback: Englisch wenn Sprache nicht verfügbar
+  - Unterstützte Sprachen (Phase 1):
+    - 🇩🇪 Deutsch (Primär)
+    - 🇬🇧 Englisch
+  - Weitere Sprachen (Community-beigetragen):
+    - 🇫🇷 Französisch
+    - 🇪🇸 Spanisch
+    - 🇮🇹 Italienisch
+    - 🇳🇱 Niederländisch
+    - 🇵🇱 Polnisch
+    - 🇷🇺 Russisch
+
+- [ ] **Übersetzungs-Dateien**
+  - .ts Dateien für jede Sprache
+  - Alle UI-Strings extrahieren
+  - Datum/Zeit-Formate lokalisieren
+  - Zahlen-Formate lokalisieren (1.000 vs 1,000)
+  - Pluralisierung (1 Datei vs 2 Dateien)
+
+- [ ] **Sprachauswahl**
+  - Settings → "Sprache"
+  - Dropdown mit verfügbaren Sprachen
+  - "Automatisch (System)" Option
+  - Nach Sprachwechsel: Neustart erforderlich (Info)
+
+- [ ] **Übersetzungs-Workflow**
+  - Contributor-Guide für Übersetzer
+  - .ts Dateien in Repository
+  - GitHub Issues Template für neue Sprachen
+  - Weblate/Crowdin für Community-Übersetzungen (optional)
+
+### Dark Mode / Theme-Unterstützung
+
+- [ ] **Automatische Dark-Mode-Erkennung**
+  - Windows 10/11 Dark Mode Setting abfragen
+  - PyQt6: QPalette.ColorRole.Window prüfen
+  - Automatisch umschalten beim OS-Wechsel
+  - App-Neustart nicht erforderlich
+
+- [ ] **Dark Mode Theme**
+  - Dark Theme für alle Widgets
+  - Angepasste Farben:
+    - Hintergrund: #1e1e1e (dunkelgrau)
+    - Text: #e0e0e0 (hellgrau)
+    - Akzente: #007acc (blau)
+    - Fehler: #f48771 (helles rot)
+    - Erfolg: #89d185 (helles grün)
+  - Icons für Dark Mode optimieren
+  - Kontrast-Verhältnis: ≥ 7:1 (WCAG AAA)
+
+- [ ] **Light Mode Theme**
+  - Light Theme (aktuelles Design)
+  - Windows 11 Design-Richtlinien
+  - Kontrast-Verhältnis: ≥ 4.5:1 (WCAG AA)
+
+- [ ] **Theme-Einstellungen**
+  - Settings → "Erscheinungsbild"
+  - Theme-Auswahl:
+    - "Automatisch (System)"
+    - "Hell"
+    - "Dunkel"
+  - Live-Vorschau beim Wechsel
+  - Keine App-Neustart erforderlich
+
+- [ ] **Hochkontrast-Modus**
+  - Windows Hochkontrast-Einstellungen respektieren
+  - Spezielle Hochkontrast-Farben
+  - Barrierefreiheit für sehbehinderte Nutzer
+
+- [ ] **Theme-Engine**
+  - Zentrale theme.py erweitern
+  - get_theme() → "light" | "dark" | "high_contrast"
+  - apply_theme() für dynamisches Umschalten
+  - Theme-Change-Event für alle Widgets
+
 ### Barrierefreiheit (Accessibility)
 
 - [ ] **Tastatur-Navigation**
