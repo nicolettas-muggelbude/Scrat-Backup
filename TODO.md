@@ -147,6 +147,39 @@
   - Keine Information nur durch Farbe vermittelt
   - Icons + Text (nicht nur Icons)
 
+- [ ] **Farbenblindheit-freundliche Farbpaletten**
+  - **Color Universal Design (CUD)** implementieren
+  - Niemals nur Farbe zur Information nutzen:
+    - ✅ Erfolg: Grüner Haken + "Erfolgreich" Text
+    - ✅ Fehler: Rotes X + "Fehler" Text
+    - ✅ Warnung: Gelbes Dreieck + "Achtung" Text
+    - ❌ Nur farbige Balken ohne Symbole
+  - Rot-Grün-Kombinationen vermeiden
+    - Stattdessen: Blau-Orange oder Blau-Gelb
+  - Empfohlene Farbpalette (Paul Tol's Bright):
+    - Info/Primary: `#4477AA` (Blau)
+    - Error: `#EE6677` (Rosa/Rot)
+    - Success: `#228833` (Grün)
+    - Warning: `#CCBB44` (Gelb)
+    - Accent: `#66CCEE` (Cyan)
+  - Alternative: IBM Design Colors
+    - Blue: `#0F62FE`
+    - Magenta: `#EE538B`
+    - Teal: `#009D9A`
+    - Purple: `#8A3FFC`
+  - Alle Status-Meldungen mit Icons + Text + Farbe
+  - Fortschrittsbalken mit Muster/Streifen (nicht nur Farbe)
+
+- [ ] **Farbenblindheit testen**
+  - Chrome DevTools: "Rendering → Emulate Vision Deficiencies"
+    - Protanopia (Rot-Blindheit)
+    - Deuteranopia (Grün-Blindheit)
+    - Tritanopia (Blau-Blindheit)
+    - Achromatopsia (Totale Farbenblindheit)
+  - Color Oracle (Desktop-Tool)
+  - Coblis Color Blindness Simulator
+  - Mit allen 4 Typen testen
+
 - [ ] **Motorische Einschränkungen**
   - Große Klickflächen (mindestens 44×44 Pixel)
   - Großzügige Abstände zwischen interaktiven Elementen
