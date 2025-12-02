@@ -399,6 +399,85 @@
   - User-Umfragen
   - Feature-Requests (GitHub Issues)
 
+### Sponsoring & Spenden
+
+- [ ] **Sponsoring-Plattformen einrichten**
+  - **GitHub Sponsors** (Primär)
+    - Direkt auf GitHub-Repo-Seite sichtbar
+    - Monatliche/einmalige Spenden
+    - Sponsor-Button im Repo
+  - **Open Collective** (Alternativ)
+    - Transparente Finanzen
+    - Community-verwaltet
+    - Ausgaben öffentlich sichtbar
+  - **Ko-fi** (Für einmalige Spenden)
+    - Einfach & schnell
+    - "Buy me a coffee" Stil
+  - **Liberapay** (Europa-freundlich)
+    - SEPA-freundlich
+    - Wöchentliche Unterstützung
+
+- [ ] **FUNDING.yml erstellen**
+  - .github/FUNDING.yml Datei
+  - Sponsoring-Button auf GitHub
+  - Links zu allen Plattformen
+
+- [ ] **Sponsor-Tiers definieren**
+  - 🥉 **Bronze** ($5/Monat)
+    - Name in SPONSORS.md
+    - Dankeschön-E-Mail
+  - 🥈 **Silver** ($25/Monat)
+    - Name + Logo in README.md
+    - Name auf Projektwebseite
+  - 🥇 **Gold** ($100/Monat)
+    - Prominentes Logo in README + Website
+    - Erwähnung in Release-Notes
+    - Prioritäts-Support
+  - 💎 **Platinum** ($500/Monat)
+    - Alle Gold-Vorteile
+    - Einfluss auf Roadmap
+    - Private Consulting (1h/Monat)
+
+- [ ] **SPONSORS.md erstellen**
+  - Liste aller aktuellen Sponsoren
+  - Danksagungen
+  - Verwendung der Mittel transparent darstellen
+
+- [ ] **Sponsoring-Seite auf Website**
+  - "Unterstütze Scrat-Backup"
+  - Vorteile für Sponsoren
+  - Verwendung der Spenden:
+    - Entwicklungszeit
+    - Hosting-Kosten
+    - Domain-Kosten
+    - Marketing
+  - Finanz-Transparenz (monatlicher Report)
+
+- [ ] **Sponsor-Logo-Integration**
+  - Automatisches Logo-Update in README
+  - GitHub Action für Sponsor-Sync
+  - Sponsor-Slider auf Website
+
+- [ ] **Dankeschön-System**
+  - Automatische E-Mail an neue Sponsoren
+  - Monatlicher Newsletter für Sponsoren
+  - Erwähnung in Release-Notes
+  - Social Media Shout-Outs
+
+- [ ] **Verwendung transparent kommunizieren**
+  - Monatlicher Finanz-Report
+  - Ausgaben aufschlüsseln:
+    - Entwicklung: X Stunden á Y €
+    - Infrastruktur: Server, Domain
+    - Marketing: Anzeigen, etc.
+  - Open Collective für volle Transparenz
+
+- [ ] **Steuerliche Aspekte klären**
+  - Freiberuflich vs. Gewerbe
+  - Umsatzsteuer (Kleinunternehmer?)
+  - Spendenquittungen (wenn gemeinnützig)
+  - Steuererklärung
+
 ## Abgeschlossen ✅
 
 - [x] Setup-Wizard komplett überarbeitet (2025-12-02)
