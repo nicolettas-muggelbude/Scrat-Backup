@@ -56,6 +56,7 @@ class SettingsTab(QWidget):
 
         self.config_manager: Optional[ConfigManager] = None
         self.metadata_manager: Optional[MetadataManager] = None
+        self.scheduler: Optional[Scheduler] = None
         self.original_config: dict = {}  # Backup für Cancel-Funktion
 
         # Setup UI
@@ -366,6 +367,16 @@ class SettingsTab(QWidget):
         self.metadata_manager = metadata_manager
         logger.debug("MetadataManager in SettingsTab gesetzt")
 
+    def set_scheduler(self, scheduler: Scheduler) -> None:
+        """
+        Setzt Scheduler (für Anzeige von 'Nächster Lauf')
+
+        Args:
+            scheduler: Scheduler-Instanz
+        """
+        self.scheduler = scheduler
+        logger.debug("Scheduler in SettingsTab gesetzt")
+
     def _load_settings(self) -> None:
         """Lädt Settings aus ConfigManager in UI"""
         if not self.config_manager:
@@ -578,8 +589,20 @@ class SettingsTab(QWidget):
         backup_type = "Vollbackup" if schedule.backup_type == "full" else "Inkrementell"
         details.append(f"<b>Backup-Typ:</b> {backup_type}")
 
-        # Nächster Lauf (TODO: vom Scheduler berechnen lassen)
-        # details.append(f"<b>Nächster Lauf:</b> 01.12.2025 10:00")
+        # Nächster Lauf (vom Scheduler berechnen)
+        if self.scheduler and schedule.enabled:
+            next_run = self.scheduler.get_next_scheduled_run(schedule.id)
+            if next_run:
+                # Formatiere als deutsches Datum mit Uhrzeit
+                formatted = next_run.strftime("%d.%m.%Y %H:%M")
+                details.append(f"<b>Nächster Lauf:</b> {formatted}")
+            elif schedule.frequency in [ScheduleFrequency.STARTUP, ScheduleFrequency.SHUTDOWN]:
+                # Startup/Shutdown haben keinen "nächsten Lauf"
+                details.append("<b>Nächster Lauf:</b> Bei System-Event")
+            else:
+                details.append("<b>Nächster Lauf:</b> Nicht berechnet")
+        elif not schedule.enabled:
+            details.append("<b>Nächster Lauf:</b> <i>Deaktiviert</i>")
 
         self.schedule_details_label.setText("<br>".join(details))
 

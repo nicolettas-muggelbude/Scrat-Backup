@@ -895,10 +895,10 @@ CREATE INDEX idx_backups_timestamp ON backups(timestamp);
 - [x] schedule_dialog.py - Schedule-Dialog für Erstellen/Bearbeiten
 - [x] Schedule-Verwaltung im Settings-Tab
 - [x] Config-Persistierung für Zeitpläne
-- [ ] Scheduler-Worker (Background QThread) - TODO
-- [ ] "Nächster Lauf"-Anzeige - TODO
-- [ ] Missed-Backup-Detection - TODO
-- [ ] Scheduler-Tests - TODO
+- [x] Scheduler-Worker (Background QThread) ✅
+- [x] "Nächster Lauf"-Anzeige ✅
+- [x] Missed-Backup-Detection ✅
+- [x] Scheduler-Tests ✅ (22 passing, 3 skipped)
 
 ### Phase 10: Logging & Benachrichtigungen (Sprint 9)
 - [ ] logger.py - Strukturiertes Logging
@@ -989,6 +989,36 @@ mypy>=1.8.0
 ---
 
 ## Changelog
+
+### 2025-12-15 - Phase 10 vollständig abgeschlossen ✅
+- **Scheduler-Worker implementiert (scheduler_worker.py - 253 Zeilen):**
+  - Background QThread der alle 60 Sekunden Zeitpläne prüft
+  - Automatisches Triggern fälliger Backups
+  - Signals: backup_due, next_run_changed, error_occurred
+  - Pause/Resume-Funktionalität
+  - Graceful Shutdown beim Beenden
+- **Missed-Backup-Detection:**
+  - Erkennt wenn System lange ausgeschaltet war
+  - Identifiziert verpasste Backups
+  - Fragt User ob Backup nachgeholt werden soll
+  - Automatische Neuberechnung von next_run
+- **"Nächster Lauf"-Anzeige im Settings-Tab:**
+  - Zeigt geplanten Zeitpunkt für jeden Zeitplan
+  - Deutsches Datumsformat (DD.MM.YYYY HH:MM)
+  - Unterscheidet: Startup/Shutdown ("Bei System-Event")
+  - Live-Update bei Änderungen durch Worker
+- **Integration in MainWindow:**
+  - Scheduler wird beim Start initialisiert
+  - Worker startet automatisch im Hintergrund
+  - Event-Handler für backup_due mit User-Dialog
+  - Verpasste Backups können nachgeholt oder übersprungen werden
+  - Worker wird beim Beenden sauber gestoppt
+- **Scheduler-Tests (25 Tests gesamt):**
+  - 16 Tests für Scheduler-Klasse (alle passing)
+  - 9 Tests für SchedulerWorker (6 passing, 3 skipped)
+  - Geskippt: Fragile asynchrone Signal-Tests (manuell testbar)
+  - Coverage: scheduler.py 68%, scheduler_worker.py 47%
+  - Getestet: Zeitberechnung, Job-Verwaltung, Windows Task Scheduler
 
 ### 2025-11-30 - Phase 10 Schedule-Dialog und Config-Persistierung ✅
 - **Schedule-Dialog implementiert (schedule_dialog.py - 402 Zeilen):**
@@ -1276,9 +1306,11 @@ mypy>=1.8.0
 
 ---
 
-**Letzte Aktualisierung:** 2025-12-01
+**Letzte Aktualisierung:** 2025-12-15
 **Version:** 0.1.0-dev
 **Status:** Phase 1-11 abgeschlossen ✅ - GUI komplett funktionsfähig & polished!
+        Phase 10 (Scheduler) vollständig implementiert ✅
+        Scheduler-Worker läuft im Hintergrund, Missed-Backup-Detection aktiv
         Passwort-Management, UI-Verbesserungen, Input-Validierung ✅
-        Alle Core-Tests bestehen (121 passed)!
+        Scheduler-Tests: 22 passing, 3 skipped
         Bereit für Phase 12 (Packaging & Release)

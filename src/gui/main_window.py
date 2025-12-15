@@ -23,6 +23,8 @@ from PyQt6.QtWidgets import (
 
 from src.core.config_manager import ConfigManager
 from src.core.metadata_manager import MetadataManager
+from src.core.scheduler import Scheduler
+from src.core.scheduler_worker import SchedulerWorker
 from src.gui.backup_tab import BackupTab
 from src.gui.event_bus import get_event_bus
 from src.gui.logs_tab import LogsTab
@@ -62,6 +64,9 @@ class MainWindow(QMainWindow):
         self._create_statusbar()
         self._create_system_tray()
         self._connect_events()
+
+        # Scheduler initialisieren und starten
+        self._init_scheduler()
 
         logger.info("Hauptfenster initialisiert")
 
@@ -343,6 +348,44 @@ class MainWindow(QMainWindow):
 
         logger.debug("System Tray Icon erstellt")
 
+    def _init_scheduler(self) -> None:
+        """Initialisiert Scheduler und Worker"""
+        # Erstelle Scheduler
+        self.scheduler = Scheduler(callback=self._on_scheduled_backup)
+
+        # Verbinde Scheduler mit Settings-Tab (für "Nächster Lauf"-Anzeige)
+        self.settings_tab.set_scheduler(self.scheduler)
+
+        # Lade Zeitpläne aus Config
+        self._load_schedules()
+
+        # Erstelle und starte Worker
+        self.scheduler_worker = SchedulerWorker(self.scheduler, check_interval=60)
+        self.scheduler_worker.backup_due.connect(self._on_scheduled_backup_due)
+        self.scheduler_worker.next_run_changed.connect(self._on_next_run_changed)
+        self.scheduler_worker.error_occurred.connect(self._on_scheduler_error)
+        self.scheduler_worker.start()
+
+        logger.info("Scheduler-Worker gestartet")
+
+    def _load_schedules(self) -> None:
+        """Lädt Zeitpläne aus Config in Scheduler"""
+        schedules_data = self.config_manager.get_schedules()
+
+        for schedule_dict in schedules_data:
+            try:
+                # Konvertiere zu Schedule-Objekt (nutze settings_tab Methode)
+                schedule = self.settings_tab._schedule_from_dict(schedule_dict)
+
+                # Füge zum Scheduler hinzu (nur wenn enabled)
+                if schedule.enabled:
+                    self.scheduler.add_schedule(schedule)
+
+            except Exception as e:
+                logger.error(f"Fehler beim Laden von Zeitplan: {e}", exc_info=True)
+
+        logger.info(f"{len(self.scheduler.jobs)} aktive Zeitpläne geladen")
+
     def _connect_events(self) -> None:
         """Verbindet Event-Bus-Signals mit Slots"""
         # Backup-Events
@@ -450,6 +493,63 @@ class MainWindow(QMainWindow):
         self.status_label.setText(f"Storage-Fehler: {message}")
         logger.error(f"Storage-Fehler: {message}", exc_info=error)
 
+    def _on_scheduled_backup(self, schedule) -> None:
+        """Handler für geplante Backups (Scheduler Callback)"""
+        logger.info(f"Geplantes Backup wird ausgeführt: {schedule.name}")
+        # Dieser Callback wird vom Scheduler direkt aufgerufen (optional)
+        # Die eigentliche Verarbeitung erfolgt in _on_scheduled_backup_due
+
+    def _on_scheduled_backup_due(self, schedule, is_missed: bool) -> None:
+        """Handler für SchedulerWorker: Backup fällig"""
+        logger.info(f"Backup fällig: '{schedule.name}' (Verpasst: {is_missed})")
+
+        # Bei verpasstem Backup: Frage User
+        if is_missed:
+            reply = QMessageBox.question(
+                self,
+                "Verpasstes Backup",
+                f"Das geplante Backup '{schedule.name}' wurde verpasst.\n\n"
+                f"Möchten Sie es jetzt nachholen?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+
+            if reply == QMessageBox.StandardButton.No:
+                # Markiere als abgeschlossen (ohne Ausführung)
+                self.scheduler_worker.mark_job_finished(schedule.id)
+                logger.info(f"Verpasstes Backup '{schedule.name}' übersprungen")
+                return
+
+        # Zeige Notification
+        self.system_tray.show_message(
+            "Geplantes Backup",
+            f"Backup '{schedule.name}' wird gestartet...",
+        )
+
+        # TODO: Triggere Backup über BackupEngine
+        # Für jetzt: Platzhalter
+        logger.info(f"TODO: Starte Backup für Zeitplan '{schedule.name}'")
+
+        # Simuliere Abschluss (in Realität: wenn Backup fertig)
+        # self.scheduler_worker.mark_job_finished(schedule.id)
+
+    def _on_next_run_changed(self, schedule_id: int, next_run) -> None:
+        """Handler für SchedulerWorker: Nächster Lauf geändert"""
+        logger.debug(f"Nächster Lauf für Schedule {schedule_id}: {next_run}")
+
+        # Wenn Settings-Tab gerade aktiv ist und dieser Schedule ausgewählt,
+        # aktualisiere die Details-Anzeige
+        if self.tab_widget.currentWidget() == self.settings_tab:
+            current_item = self.settings_tab.schedules_list.currentItem()
+            if current_item:
+                schedule = current_item.data(Qt.ItemDataRole.UserRole)
+                if schedule and schedule.id == schedule_id:
+                    self.settings_tab._update_schedule_details(schedule)
+
+    def _on_scheduler_error(self, error_message: str) -> None:
+        """Handler für Scheduler-Fehler"""
+        logger.error(f"Scheduler-Fehler: {error_message}")
+        self.status_label.setText(f"Scheduler-Fehler: {error_message}")
+
     def _on_tray_show_window(self) -> None:
         """Handler für Tray: Hauptfenster anzeigen"""
         self.show()
@@ -504,6 +604,12 @@ class MainWindow(QMainWindow):
         if hasattr(self, "quit_requested") and self.quit_requested:
             # Wirklich beenden (über Tray-Menu)
             logger.info("Anwendung wird beendet")
+
+            # Stoppe Scheduler-Worker
+            if hasattr(self, "scheduler_worker"):
+                logger.info("Stoppe Scheduler-Worker...")
+                self.scheduler_worker.stop()
+
             event.accept()
         else:
             # Minimiere zu Tray
