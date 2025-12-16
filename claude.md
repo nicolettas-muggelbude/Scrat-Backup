@@ -913,13 +913,17 @@ CREATE INDEX idx_backups_timestamp ON backups(timestamp);
 - [ ] Icon-Design (Eichel)
 - [ ] Beta-Testing
 
-### Phase 12: Packaging & Release (Sprint 11)
-- [ ] PyInstaller-Konfiguration
-- [ ] Inno Setup Installer
-- [ ] README.md (Deutsch + Englisch)
-- [ ] User Guide mit Screenshots
-- [ ] GitHub-Repository veröffentlichen
-- [ ] Release 1.0
+### Phase 12: Packaging & Release (Sprint 11) ✅ BETA-RELEASE
+- [x] PyInstaller-Konfiguration ✅
+- [x] Build-Script (build_exe.py) ✅
+- [x] Inno Setup Installer ✅
+- [x] BUILD.md Dokumentation ✅
+- [x] README.md aktualisiert (Beta-Status) ✅
+- [x] RELEASE_NOTES.md erstellt ✅
+- [x] CHANGELOG.md erstellt ✅
+- [ ] User Guide mit Screenshots (TODO)
+- [ ] Beta-Version als GitHub Release (TODO)
+- [ ] Release 1.0 (Q2 2025)
 
 ---
 
@@ -1307,10 +1311,11 @@ mypy>=1.8.0
 ---
 
 **Letzte Aktualisierung:** 2025-12-15
-**Version:** 0.1.0-dev
-**Status:** Phase 1-11 abgeschlossen ✅ - GUI komplett funktionsfähig & polished!
-        Phase 10 (Scheduler) vollständig implementiert ✅
-        Scheduler-Worker läuft im Hintergrund, Missed-Backup-Detection aktiv
-        Passwort-Management, UI-Verbesserungen, Input-Validierung ✅
-        Scheduler-Tests: 22 passing, 3 skipped
-        Bereit für Phase 12 (Packaging & Release)
+**Version:** 0.2.0-beta
+**Status:** 🎉 BETA-RELEASE! Phase 1-12 abgeschlossen ✅
+        Phase 10: Scheduler vollständig implementiert (22 Tests)
+        Phase 12: Packaging & Distribution abgeschlossen
+        PyInstaller Build-System, Inno Setup Installer
+        Release-Dokumentation: BUILD.md, RELEASE_NOTES.md, CHANGELOG.md
+        README.md aktualisiert für Beta-Release
+        Bereit für Public Beta Testing! 🚀

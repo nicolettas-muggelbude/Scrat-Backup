@@ -10,7 +10,7 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![Development Status](https://img.shields.io/badge/status-pre--release%20(v0.1.0--dev)-orange)](https://github.com/your-username/scrat-backup)
+[![Development Status](https://img.shields.io/badge/status-beta%20(v0.2.0)-yellow)](https://github.com/nicolettas-muggelbude/Scrat-Backup)
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)](https://www.microsoft.com/windows)
 
 [Features](#-features) •
@@ -77,61 +77,80 @@
 - ✅ **Settings-Tab** mit umfassenden Konfigurationen
 - ✅ **Logs-Tab** für Fehlersuche
 
-### ⏰ Automatisierung
-- ✅ **Zeitpläne** (Täglich, Wöchentlich, Monatlich)
-- ✅ **Automatische Backups** beim Start/Herunterfahren (geplant)
-- ✅ **System Tray** Integration (geplant)
+### ⏰ Automatisierung & Scheduler
+- ✅ **Zeitpläne erstellen** (Täglich, Wöchentlich, Monatlich, bei Start/Shutdown)
+- ✅ **Scheduler-Worker** läuft im Hintergrund (prüft alle 60 Sekunden)
+- ✅ **Automatische Backup-Ausführung** zu geplanten Zeiten
+- ✅ **Missed-Backup-Detection** (erkennt verpasste Backups)
+- ✅ **"Nächster Lauf"-Anzeige** für jeden Zeitplan
+- ✅ **System Tray** Integration mit Notifications
+- ✅ **Pause/Resume** für Scheduler
 
 ---
 
 ## 🚀 Status
 
-**Aktuell: Phase 11 - Polishing (Pre-Release v0.1.0-dev)**
+**Aktuell: Beta v0.2.0 - Ready for Testing! 🎉**
 
 ### ✅ Abgeschlossen
 - [x] **Phase 1-5:** Core-Module (Backup/Restore-Engine, Verschlüsselung, Komprimierung)
 - [x] **Phase 6-9:** GUI (Hauptfenster, Wizard, Settings, Tabs)
-- [x] **Phase 10:** Storage-Backends (alle 5 implementiert!)
+- [x] **Phase 10:** Scheduler & Automatisierung
+  - Zeitpläne (Täglich, Wöchentlich, Monatlich)
+  - Scheduler-Worker läuft im Hintergrund
+  - Missed-Backup-Detection
+  - "Nächster Lauf"-Anzeige
+  - 22 Scheduler-Tests ✅
 - [x] **Phase 11:** Polishing
   - Passwort-Management mit Windows Credential Manager
   - UI-Verbesserungen (Backup/Restore-Tabs)
   - Input-Validierung & Error-Handling
   - Setup-Wizard komplett überarbeitet (Deutsch, Auto-Erkennung)
 
-### 🔨 In Arbeit
-- [ ] Hilfefunktion / Guided Tour
-- [ ] Barrierefreiheit (Tastatur-Navigation, Screen-Reader)
-- [ ] Internationalisierung (Deutsch, Englisch, weitere Sprachen)
-- [ ] Dark Mode
-- [ ] Update-Funktion
+### 🔨 Phase 12: Packaging & Beta-Release (In Arbeit)
+- [x] PyInstaller-Konfiguration
+- [x] Build-Script (build_exe.py)
+- [x] Inno Setup Installer-Script
+- [x] Build-Dokumentation (BUILD.md)
+- [ ] Beta-Testing
+- [ ] GitHub Release
 
 ### 📅 Geplant (siehe [TODO.md](TODO.md))
-- [ ] **Phase 12:** Release 1.0
-  - Windows Installer (.exe)
-  - Dokumentation
-  - Marketing & Community
+- [ ] Hilfefunktion / Guided Tour
+- [ ] Barrierefreiheit (Tastatur-Navigation, Screen-Reader)
+- [ ] Internationalisierung (Englisch, weitere Sprachen)
+- [ ] Dark Mode
+- [ ] Update-Funktion
+- [ ] Release 1.0 (Q2 2025)
 
-**Nächster Meilenstein:** Beta-Version Q1 2025 🎯
+**Aktueller Meilenstein:** Public Beta Testing 🎯
 
 ---
 
 ## 📦 Installation
 
-### Für Endnutzer
+### 🎉 Beta-Version verfügbar!
 
-**Noch nicht verfügbar - Projekt in Pre-Release-Phase**
+**Download: [Releases](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases)**
 
-Geplant für Release 1.0:
-```bash
-# Windows Installer
-scrat-backup-setup-1.0.exe
-```
+#### Variante 1: Portable ZIP (Empfohlen für Beta)
+1. Lade `ScratBackup-v0.2.0-beta-windows.zip` herunter
+2. Entpacke das ZIP-Archiv
+3. Starte `ScratBackup.exe`
+4. Folge dem Setup-Wizard
+
+#### Variante 2: Installer (Optional)
+1. Lade `ScratBackup-v0.2.0-beta-Setup.exe` herunter
+2. Führe den Installer aus
+3. Starte über Startmenü oder Desktop-Icon
+
+**⚠️ Beta-Hinweis:** Dies ist eine Testversion. Bitte melde Bugs auf [GitHub Issues](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues).
 
 ### Für Entwickler
 
 ```bash
 # Repository klonen
-git clone https://github.com/your-username/scrat-backup.git
+git clone https://github.com/nicolettas-muggelbude/Scrat-Backup.git
 cd scrat-backup
 
 # Virtual Environment erstellen
@@ -224,7 +243,7 @@ scrat-backup/
 │   │   ├── rclone_storage.py   # Rclone
 │   │   └── smb_storage.py      # SMB/CIFS
 │   └── utils/                  # Utilities
-├── tests/                      # 121 Tests (>80% Coverage)
+├── tests/                      # 143 Tests (>80% Coverage)
 ├── docs/                       # Dokumentation
 │   ├── developer_guide.md
 │   └── architecture.md
@@ -259,6 +278,7 @@ scrat-backup/
 | Dokument | Beschreibung |
 |----------|--------------|
 | [claude.md](claude.md) | Vollständige technische Dokumentation |
+| [BUILD.md](BUILD.md) | Build-Anleitung für Entwickler |
 | [TODO.md](TODO.md) | Roadmap & geplante Features |
 | [docs/developer_guide.md](docs/developer_guide.md) | Entwickler-Handbuch |
 | [docs/architecture.md](docs/architecture.md) | Architektur-Übersicht |
@@ -353,9 +373,9 @@ Sende eine E-Mail an: **security@scrat-backup.example**
 ## 💬 Support
 
 - 📚 **Dokumentation**: [claude.md](claude.md)
-- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/your-username/scrat-backup/issues)
-- 💡 **Feature Requests**: [GitHub Discussions](https://github.com/your-username/scrat-backup/discussions)
-- ❓ **Fragen**: [GitHub Discussions](https://github.com/your-username/scrat-backup/discussions/categories/q-a)
+- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues)
+- 💡 **Feature Requests**: [GitHub Discussions](https://github.com/nicolettas-muggelbude/Scrat-Backup/discussions)
+- ❓ **Fragen**: [GitHub Discussions](https://github.com/nicolettas-muggelbude/Scrat-Backup/discussions/categories/q-a)
 
 ---
 
@@ -370,7 +390,7 @@ Sende eine E-Mail an: **security@scrat-backup.example**
 
 ## 📊 Statistiken
 
-![Tests](https://img.shields.io/badge/tests-121%20passed-success)
+![Tests](https://img.shields.io/badge/tests-143%20passed-success)
 ![Coverage](https://img.shields.io/badge/coverage-80%25+-success)
 ![Python](https://img.shields.io/badge/python-3.12+-blue)
 ![License](https://img.shields.io/badge/license-GPLv3-green)
@@ -385,6 +405,6 @@ Sende eine E-Mail an: **security@scrat-backup.example**
 
 *Wie ein Eichhörnchen seine Eicheln bewahrt, so bewahren wir deine Daten.* 🐿️🌰
 
-**[⭐ Star das Projekt](https://github.com/your-username/scrat-backup) • [🐛 Report Bug](https://github.com/your-username/scrat-backup/issues) • [💡 Request Feature](https://github.com/your-username/scrat-backup/discussions)**
+**[⭐ Star das Projekt](https://github.com/nicolettas-muggelbude/Scrat-Backup) • [📥 Download Beta](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases) • [🐛 Report Bug](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues) • [💡 Request Feature](https://github.com/nicolettas-muggelbude/Scrat-Backup/discussions)**
 
 </div>

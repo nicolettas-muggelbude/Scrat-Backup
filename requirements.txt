@@ -37,5 +37,5 @@ flake8>=7.0.0           # Linter
 mypy>=1.8.0             # Type-Checker
 isort>=5.13.0           # Import-Sortierer
 
-# Optional: Für späteren Build
-# pyinstaller>=6.3.0
+# Packaging
+pyinstaller>=6.0.0      # Executable Builder

@@ -1,0 +1,58 @@
+═══════════════════════════════════════════════════════════════
+          Willkommen bei Scrat-Backup Installation
+═══════════════════════════════════════════════════════════════
+
+🐿️ Wie ein Eichhörnchen seine Eicheln bewahrt,
+   so bewahren wir deine Daten.
+
+
+SYSTEMANFORDERUNGEN
+───────────────────
+• Windows 10 oder neuer (64-bit)
+• Mindestens 4 GB RAM
+• 500 MB freier Festplattenspeicher
+• Internetverbindung (für Cloud-Backups)
+
+
+WAS WIRD INSTALLIERT?
+──────────────────────
+• Scrat-Backup Hauptanwendung
+• Alle benötigten Bibliotheken
+• Konfigurationsvorlagen
+• Dokumentation
+
+
+NACH DER INSTALLATION
+──────────────────────
+1. Starte Scrat-Backup über das Startmenü
+2. Der Setup-Wizard führt dich durch die Erstkonfiguration
+3. Füge Backup-Quellen hinzu (Ordner, die gesichert werden sollen)
+4. Wähle ein Backup-Ziel (USB, Netzwerk, Cloud)
+5. Erstelle optional einen Zeitplan für automatische Backups
+
+
+SICHERHEIT & DATENSCHUTZ
+─────────────────────────
+✓ Alle Backups werden mit AES-256-GCM verschlüsselt
+✓ Passwörter werden sicher im Windows Credential Manager gespeichert
+✓ Keine Telemetrie oder Datensammlung
+✓ 100% Open Source (GPLv3)
+
+
+UNTERSTÜTZUNG
+─────────────
+• Dokumentation: README.md im Installationsordner
+• User Guide: docs/USER_GUIDE.md
+• Online: https://github.com/nicolettas-muggelbude/Scrat-Backup
+• Issues: https://github.com/nicolettas-muggelbude/Scrat-Backup/issues
+
+
+LIZENZ
+──────
+Scrat-Backup ist freie Software unter der GNU General Public License v3.0.
+Siehe LICENSE-Datei für Details.
+
+
+───────────────────────────────────────────────────────────────
+ Drücke "Weiter" um mit der Installation fortzufahren.
+───────────────────────────────────────────────────────────────
