@@ -44,8 +44,8 @@ class BuildScript:
         """Prüft ob Icon vorhanden ist"""
         self.print_header("Prüfe Icon-Datei")
 
-        icon_ico = self.assets_dir / "scrat_icon.ico"
-        icon_png = self.assets_dir / "scrat_icon.png"
+        icon_ico = self.assets_dir / "icons" / "scrat.ico"
+        icon_png = self.assets_dir / "icons" / "scrat-256.png"
 
         if icon_ico.exists():
             print(f"✓ Icon gefunden: {icon_ico}")
@@ -53,8 +53,6 @@ class BuildScript:
         elif icon_png.exists():
             print(f"✓ PNG-Icon gefunden: {icon_png}")
             print("  Hinweis: Für Windows .exe wird .ico empfohlen")
-            print("  Du kannst mit 'convert' PNG zu ICO konvertieren:")
-            print(f"  convert {icon_png} -define icon:auto-resize=256,128,96,64,48,32,16 {icon_ico}")
             return True
         else:
             print("⚠ Warnung: Kein Icon gefunden")
