@@ -35,6 +35,8 @@ venv.bak/
 # PyInstaller
 *.manifest
 *.spec
+# Ausnahme: Unsere PyInstaller Spec-Datei soll getrackt werden
+!scrat_backup.spec
 
 # Unit test / coverage
 htmlcov/

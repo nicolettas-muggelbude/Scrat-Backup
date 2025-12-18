@@ -18,7 +18,7 @@ class BuildScript:
         self.project_root = Path(__file__).parent
         self.dist_dir = self.project_root / "dist"
         self.build_dir = self.project_root / "build"
-        self.spec_file = self.project_root / "scrat-backup.spec"
+        self.spec_file = self.project_root / "scrat_backup.spec"
         self.assets_dir = self.project_root / "assets"
 
     def print_header(self, text: str):
