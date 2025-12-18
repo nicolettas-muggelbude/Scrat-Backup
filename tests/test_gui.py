@@ -3,7 +3,7 @@ Unit-Tests für GUI-Komponenten
 """
 
 import pytest
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from src.gui.event_bus import EventBus, EventType, get_event_bus
 from src.gui.main_window import MainWindow

@@ -7,9 +7,9 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QIcon
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -154,7 +154,7 @@ class MainWindow(QMainWindow):
 
         icon_path = Path(__file__).parent.parent.parent / "assets" / "scrat_icon.png"
         if icon_path.exists():
-            from PyQt6.QtGui import QPixmap
+            from PySide6.QtGui import QPixmap
 
             icon_label = QLabel()
             pixmap = QPixmap(str(icon_path)).scaled(

@@ -6,8 +6,8 @@ GUI für Applikations-Einstellungen
 import logging
 from typing import Optional
 
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
@@ -48,7 +48,7 @@ class SettingsTab(QWidget):
     """
 
     # Signals
-    settings_changed = pyqtSignal()  # Wenn Einstellungen gespeichert wurden
+    settings_changed = Signal()  # Wenn Einstellungen gespeichert wurden
 
     def __init__(self, parent: Optional[QWidget] = None):
         """Initialisiert Settings-Tab"""

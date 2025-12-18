@@ -9,8 +9,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt, Signal, Slot
+from PySide6.QtWidgets import (
     QCheckBox,
     QFileDialog,
     QGroupBox,
@@ -48,9 +48,9 @@ class RestoreTab(QWidget):
     """
 
     # Signals für Thread-safe GUI-Updates
-    progress_updated = pyqtSignal(object)  # RestoreProgress
-    restore_completed = pyqtSignal(object)  # RestoreResult
-    restore_failed = pyqtSignal(str)  # Error message
+    progress_updated = Signal(object)  # RestoreProgress
+    restore_completed = Signal(object)  # RestoreResult
+    restore_failed = Signal(str)  # Error message
 
     def __init__(self, parent: Optional[QWidget] = None):
         """Initialisiert Restore-Tab"""
@@ -628,7 +628,7 @@ class RestoreTab(QWidget):
         # Signal an GUI-Thread
         self.progress_updated.emit(progress)
 
-    @pyqtSlot(object)
+    @Slot(object)
     def _update_progress_ui(self, progress: RestoreProgress) -> None:
         """
         Aktualisiert Progress-UI (läuft in GUI-Thread)
@@ -664,7 +664,7 @@ class RestoreTab(QWidget):
             stats += f" • {mb_processed:.1f}/{mb_total:.1f} MB"
         self.stats_label.setText(stats)
 
-    @pyqtSlot(object)
+    @Slot(object)
     def _on_restore_completed(self, result: RestoreResult) -> None:
         """
         Callback wenn Restore abgeschlossen ist
@@ -701,7 +701,7 @@ class RestoreTab(QWidget):
             errors = "\n".join(result.errors[:5])  # Erste 5 Fehler
             QMessageBox.critical(self, "Wiederherstellung fehlgeschlagen", f"Fehler:\n{errors}")
 
-    @pyqtSlot(str)
+    @Slot(str)
     def _on_restore_failed(self, error: str) -> None:
         """
         Callback wenn Restore fehlgeschlagen ist

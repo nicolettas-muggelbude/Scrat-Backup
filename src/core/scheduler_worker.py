@@ -7,7 +7,7 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from PyQt6.QtCore import QThread, pyqtSignal
+from PySide6.QtCore import QThread, Signal
 
 from src.core.scheduler import Schedule, Scheduler
 
@@ -31,9 +31,9 @@ class SchedulerWorker(QThread):
     """
 
     # Signals
-    backup_due = pyqtSignal(object, bool)  # schedule, is_missed
-    next_run_changed = pyqtSignal(int, object)  # schedule_id, next_run (datetime)
-    error_occurred = pyqtSignal(str)  # error_message
+    backup_due = Signal(object, bool)  # schedule, is_missed
+    next_run_changed = Signal(int, object)  # schedule_id, next_run (datetime)
+    error_occurred = Signal(str)  # error_message
 
     def __init__(
         self,

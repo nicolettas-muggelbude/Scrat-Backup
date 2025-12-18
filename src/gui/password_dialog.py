@@ -6,7 +6,7 @@ Dialog zur Passwort-Eingabe mit Option zum Speichern
 import logging
 from typing import Optional, Tuple
 
-from PyQt6.QtWidgets import (
+from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
     QDialogButtonBox,
@@ -141,7 +141,7 @@ class PasswordDialog(QDialog):
 
         if not password:
             # Leeres Passwort - Warnung aber erlauben
-            from PyQt6.QtWidgets import QMessageBox
+            from PySide6.QtWidgets import QMessageBox
 
             reply = QMessageBox.question(
                 self,

@@ -9,7 +9,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Optional
 
-from PyQt6.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 logger = logging.getLogger(__name__)
 
@@ -92,28 +92,28 @@ class EventBus(QObject):
 
     # PyQt Signals für verschiedene Event-Typen
     # Format: (event_type: str, data: Any, message: str, error: Exception)
-    event_occurred = pyqtSignal(object)  # Event object
+    event_occurred = Signal(object)  # Event object
 
     # Spezifische Signals für häufig genutzte Events (Performance)
-    backup_progress = pyqtSignal(object)  # BackupProgress
-    backup_completed = pyqtSignal(object)  # BackupResult
-    backup_failed = pyqtSignal(str, object)  # message, exception
+    backup_progress = Signal(object)  # BackupProgress
+    backup_completed = Signal(object)  # BackupResult
+    backup_failed = Signal(str, object)  # message, exception
 
-    restore_progress = pyqtSignal(object)  # RestoreProgress
-    restore_completed = pyqtSignal(object)  # RestoreResult
-    restore_failed = pyqtSignal(str, object)  # message, exception
+    restore_progress = Signal(object)  # RestoreProgress
+    restore_completed = Signal(object)  # RestoreResult
+    restore_failed = Signal(str, object)  # message, exception
 
-    scan_progress = pyqtSignal(object)  # Path or status
-    scan_completed = pyqtSignal(object)  # ScanResult
+    scan_progress = Signal(object)  # Path or status
+    scan_completed = Signal(object)  # ScanResult
 
-    storage_connected = pyqtSignal(str)  # storage name
-    storage_disconnected = pyqtSignal(str)  # storage name
-    storage_error = pyqtSignal(str, object)  # message, exception
+    storage_connected = Signal(str)  # storage name
+    storage_disconnected = Signal(str)  # storage name
+    storage_error = Signal(str, object)  # message, exception
 
-    error_occurred = pyqtSignal(str, object)  # message, exception
-    warning_occurred = pyqtSignal(str)  # message
-    info_message = pyqtSignal(str)  # message
-    log_message = pyqtSignal(str, str)  # level, message
+    error_occurred = Signal(str, object)  # message, exception
+    warning_occurred = Signal(str)  # message
+    info_message = Signal(str)  # message
+    log_message = Signal(str, str)  # level, message
 
     def __init__(self):
         """Initialisiert Event-Bus"""

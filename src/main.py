@@ -7,7 +7,7 @@ import logging
 import sys
 from pathlib import Path
 
-from PyQt6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from src.core.config_manager import ConfigManager
 from src.core.metadata_manager import MetadataManager

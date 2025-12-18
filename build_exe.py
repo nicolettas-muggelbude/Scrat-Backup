@@ -72,10 +72,10 @@ class BuildScript:
             return False
 
         try:
-            import PyQt6
-            print(f"✓ PyQt6: {PyQt6.QtCore.PYQT_VERSION_STR}")
+            import PySide6
+            print(f"✓ PySide6: {PySide6.__version__}")
         except ImportError:
-            print("✗ PyQt6 nicht gefunden!")
+            print("✗ PySide6 nicht gefunden!")
             return False
 
         # Weitere wichtige Dependencies

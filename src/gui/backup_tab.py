@@ -10,8 +10,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from PyQt6.QtCore import Qt, pyqtSignal, pyqtSlot
-from PyQt6.QtWidgets import (
+from PySide6.QtCore import Qt, Signal, Slot
+from PySide6.QtWidgets import (
     QComboBox,
     QGroupBox,
     QHBoxLayout,
@@ -49,9 +49,9 @@ class BackupTab(QWidget):
     """
 
     # Signals für Thread-safe GUI-Updates
-    progress_updated = pyqtSignal(object)  # BackupProgress
-    backup_completed = pyqtSignal(object)  # BackupResult
-    backup_failed = pyqtSignal(str)  # Error message
+    progress_updated = Signal(object)  # BackupProgress
+    backup_completed = Signal(object)  # BackupResult
+    backup_failed = Signal(str)  # Error message
 
     def __init__(self, parent: Optional[QWidget] = None):
         """Initialisiert Backup-Tab"""
@@ -311,7 +311,7 @@ class BackupTab(QWidget):
             self.sources_list.addItem(item)
 
         if not sources:
-            from PyQt6.QtGui import QColor
+            from PySide6.QtGui import QColor
 
             item = QListWidgetItem("Keine Quellen konfiguriert")
             item.setFlags(Qt.ItemFlag.NoItemFlags)
@@ -514,7 +514,7 @@ class BackupTab(QWidget):
         # Signal an GUI-Thread
         self.progress_updated.emit(progress)
 
-    @pyqtSlot(object)
+    @Slot(object)
     def _update_progress_ui(self, progress: BackupProgress) -> None:
         """
         Aktualisiert Progress-UI (läuft in GUI-Thread)
@@ -575,7 +575,7 @@ class BackupTab(QWidget):
 
         self.stats_label.setText(stats)
 
-    @pyqtSlot(object)
+    @Slot(object)
     def _on_backup_completed(self, result: BackupResult) -> None:
         """
         Callback wenn Backup abgeschlossen ist
@@ -617,7 +617,7 @@ class BackupTab(QWidget):
             errors = "\n".join(result.errors[:5])  # Erste 5 Fehler
             QMessageBox.critical(self, "Backup fehlgeschlagen", f"Fehler:\n{errors}")
 
-    @pyqtSlot(str)
+    @Slot(str)
     def _on_backup_failed(self, error: str) -> None:
         """
         Callback wenn Backup fehlgeschlagen ist

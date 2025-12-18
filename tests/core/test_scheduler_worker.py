@@ -5,7 +5,7 @@ Tests für SchedulerWorker-Modul
 import pytest
 from datetime import datetime, time, timedelta
 from unittest.mock import Mock, MagicMock, patch
-from PyQt6.QtTest import QSignalSpy
+from PySide6.QtTest import QSignalSpy
 
 from src.core.scheduler import Schedule, Scheduler, ScheduleFrequency
 from src.core.scheduler_worker import SchedulerWorker
@@ -43,7 +43,7 @@ class TestSchedulerWorker:
         worker.start()
 
         # Kurz warten bis gestartet
-        from PyQt6.QtTest import QTest
+        from PySide6.QtTest import QTest
         QTest.qWait(100)
 
         assert worker.isRunning()

@@ -72,7 +72,7 @@ if __name__ == "__main__":
     print("\nStarte GUI...")
 
     # GUI starten
-    from PyQt6.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
     from src.gui.main_window import MainWindow
     from src.gui.theme import apply_theme
 

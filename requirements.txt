@@ -3,8 +3,7 @@
 # Python Version: 3.10+
 
 # GUI Framework
-PyQt6>=6.6.0
-PyQt6-Qt6>=6.6.0
+PySide6>=6.6.0
 
 # Komprimierung
 py7zr>=0.20.0

@@ -7,9 +7,9 @@ import logging
 from pathlib import Path
 from typing import Optional
 
-from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtGui import QAction, QIcon
-from PyQt6.QtWidgets import QMenu, QSystemTrayIcon
+from PySide6.QtCore import QObject, Signal
+from PySide6.QtGui import QAction, QIcon
+from PySide6.QtWidgets import QMenu, QSystemTrayIcon
 
 logger = logging.getLogger(__name__)
 
@@ -27,11 +27,11 @@ class SystemTray(QObject):
     """
 
     # Signals
-    show_main_window = pyqtSignal()
-    start_backup = pyqtSignal()
-    start_restore = pyqtSignal()
-    show_settings = pyqtSignal()
-    quit_application = pyqtSignal()
+    show_main_window = Signal()
+    start_backup = Signal()
+    start_restore = Signal()
+    show_settings = Signal()
+    quit_application = Signal()
 
     def __init__(self, parent=None):
         """

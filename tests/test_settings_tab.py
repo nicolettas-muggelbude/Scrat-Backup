@@ -5,7 +5,7 @@ Unit-Tests für Settings-Tab GUI
 from unittest.mock import patch
 
 import pytest
-from PyQt6.QtWidgets import QMessageBox
+from PySide6.QtWidgets import QMessageBox
 
 from src.core.config_manager import ConfigManager
 from src.gui.settings_tab import SettingsTab
