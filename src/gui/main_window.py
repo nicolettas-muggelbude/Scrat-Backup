@@ -118,6 +118,7 @@ class MainWindow(QMainWindow):
     def _create_restore_tab(self) -> None:
         """Erstellt Restore-Tab"""
         self.restore_tab = RestoreTab()
+        self.restore_tab.set_metadata_manager(self.metadata_manager)
         self.tab_widget.addTab(self.restore_tab, "Wiederherstellen")
 
     def _create_settings_tab(self) -> None:

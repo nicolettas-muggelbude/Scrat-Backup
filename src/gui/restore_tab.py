@@ -328,7 +328,7 @@ class RestoreTab(QWidget):
 
         try:
             # Hole alle Backups (nur completed)
-            backups = self.metadata_manager.list_backups(limit=50)
+            backups = self.metadata_manager.get_all_backups(limit=50)
             completed_backups = [b for b in backups if b.get("status") == "completed"]
 
             # Sortiere nach Datum (neueste zuerst)
@@ -345,15 +345,16 @@ class RestoreTab(QWidget):
                 timestamp = datetime.fromisoformat(backup["timestamp"])
                 date_str = timestamp.strftime("%d.%m.%Y %H:%M:%S")
                 date_item.setText(date_str)
-                date_item.setData(Qt.ItemDataRole.UserRole, backup["backup_id"])
+                # Feld heißt "id", nicht "backup_id"
+                date_item.setData(Qt.ItemDataRole.UserRole, backup["id"])
                 self.backup_table.setItem(row, 0, date_item)
 
-                # Typ
-                backup_type = "📦 Full" if backup["backup_type"] == "full" else "📝 Incr"
+                # Typ (Feld heißt "type" in DB, nicht "backup_type")
+                backup_type = "📦 Full" if backup.get("type") == "full" else "📝 Incr"
                 self.backup_table.setItem(row, 1, QTableWidgetItem(backup_type))
 
-                # Dateien
-                files = str(backup.get("file_count", 0))
+                # Dateien (Feld heißt "files_total" in DB, nicht "file_count")
+                files = str(backup.get("files_total", 0))
                 self.backup_table.setItem(row, 2, QTableWidgetItem(files))
 
                 # Größe
@@ -361,8 +362,15 @@ class RestoreTab(QWidget):
                 size_str = f"{size_mb:.1f} MB"
                 self.backup_table.setItem(row, 3, QTableWidgetItem(size_str))
 
-                # Dauer
-                duration_seconds = backup.get("duration_seconds", 0)
+                # Dauer (berechne aus created_at und completed_at)
+                duration_seconds = 0
+                if backup.get("created_at") and backup.get("completed_at"):
+                    try:
+                        created = datetime.fromisoformat(backup["created_at"])
+                        completed = datetime.fromisoformat(backup["completed_at"])
+                        duration_seconds = (completed - created).total_seconds()
+                    except:
+                        pass
                 if duration_seconds > 0:
                     if duration_seconds < 60:
                         duration_str = f"{int(duration_seconds)}s"
