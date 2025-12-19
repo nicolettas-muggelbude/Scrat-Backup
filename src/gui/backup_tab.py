@@ -458,13 +458,13 @@ class BackupTab(QWidget):
             return
 
         # Erstelle BackupConfig
+        # Note: BackupEngine entscheidet automatisch ob Full oder Incremental
         config = BackupConfig(
             sources=selected_sources,
             destination_path=Path(dest_config.get("path", Path.home() / "scrat-backups")),
             destination_type=destination["type"],
             password=password,
             compression_level=5,
-            backup_type=backup_type,
         )
 
         # Backup-Engine erstellen
