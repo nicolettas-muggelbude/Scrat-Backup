@@ -625,7 +625,7 @@ class RestoreTab(QWidget):
                     files_restored=0,
                     bytes_restored=0,
                     duration_seconds=0,
-                    error_message=str(e),
+                    errors=[str(e)],  # errors ist eine Liste, nicht error_message
                 )
                 self.restore_completed.emit(result)
 
