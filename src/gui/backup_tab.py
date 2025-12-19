@@ -53,12 +53,13 @@ class BackupTab(QWidget):
     backup_completed = Signal(object)  # BackupResult
     backup_failed = Signal(str)  # Error message
 
-    def __init__(self, parent: Optional[QWidget] = None):
+    def __init__(self, config_manager=None, parent: Optional[QWidget] = None):
         """Initialisiert Backup-Tab"""
         super().__init__(parent)
 
         self.event_bus = get_event_bus()
-        self.metadata_manager: Optional[MetadataManager] = None
+        self.config_manager = config_manager  # Für Quellen/Ziele
+        self.metadata_manager: Optional[MetadataManager] = None  # Für Backup-History
         self.backup_engine: Optional[BackupEngine] = None
         self.backup_thread: Optional[threading.Thread] = None
         self.is_backup_running = False
@@ -290,15 +291,23 @@ class BackupTab(QWidget):
         self._load_history()
 
     def _load_sources(self) -> None:
-        """Lädt Quellen aus MetadataManager"""
-        if not self.metadata_manager:
-            return
-
+        """Lädt Quellen aus ConfigManager"""
         self.sources_list.clear()
 
-        sources = self.metadata_manager.get_sources()
-        for source in sources:
-            item = QListWidgetItem(f"{source['name']} - {source['windows_path']}")
+        # Lade aus ConfigManager statt MetadataManager
+        if not self.config_manager:
+            logger.warning("Kein ConfigManager verfügbar")
+            item = QListWidgetItem("⚠ Keine Konfiguration geladen")
+            item.setFlags(Qt.ItemFlag.NoItemFlags)
+            self.sources_list.addItem(item)
+            return
+
+        sources = self.config_manager.config.get("sources", [])
+        for idx, source in enumerate(sources):
+            # Format: {'path': '...', 'name': '...', 'enabled': True, 'exclude_patterns': []}
+            source_name = source.get("name", "Unbenannt")
+            source_path = source.get("path", "")
+            item = QListWidgetItem(f"{source_name} - {source_path}")
             item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
 
             # Standardmäßig aktivierte Quellen sind gecheckt
@@ -307,7 +316,7 @@ class BackupTab(QWidget):
             else:
                 item.setCheckState(Qt.CheckState.Unchecked)
 
-            item.setData(Qt.ItemDataRole.UserRole, source["id"])
+            item.setData(Qt.ItemDataRole.UserRole, idx)  # Index statt ID
             self.sources_list.addItem(item)
 
         if not sources:
