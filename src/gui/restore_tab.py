@@ -58,6 +58,7 @@ class RestoreTab(QWidget):
 
         self.event_bus = get_event_bus()
         self.metadata_manager: Optional[MetadataManager] = None
+        self.db_path: Optional[Path] = None  # DB-Pfad für Thread-sichere Nutzung
         self.restore_engine: Optional[RestoreEngine] = None
         self.restore_thread: Optional[threading.Thread] = None
         self.is_restore_running = False
@@ -319,6 +320,7 @@ class RestoreTab(QWidget):
             metadata_manager: MetadataManager-Instanz
         """
         self.metadata_manager = metadata_manager
+        self.db_path = metadata_manager.db_path  # Speichere für Thread-sichere Nutzung
         self._load_backups()
 
     def _load_backups(self) -> None:
@@ -574,44 +576,55 @@ class RestoreTab(QWidget):
             restore_permissions=self.restore_permissions_checkbox.isChecked(),
         )
 
-        # Restore-Engine erstellen
-        try:
-            from src.core.restore_engine import RestoreEngine
+        # UI vorbereiten
+        self.is_restore_running = True
+        self.restore_button.setEnabled(False)
+        self.stop_button.setEnabled(True)
+        self.status_label.setText("Starte Wiederherstellung...")
+        self.progress_bar.setValue(0)
+        self.error_label.hide()
 
-            self.restore_engine = RestoreEngine(
-                metadata_manager=self.metadata_manager,
-                storage_backend=storage_backend,
-                config=config,
-                progress_callback=self._on_progress_update,
-            )
+        # Starte Wiederherstellung in Thread (mit Config, Storage-Backend und DB-Path)
+        self._start_restore_thread(backup_id, config, storage_backend, self.db_path)
 
-            # UI vorbereiten
-            self.is_restore_running = True
-            self.restore_button.setEnabled(False)
-            self.stop_button.setEnabled(True)
-            self.status_label.setText("Starte Wiederherstellung...")
-            self.progress_bar.setValue(0)
-            self.error_label.hide()
-
-            # Starte echte Wiederherstellung in Thread
-            self._start_restore_thread(backup_id)
-
-        except Exception as e:
-            logger.error(f"Fehler beim Starten der Wiederherstellung: {e}", exc_info=True)
-            QMessageBox.critical(self, "Fehler", f"Fehler beim Starten:\n{e}")
-
-    def _start_restore_thread(self, backup_id: int) -> None:
+    def _start_restore_thread(
+        self,
+        backup_id: int,
+        config: "RestoreConfig",
+        storage_backend: "StorageBackend",
+        db_path: Path,
+    ) -> None:
         """
         Startet Wiederherstellung in eigenem Thread
 
         Args:
             backup_id: ID des wiederherzustellenden Backups
+            config: Restore-Konfiguration
+            storage_backend: Storage-Backend für Downloads
+            db_path: Pfad zur Metadaten-Datenbank
         """
 
         def run_restore():
+            # Thread-lokalen MetadataManager erstellen (SQLite-Threading-Sicherheit)
+            thread_metadata_manager = None
             try:
+                # Erstelle thread-lokalen MetadataManager
+                thread_metadata_manager = MetadataManager(db_path)
+                logger.info("Thread-lokaler MetadataManager für Restore erstellt")
+
+                # Erstelle RestoreEngine mit thread-lokalem MetadataManager
+                from src.core.restore_engine import RestoreEngine
+
+                restore_engine = RestoreEngine(
+                    metadata_manager=thread_metadata_manager,
+                    storage_backend=storage_backend,
+                    config=config,
+                    progress_callback=self._on_progress_update,
+                )
+                logger.info("RestoreEngine im Thread erstellt")
+
                 # Führe Wiederherstellung aus
-                result = self.restore_engine.restore_full_backup(backup_id)
+                result = restore_engine.restore_full_backup(backup_id)
 
                 # Emit completion signal
                 self.restore_completed.emit(result)
@@ -625,9 +638,15 @@ class RestoreTab(QWidget):
                     files_restored=0,
                     bytes_restored=0,
                     duration_seconds=0,
-                    errors=[str(e)],  # errors ist eine Liste, nicht error_message
+                    errors=[str(e)],
                 )
                 self.restore_completed.emit(result)
+
+            finally:
+                # Schließe thread-lokale Datenbankverbindung
+                if thread_metadata_manager:
+                    thread_metadata_manager.disconnect()
+                    logger.info("Thread-lokale DB-Verbindung geschlossen")
 
         self.restore_thread = threading.Thread(target=run_restore, daemon=True)
         self.restore_thread.start()
