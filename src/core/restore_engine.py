@@ -178,6 +178,14 @@ class RestoreEngine:
                     f"nur 'completed' Backups können wiederhergestellt werden"
                 )
 
+            # Log: Restore gestartet
+            self.metadata_manager.add_log(
+                level="INFO",
+                message=f"Wiederherstellung gestartet",
+                backup_id=backup_id,
+                details=f"Ziel: {self.config.destination_path}",
+            )
+
             # Progress initialisieren
             progress = RestoreProgress(phase="preparing")
             self._report_progress(progress)
@@ -233,6 +241,15 @@ class RestoreEngine:
                     f"Dauer: {duration:.1f}s"
                 )
 
+                # Log: Restore erfolgreich
+                self.metadata_manager.add_log(
+                    level="INFO",
+                    message=f"Wiederherstellung erfolgreich abgeschlossen",
+                    backup_id=backup_id,
+                    details=f"Dateien: {files_restored}, Bytes: {progress.bytes_total / 1024 / 1024:.1f}MB, "
+                    f"Dauer: {duration:.1f}s",
+                )
+
                 return RestoreResult(
                     success=True,
                     files_restored=files_restored,
@@ -252,6 +269,18 @@ class RestoreEngine:
 
         except Exception as e:
             logger.error(f"Fehler bei Wiederherstellung: {e}", exc_info=True)
+
+            # Log: Restore fehlgeschlagen
+            try:
+                self.metadata_manager.add_log(
+                    level="ERROR",
+                    message=f"Wiederherstellung fehlgeschlagen",
+                    backup_id=backup_id,
+                    details=str(e),
+                )
+            except Exception:
+                pass
+
             raise RuntimeError(f"Wiederherstellung fehlgeschlagen: {e}") from e
 
     def restore_to_point_in_time(self, target_datetime: datetime) -> RestoreResult:
