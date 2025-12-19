@@ -580,8 +580,20 @@ class MainWindow(QMainWindow):
 
     def _on_tray_quit(self) -> None:
         """Handler für Tray: Anwendung beenden"""
-        self.quit_requested = True  # Flag für closeEvent
-        self.close()
+        logger.info("Beenden über Tray-Menu angefordert")
+
+        # Stoppe Scheduler-Worker
+        if hasattr(self, "scheduler_worker") and self.scheduler_worker:
+            logger.info("Stoppe Scheduler-Worker...")
+            self.scheduler_worker.stop()
+
+        # Verstecke Tray-Icon
+        if hasattr(self, "system_tray"):
+            self.system_tray.hide()
+
+        # Beende die gesamte Anwendung
+        from PySide6.QtWidgets import QApplication
+        QApplication.instance().quit()
 
     def show_welcome_wizard(self) -> bool:
         """
