@@ -426,8 +426,10 @@ class RestoreTab(QWidget):
             timestamp = datetime.fromisoformat(backup["timestamp"])
             date_str = timestamp.strftime("%d.%m.%Y %H:%M:%S")
 
-            backup_type = "Full Backup" if backup["backup_type"] == "full" else "Incremental Backup"
-            file_count = backup.get("file_count", 0)
+            # Feld heißt "type" in DB, nicht "backup_type"
+            backup_type = "Full Backup" if backup.get("type") == "full" else "Incremental Backup"
+            # Feld heißt "files_total" in DB, nicht "file_count"
+            file_count = backup.get("files_total", 0)
             size_mb = backup.get("size_original", 0) / (1024 * 1024)
             compressed_mb = backup.get("size_compressed", 0) / (1024 * 1024)
             compression_ratio = (
