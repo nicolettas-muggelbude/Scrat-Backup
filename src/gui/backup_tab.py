@@ -60,6 +60,7 @@ class BackupTab(QWidget):
         self.event_bus = get_event_bus()
         self.config_manager = config_manager  # Für Quellen/Ziele
         self.metadata_manager: Optional[MetadataManager] = None  # Für Backup-History
+        self.db_path: Optional[Path] = None  # DB-Pfad für Thread-sichere Nutzung
         self.backup_engine: Optional[BackupEngine] = None
         self.backup_thread: Optional[threading.Thread] = None
         self.is_backup_running = False
@@ -286,6 +287,7 @@ class BackupTab(QWidget):
             metadata_manager: MetadataManager-Instanz
         """
         self.metadata_manager = metadata_manager
+        self.db_path = metadata_manager.db_path  # Speichere für Thread-sichere Nutzung
         self._load_sources()
         self._load_destinations()
         self._load_history()
@@ -467,13 +469,6 @@ class BackupTab(QWidget):
             compression_level=5,
         )
 
-        # Backup-Engine erstellen
-        self.backup_engine = BackupEngine(
-            metadata_manager=self.metadata_manager,
-            config=config,
-            progress_callback=self._on_progress_update,
-        )
-
         # UI vorbereiten
         self.is_backup_running = True
         self.start_button.setEnabled(False)
@@ -485,29 +480,46 @@ class BackupTab(QWidget):
         # Start-Zeit für Speed/ETA-Berechnung
         self.backup_start_time = time.time()
 
-        # Backup in Thread starten
+        # Backup in Thread starten (mit Config und DB-Path für thread-sicheren Zugriff)
         backup_type = self.type_combo.currentData()
         self.backup_thread = threading.Thread(
             target=self._run_backup,
-            args=(backup_type,),
+            args=(config, backup_type, self.db_path),
             daemon=True,
         )
         self.backup_thread.start()
 
         logger.info(f"Backup gestartet: {backup_type}")
 
-    def _run_backup(self, backup_type: str) -> None:
+    def _run_backup(self, config: BackupConfig, backup_type: str, db_path: Path) -> None:
         """
         Führt Backup aus (läuft in separatem Thread)
 
         Args:
+            config: Backup-Konfiguration
             backup_type: "full" oder "incremental"
+            db_path: Pfad zur Metadaten-Datenbank
         """
+        # Thread-lokalen MetadataManager erstellen (SQLite-Threading-Sicherheit)
+        thread_metadata_manager = None
         try:
+            # Erstelle thread-lokalen MetadataManager
+            thread_metadata_manager = MetadataManager(db_path)
+            logger.info("Thread-lokaler MetadataManager erstellt")
+
+            # Erstelle BackupEngine mit thread-lokalem MetadataManager
+            backup_engine = BackupEngine(
+                metadata_manager=thread_metadata_manager,
+                config=config,
+                progress_callback=self._on_progress_update,
+            )
+            logger.info("BackupEngine im Thread erstellt")
+
+            # Führe Backup aus
             if backup_type == "full":
-                result = self.backup_engine.create_full_backup()
+                result = backup_engine.create_full_backup()
             else:
-                result = self.backup_engine.create_incremental_backup()
+                result = backup_engine.create_incremental_backup()
 
             # Signal an GUI
             self.backup_completed.emit(result)
@@ -515,6 +527,12 @@ class BackupTab(QWidget):
         except Exception as e:
             logger.error(f"Backup fehlgeschlagen: {e}", exc_info=True)
             self.backup_failed.emit(str(e))
+
+        finally:
+            # Schließe thread-lokale Datenbankverbindung
+            if thread_metadata_manager:
+                thread_metadata_manager.disconnect()
+                logger.info("Thread-lokale DB-Verbindung geschlossen")
 
     def _on_progress_update(self, progress: BackupProgress) -> None:
         """
