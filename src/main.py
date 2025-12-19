@@ -150,17 +150,27 @@ def run_gui() -> int:
     Returns:
         int: Exit-Code (0 = Erfolg)
     """
+    logger.info("=" * 60)
+    logger.info("Scrat-Backup GUI wird gestartet")
+    logger.info("=" * 60)
+
     # QApplication erstellen
     app = QApplication(sys.argv)
     app.setApplicationName("Scrat-Backup")
     app.setOrganizationName("Scrat")
+    logger.info("QApplication erstellt")
 
     # Theme anwenden
     apply_theme(app)
+    logger.info("Theme angewendet")
 
     # Prüfe ob erster Start
-    if check_first_run():
-        logger.info("Erster Start erkannt - zeige Setup-Wizard")
+    logger.info("Prüfe ob erster Start...")
+    is_first_run = check_first_run()
+    logger.info(f"check_first_run() = {is_first_run}")
+
+    if is_first_run:
+        logger.info(">>> WIZARD WIRD GESTARTET <<<")
 
         # Setup-Wizard anzeigen
         wizard = SetupWizard()
@@ -187,12 +197,15 @@ def run_gui() -> int:
             # Wizard abgebrochen
             logger.info("Setup abgebrochen")
             return 1
+    else:
+        logger.info(">>> KEIN WIZARD - Hauptfenster direkt starten <<<")
 
     # Hauptfenster erstellen und anzeigen
+    logger.info("Erstelle Hauptfenster...")
     window = MainWindow()
     window.show()
 
-    logger.info("GUI gestartet")
+    logger.info("Hauptfenster angezeigt - GUI gestartet")
 
     # Event-Loop starten
     return app.exec()
