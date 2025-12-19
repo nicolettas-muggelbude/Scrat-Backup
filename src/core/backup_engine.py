@@ -181,6 +181,14 @@ class BackupEngine:
                 encryption_key_hash=self.password_hash,
             )
 
+            # Log: Backup gestartet
+            self.metadata_manager.add_log(
+                level="INFO",
+                message=f"Vollbackup gestartet: {backup_id}",
+                backup_id=db_backup_id,
+                details=f"Quellen: {len(self.config.sources)}, Ziel: {self.config.destination_path}",
+            )
+
             # Progress initialisieren
             progress = BackupProgress(backup_id=backup_id, phase="scanning")
             self._report_progress(progress)
@@ -327,6 +335,15 @@ class BackupEngine:
                 f"Dauer: {duration:.1f}s"
             )
 
+            # Log: Backup erfolgreich
+            self.metadata_manager.add_log(
+                level="INFO",
+                message=f"Vollbackup erfolgreich abgeschlossen",
+                backup_id=db_backup_id,
+                details=f"Dateien: {len(all_files)}, Original: {total_size / 1024 / 1024:.1f}MB, "
+                f"Komprimiert: {size_compressed / 1024 / 1024:.1f}MB, Dauer: {duration:.1f}s",
+            )
+
             return BackupResult(
                 backup_id=backup_id,
                 success=True,
@@ -340,6 +357,17 @@ class BackupEngine:
 
         except Exception as e:
             logger.error(f"Fehler beim Vollbackup: {e}", exc_info=True)
+
+            # Log: Backup fehlgeschlagen
+            try:
+                self.metadata_manager.add_log(
+                    level="ERROR",
+                    message=f"Vollbackup fehlgeschlagen",
+                    backup_id=db_backup_id,
+                    details=str(e),
+                )
+            except Exception:
+                pass
 
             # Markiere Backup als fehlgeschlagen
             try:
@@ -388,6 +416,14 @@ class BackupEngine:
                 destination_path=str(self.config.destination_path),
                 encryption_key_hash=self.password_hash,
                 base_backup_id=base_backup_id,
+            )
+
+            # Log: Backup gestartet
+            self.metadata_manager.add_log(
+                level="INFO",
+                message=f"Inkrementelles Backup gestartet: {backup_id}",
+                backup_id=db_backup_id,
+                details=f"Basis: #{base_backup_id}, Quellen: {len(self.config.sources)}",
             )
 
             # Progress initialisieren
@@ -564,6 +600,15 @@ class BackupEngine:
                 f"Dauer: {duration:.1f}s"
             )
 
+            # Log: Backup erfolgreich
+            self.metadata_manager.add_log(
+                level="INFO",
+                message=f"Inkrementelles Backup erfolgreich abgeschlossen",
+                backup_id=db_backup_id,
+                details=f"Dateien: {len(all_changed_files)}, Original: {total_size / 1024 / 1024:.1f}MB, "
+                f"Komprimiert: {size_compressed / 1024 / 1024:.1f}MB, Dauer: {duration:.1f}s",
+            )
+
             return BackupResult(
                 backup_id=backup_id,
                 success=True,
@@ -577,6 +622,17 @@ class BackupEngine:
 
         except Exception as e:
             logger.error(f"Fehler beim inkrementellen Backup: {e}", exc_info=True)
+
+            # Log: Backup fehlgeschlagen
+            try:
+                self.metadata_manager.add_log(
+                    level="ERROR",
+                    message=f"Inkrementelles Backup fehlgeschlagen",
+                    backup_id=db_backup_id,
+                    details=str(e),
+                )
+            except Exception:
+                pass
 
             try:
                 self.metadata_manager.mark_backup_failed(
