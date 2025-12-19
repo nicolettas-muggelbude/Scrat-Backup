@@ -330,16 +330,21 @@ class BackupTab(QWidget):
         logger.debug(f"Quellen geladen: {len(sources)} Einträge")
 
     def _load_destinations(self) -> None:
-        """Lädt Ziele aus MetadataManager"""
-        if not self.metadata_manager:
-            return
-
+        """Lädt Ziele aus ConfigManager"""
         self.destination_combo.clear()
 
-        destinations = self.metadata_manager.get_destinations()
-        for dest in destinations:
-            label = f"{dest['name']} ({dest['type'].upper()})"
-            self.destination_combo.addItem(label, dest["id"])
+        if not self.config_manager:
+            logger.warning("Kein ConfigManager verfügbar")
+            self.destination_combo.addItem("⚠ Keine Konfiguration geladen", None)
+            return
+
+        destinations = self.config_manager.config.get("destinations", [])
+        for idx, dest in enumerate(destinations):
+            if dest.get("enabled", True):
+                dest_name = dest.get("name", "Unbenannt")
+                dest_type = dest.get("type", "unknown")
+                label = f"{dest_name} ({dest_type.upper()})"
+                self.destination_combo.addItem(label, idx)
 
         if not destinations:
             self.destination_combo.addItem("Keine Ziele konfiguriert", None)
