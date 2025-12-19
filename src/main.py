@@ -5,12 +5,12 @@ Windows Backup-Tool für Privatnutzer
 
 import logging
 import sys
+from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtWidgets import QApplication
 
 from src.core.config_manager import ConfigManager
-from src.core.metadata_manager import MetadataManager
 from src.gui.main_window import MainWindow
 from src.gui.theme import apply_theme
 from src.gui.wizard import SetupWizard
@@ -39,55 +39,71 @@ def check_first_run() -> bool:
 
 def save_wizard_config(wizard_config: dict) -> None:
     """
-    Speichert Wizard-Konfiguration in ConfigManager und MetadataManager
+    Speichert Wizard-Konfiguration in ConfigManager
 
     Args:
         wizard_config: Dictionary aus SetupWizard.get_config()
     """
     config_manager = ConfigManager()
-    db_path = Path.home() / ".scrat-backup" / "metadata.db"
-    metadata_manager = MetadataManager(db_path)
 
     try:
-        # 1. Quellen in MetadataManager speichern
-        for i, source_path in enumerate(wizard_config.get("sources", [])):
-            # Bestimme Namen aus Pfad
-            path_obj = Path(source_path)
-            name = path_obj.name if path_obj.name else "Quelle"
+        # 1. Quellen in Config speichern
+        sources = wizard_config.get("sources", [])
+        if not config_manager.config.get("sources"):
+            config_manager.config["sources"] = []
 
-            metadata_manager.add_source(
-                name=f"{name} ({i+1})",
-                windows_path=source_path,
-                enabled=True,
-                exclude_patterns=None,
-            )
+        # Erstelle Source-Einträge
+        for source_path in sources:
+            path_obj = Path(source_path)
+            source_entry = {
+                "path": source_path,
+                "name": path_obj.name if path_obj.name else "Quelle",
+                "enabled": True,
+                "exclude_patterns": [],
+            }
+            config_manager.config["sources"].append(source_entry)
             logger.info(f"Quelle hinzugefügt: {source_path}")
 
-        # 2. Ziel in MetadataManager speichern
+        # 2. Ziel in Config speichern
         storage = wizard_config.get("storage", {})
         if storage:
-            import json
+            if not config_manager.config.get("destinations"):
+                config_manager.config["destinations"] = []
 
-            metadata_manager.add_destination(
-                name=f"Backup-Ziel ({storage.get('type', 'unknown')})",
-                dest_type=storage.get("type", "usb"),
-                config=json.dumps(storage),  # Speichere komplette Storage-Config
-                enabled=True,
-            )
+            destination_entry = {
+                "name": f"Backup-Ziel ({storage.get('type', 'unknown')})",
+                "type": storage.get("type", "usb"),
+                "config": storage,
+                "enabled": True,
+            }
+            config_manager.config["destinations"].append(destination_entry)
             logger.info(f"Ziel hinzugefügt: {storage.get('type')}")
 
-        # 3. Verschlüsselungs-Passwort (optional in Config speichern - WARNUNG: Unsicher!)
+        # 3. Verschlüsselungs-Passwort im Windows Credential Manager speichern
         # Für jetzt: Nicht speichern, User muss bei jedem Backup eingeben
-        # In Zukunft: Windows Credential Manager nutzen
+        # TODO: Windows Credential Manager Integration
+        encryption_config = wizard_config.get("encryption", {})
+        if encryption_config:
+            logger.info("Verschlüsselung konfiguriert (Passwort wird nicht gespeichert)")
 
-        # 4. Zeitplan (optional)
+        # 4. Zeitplan in Config speichern
         schedule = wizard_config.get("schedule", {})
-        if schedule:
-            # TODO: Schedule in ConfigManager speichern wenn implementiert
-            pass
+        if schedule and schedule.get("enabled"):
+            if not config_manager.config.get("schedules"):
+                config_manager.config["schedules"] = []
 
+            schedule_entry = {
+                "name": "Automatisches Backup",
+                "enabled": True,
+                "interval": schedule.get("interval", "Täglich"),
+                "retention": schedule.get("retention", 3),
+                "created_at": datetime.now().isoformat(),
+            }
+            config_manager.config["schedules"].append(schedule_entry)
+            logger.info(f"Zeitplan hinzugefügt: {schedule.get('interval')}")
+
+        # 5. Speichere Konfiguration
         config_manager.save()
-        metadata_manager.disconnect()
 
         logger.info("Wizard-Konfiguration erfolgreich gespeichert")
 
