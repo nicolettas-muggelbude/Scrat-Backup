@@ -121,7 +121,13 @@ class SourcesPage(QWizardPage):
 
         # Liste der weiteren Ordner
         self.custom_folders_list = QListWidget()
-        self.custom_folders_list.setMaximumHeight(150)
+        self.custom_folders_list.setMinimumHeight(80)  # Mindestens 2-3 Einträge sichtbar
+        self.custom_folders_list.setMaximumHeight(200)
+        # Bessere Sichtbarkeit: Rahmen hinzufügen
+        self.custom_folders_list.setStyleSheet(
+            "QListWidget { border: 2px solid #cccccc; border-radius: 4px; "
+            "padding: 4px; background-color: #ffffff; }"
+        )
         layout.addWidget(self.custom_folders_list)
 
         # Buttons zum Hinzufügen/Entfernen
@@ -549,11 +555,18 @@ class EncryptionPage(QWizardPage):
     def initializePage(self):
         """Wird aufgerufen wenn Seite angezeigt wird - stellt Passwort wieder her"""
         wizard = self.wizard()
-        # Stelle Passwörter wieder her (wenn vorhanden)
-        saved_password = wizard.field("password")
-        if saved_password:
-            self.password.setText(saved_password)
-            self.password_confirm.setText(saved_password)
+        # Stelle Passwort aus Wizard-Instanzvariable wieder her
+        if hasattr(wizard, '_saved_password') and wizard._saved_password:
+            self.password.setText(wizard._saved_password)
+            self.password_confirm.setText(wizard._saved_password)
+
+    def cleanupPage(self):
+        """Wird aufgerufen wenn Seite verlassen wird - speichert Passwort"""
+        wizard = self.wizard()
+        # Speichere Passwort in Wizard-Instanzvariable
+        current_password = self.password.text()
+        if current_password:
+            wizard._saved_password = current_password
 
     def validatePage(self) -> bool:
         """Validiert Passwort-Seite"""
@@ -682,9 +695,13 @@ class SummaryPage(QWizardPage):
             sources.append("🖥️ Desktop")
         if wizard.field("source_downloads"):
             sources.append("📥 Downloads")
-        custom = wizard.field("source_custom")
-        if custom:
-            sources.append(f"📁 {custom}")
+
+        # Weitere Ordner
+        sources_page = wizard.page(1)  # SourcesPage ist die 2. Seite (Index 1)
+        if isinstance(sources_page, SourcesPage):
+            custom_folders = sources_page.get_custom_folders()
+            for folder in custom_folders:
+                sources.append(f"📁 {folder}")
 
         sources_list = "<br>  • ".join(sources) if sources else "Keine"
         summary_text += f"<p><b>Backup-Quellen:</b><br>  • {sources_list}</p>"
@@ -760,6 +777,9 @@ class SetupWizard(QWizard):
         self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
         self.setOption(QWizard.WizardOption.HaveHelpButton, False)
         self.setMinimumSize(700, 500)
+
+        # Speichere Passwort persistent (damit es beim Zurückgehen nicht verloren geht)
+        self._saved_password = ""
 
         # Button-Texte auf Deutsch
         self.setButtonText(QWizard.WizardButton.BackButton, "Zurück")
@@ -851,7 +871,7 @@ class SetupWizard(QWizard):
 
         # Verschlüsselung
         config["encryption"] = {
-            "password": self.field("password"),
+            "password": self._saved_password or self.field("password"),
         }
 
         # Zeitplan
