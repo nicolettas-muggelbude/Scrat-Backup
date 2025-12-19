@@ -363,16 +363,15 @@ class BackupTab(QWidget):
 
         # Hole ausgewählte Quellen aus UI (gecheckte Items)
         selected_sources = []
+        sources = self.config_manager.config.get("sources", [])
         for i in range(self.sources_list.count()):
             item = self.sources_list.item(i)
             if item.checkState() == Qt.CheckState.Checked:
-                source_id = item.data(Qt.ItemDataRole.UserRole)
-                # Hole Quelle aus DB
-                source = next(
-                    (s for s in self.metadata_manager.get_sources() if s["id"] == source_id), None
-                )
-                if source:
-                    selected_sources.append(Path(source["windows_path"]))
+                source_idx = item.data(Qt.ItemDataRole.UserRole)
+                # Hole Quelle aus ConfigManager (Index, nicht ID)
+                if source_idx is not None and source_idx < len(sources):
+                    source = sources[source_idx]
+                    selected_sources.append(Path(source["path"]))
 
         if not selected_sources:
             QMessageBox.warning(
@@ -383,8 +382,8 @@ class BackupTab(QWidget):
             return
 
         # Hole ausgewähltes Ziel aus UI
-        dest_id = self.destination_combo.currentData()
-        if not dest_id:
+        dest_idx = self.destination_combo.currentData()
+        if dest_idx is None:
             QMessageBox.warning(
                 self,
                 "Kein Ziel",
@@ -392,17 +391,16 @@ class BackupTab(QWidget):
             )
             return
 
-        # Hole Ziel aus DB
-        import json
-
-        destination = next(
-            (d for d in self.metadata_manager.get_destinations() if d["id"] == dest_id), None
-        )
-        if not destination:
-            QMessageBox.warning(self, "Fehler", f"Ziel mit ID {dest_id} nicht gefunden")
+        # Hole Ziel aus ConfigManager (Index, nicht ID)
+        destinations = self.config_manager.config.get("destinations", [])
+        if dest_idx >= len(destinations):
+            QMessageBox.warning(self, "Fehler", f"Ziel mit Index {dest_idx} nicht gefunden")
             return
 
-        dest_config = json.loads(destination["config"])
+        destination = destinations[dest_idx]
+
+        # Config ist bereits ein Dictionary, kein JSON-String
+        dest_config = destination["config"]
 
         # Backup-Typ aus UI
         backup_type = self.type_combo.currentData()  # "full" oder "incremental"
