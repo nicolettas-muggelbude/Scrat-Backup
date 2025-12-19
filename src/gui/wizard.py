@@ -216,21 +216,26 @@ class DestinationPage(QWizardPage):
         local_layout = QVBoxLayout(self.local_widget)
 
         # Erkannte Laufwerke
-        drives = self._detect_drives()
-        if drives:
-            drives_label = QLabel("<b>Erkannte Laufwerke:</b>")
-            local_layout.addWidget(drives_label)
+        drives_header_layout = QHBoxLayout()
+        drives_label = QLabel("<b>Erkannte Laufwerke:</b>")
+        drives_header_layout.addWidget(drives_label)
 
-            self.drives_list = QListWidget()
-            self.drives_list.setMaximumHeight(100)
-            for drive_path, drive_label in drives:
-                item = QListWidgetItem(f"{drive_label} ({drive_path})")
-                item.setData(Qt.ItemDataRole.UserRole, drive_path)
-                self.drives_list.addItem(item)
-            self.drives_list.itemClicked.connect(self._on_drive_selected)
-            local_layout.addWidget(self.drives_list)
+        refresh_btn = QPushButton("🔄 Aktualisieren")
+        refresh_btn.setToolTip("Laufwerke neu erkennen (z.B. nach Anstecken eines USB-Sticks)")
+        refresh_btn.clicked.connect(self._refresh_drives)
+        drives_header_layout.addWidget(refresh_btn)
+        drives_header_layout.addStretch()
+        local_layout.addLayout(drives_header_layout)
 
-            local_layout.addSpacing(10)
+        self.drives_list = QListWidget()
+        self.drives_list.setMaximumHeight(100)
+        self.drives_list.itemClicked.connect(self._on_drive_selected)
+        local_layout.addWidget(self.drives_list)
+
+        # Initial laden
+        self._refresh_drives()
+
+        local_layout.addSpacing(10)
 
         # Manueller Pfad
         manual_label = QLabel("<b>Oder manuell eingeben:</b>")
@@ -396,6 +401,28 @@ class DestinationPage(QWizardPage):
         self.registerField("dest_smb_share", self.smb_share)
         self.registerField("dest_smb_user", self.smb_user)
         self.registerField("dest_smb_path", self.smb_path)
+
+    def _refresh_drives(self) -> None:
+        """Aktualisiert die Liste der erkannten Laufwerke"""
+        # Lösche alte Einträge
+        self.drives_list.clear()
+
+        # Erkenne Laufwerke neu
+        drives = self._detect_drives()
+
+        # Füge zur Liste hinzu
+        if drives:
+            for drive_path, drive_label in drives:
+                item = QListWidgetItem(f"{drive_label} ({drive_path})")
+                item.setData(Qt.ItemDataRole.UserRole, drive_path)
+                self.drives_list.addItem(item)
+            logger.info(f"{len(drives)} Laufwerk(e) erkannt")
+        else:
+            # Keine Laufwerke gefunden
+            item = QListWidgetItem("(Keine Laufwerke gefunden)")
+            item.setFlags(Qt.ItemFlag.NoItemFlags)  # Nicht anklickbar
+            self.drives_list.addItem(item)
+            logger.warning("Keine Laufwerke erkannt")
 
     def _detect_drives(self) -> List[tuple]:
         """
