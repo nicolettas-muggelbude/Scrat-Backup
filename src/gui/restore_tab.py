@@ -551,9 +551,13 @@ class RestoreTab(QWidget):
                 )
                 return
 
-            storage_backend = USBStorage()
-            storage_config = {"path": backup_info.get("destination_path", "")}
-            storage_backend.connect(storage_config)
+            # Erstelle Storage-Backend mit Pfad aus Backup-Metadaten
+            dest_path_str = backup_info.get("destination_path", "")
+            if not dest_path_str:
+                raise ValueError("Kein destination_path in Backup-Metadaten gefunden")
+
+            storage_backend = USBStorage(base_path=Path(dest_path_str))
+            storage_backend.connect()  # Keine Parameter - prüft nur ob Pfad verfügbar
 
         except Exception as e:
             logger.error(f"Fehler beim Erstellen des Storage-Backends: {e}", exc_info=True)
