@@ -123,7 +123,19 @@ def run_gui() -> int:
             logger.info(f"Setup abgeschlossen: {len(config['sources'])} Quellen konfiguriert")
 
             # Speichere Konfiguration
-            save_wizard_config(config)
+            try:
+                save_wizard_config(config)
+                logger.info("Konfiguration erfolgreich gespeichert")
+            except Exception as e:
+                logger.error(f"Fehler beim Speichern der Konfiguration: {e}", exc_info=True)
+                # Zeige Fehlermeldung, aber fahre trotzdem fort
+                from PySide6.QtWidgets import QMessageBox
+                QMessageBox.warning(
+                    None,
+                    "Warnung",
+                    f"Die Konfiguration konnte nicht vollständig gespeichert werden:\n{e}\n\n"
+                    f"Das Hauptfenster wird trotzdem geöffnet.",
+                )
         else:
             # Wizard abgebrochen
             logger.info("Setup abgebrochen")
