@@ -68,12 +68,6 @@ class BackupTab(QWidget):
         self._setup_ui()
         self._connect_signals()
 
-        # Lade Quellen und Ziele aus ConfigManager
-        if self.config_manager:
-            self._load_sources()
-            self._load_destinations()
-            logger.info("Einstellungen aus ConfigManager geladen")
-
         logger.info("Backup-Tab initialisiert")
 
     def _setup_ui(self) -> None:

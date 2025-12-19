@@ -112,6 +112,7 @@ class MainWindow(QMainWindow):
     def _create_backup_tab(self) -> None:
         """Erstellt Backup-Tab"""
         self.backup_tab = BackupTab(config_manager=self.config_manager)
+        self.backup_tab.set_metadata_manager(self.metadata_manager)
         self.tab_widget.addTab(self.backup_tab, "Backup")
 
     def _create_restore_tab(self) -> None:
