@@ -694,12 +694,12 @@ class BackupTab(QWidget):
                 date_str = timestamp.strftime("%d.%m.%Y %H:%M:%S")
                 self.history_table.setItem(row, 0, QTableWidgetItem(date_str))
 
-                # Typ
-                backup_type = "📦 Full" if backup["backup_type"] == "full" else "📝 Incr"
+                # Typ (Feld heißt "type" in DB, nicht "backup_type")
+                backup_type = "📦 Full" if backup.get("type") == "full" else "📝 Incr"
                 self.history_table.setItem(row, 1, QTableWidgetItem(backup_type))
 
-                # Dateien
-                files = str(backup.get("file_count", 0))
+                # Dateien (Feld heißt "files_total" in DB, nicht "file_count")
+                files = str(backup.get("files_total", 0))
                 self.history_table.setItem(row, 2, QTableWidgetItem(files))
 
                 # Größe
@@ -707,12 +707,19 @@ class BackupTab(QWidget):
                 size_str = f"{size_mb:.1f} MB"
                 self.history_table.setItem(row, 3, QTableWidgetItem(size_str))
 
-                # Dauer
-                duration = backup.get("duration_seconds", 0)
-                if duration < 60:
-                    duration_str = f"{duration:.0f}s"
-                else:
-                    duration_str = f"{duration / 60:.1f}min"
+                # Dauer (berechne aus created_at und completed_at)
+                duration_str = "-"
+                if backup.get("created_at") and backup.get("completed_at"):
+                    try:
+                        created = datetime.fromisoformat(backup["created_at"])
+                        completed = datetime.fromisoformat(backup["completed_at"])
+                        duration_sec = (completed - created).total_seconds()
+                        if duration_sec < 60:
+                            duration_str = f"{duration_sec:.0f}s"
+                        else:
+                            duration_str = f"{duration_sec / 60:.1f}min"
+                    except:
+                        pass
                 self.history_table.setItem(row, 4, QTableWidgetItem(duration_str))
 
                 # Status
