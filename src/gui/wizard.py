@@ -119,16 +119,25 @@ class SourcesPage(QWizardPage):
         custom_label = QLabel("<b>Weitere Ordner:</b>")
         layout.addWidget(custom_label)
 
-        custom_layout = QHBoxLayout()
-        self.custom_path = QLineEdit()
-        self.custom_path.setPlaceholderText("Ordner-Pfad eingeben oder durchsuchen...")
-        custom_layout.addWidget(self.custom_path)
+        # Liste der weiteren Ordner
+        self.custom_folders_list = QListWidget()
+        self.custom_folders_list.setMaximumHeight(150)
+        layout.addWidget(self.custom_folders_list)
 
-        browse_btn = QPushButton("📁 Durchsuchen...")
-        browse_btn.clicked.connect(self._browse_source)
-        custom_layout.addWidget(browse_btn)
+        # Buttons zum Hinzufügen/Entfernen
+        custom_buttons_layout = QHBoxLayout()
 
-        layout.addLayout(custom_layout)
+        add_folder_btn = QPushButton("➕ Ordner hinzufügen")
+        add_folder_btn.clicked.connect(self._add_custom_folder)
+        custom_buttons_layout.addWidget(add_folder_btn)
+
+        remove_folder_btn = QPushButton("➖ Ausgewählten entfernen")
+        remove_folder_btn.clicked.connect(self._remove_custom_folder)
+        custom_buttons_layout.addWidget(remove_folder_btn)
+
+        custom_buttons_layout.addStretch()
+        layout.addLayout(custom_buttons_layout)
+
         layout.addStretch()
         self.setLayout(layout)
 
@@ -139,13 +148,34 @@ class SourcesPage(QWizardPage):
         self.registerField("source_videos", self.videos_checkbox)
         self.registerField("source_desktop", self.desktop_checkbox)
         self.registerField("source_downloads", self.downloads_checkbox)
-        self.registerField("source_custom", self.custom_path)
 
-    def _browse_source(self):
-        """Öffnet Ordner-Auswahl-Dialog"""
-        folder = QFileDialog.getExistingDirectory(self, "Ordner auswählen", str(Path.home()))
+    def _add_custom_folder(self):
+        """Fügt einen weiteren Ordner zur Liste hinzu"""
+        folder = QFileDialog.getExistingDirectory(
+            self, "Ordner auswählen", str(Path.home())
+        )
         if folder:
-            self.custom_path.setText(folder)
+            # Prüfe ob Ordner bereits in Liste
+            for i in range(self.custom_folders_list.count()):
+                if self.custom_folders_list.item(i).text() == folder:
+                    return  # Ordner bereits vorhanden
+            # Füge hinzu
+            self.custom_folders_list.addItem(folder)
+
+    def _remove_custom_folder(self):
+        """Entfernt ausgewählten Ordner aus Liste"""
+        current_item = self.custom_folders_list.currentItem()
+        if current_item:
+            self.custom_folders_list.takeItem(
+                self.custom_folders_list.row(current_item)
+            )
+
+    def get_custom_folders(self) -> List[str]:
+        """Gibt Liste aller weiteren Ordner zurück"""
+        folders = []
+        for i in range(self.custom_folders_list.count()):
+            folders.append(self.custom_folders_list.item(i).text())
+        return folders
 
 
 class DestinationPage(QWizardPage):
@@ -545,8 +575,11 @@ class SchedulePage(QWizardPage):
 
     def __init__(self):
         super().__init__()
-        self.setTitle("Automatische Backups (optional)")
-        self.setSubTitle("Richte einen Zeitplan für automatische Backups ein.")
+        self.setTitle("Automatische Backups")
+        self.setSubTitle(
+            "Richte einen Zeitplan für automatische Backups ein.\n"
+            "Du kannst diesen Schritt überspringen und später einrichten."
+        )
 
         layout = QVBoxLayout()
 
@@ -773,9 +806,10 @@ class SetupWizard(QWizard):
             config["sources"].append(str(Path.home() / "Downloads"))
 
         # Weitere Ordner
-        custom = self.field("source_custom")
-        if custom:
-            config["sources"].append(custom)
+        sources_page = self.page(1)  # SourcesPage ist die 2. Seite (Index 1)
+        if isinstance(sources_page, SourcesPage):
+            custom_folders = sources_page.get_custom_folders()
+            config["sources"].extend(custom_folders)
 
         # Storage
         storage_type = self.field("storage_type")
