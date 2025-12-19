@@ -683,7 +683,7 @@ class BackupTab(QWidget):
 
         try:
             # Hole alle Backups
-            backups = self.metadata_manager.list_backups(limit=50)
+            backups = self.metadata_manager.get_all_backups(limit=50)
 
             # Table füllen
             self.history_table.setRowCount(len(backups))
