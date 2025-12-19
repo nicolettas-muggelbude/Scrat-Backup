@@ -26,15 +26,46 @@ logger = logging.getLogger(__name__)
 
 def check_first_run() -> bool:
     """
-    Prüft ob erste Ausführung (keine Konfiguration vorhanden)
+    Prüft ob erste Ausführung (keine oder ungültige Konfiguration vorhanden)
 
     Returns:
-        True wenn erster Start
+        True wenn erster Start oder Konfiguration ungültig
     """
     config_dir = Path.home() / ".scrat-backup"
     config_file = config_dir / "config.json"
 
-    return not config_file.exists()
+    # Wenn config.json nicht existiert → erster Start
+    if not config_file.exists():
+        logger.info("Keine config.json gefunden → Erster Start")
+        return True
+
+    # Config-Datei existiert, prüfe ob sie gültig ist
+    try:
+        config_manager = ConfigManager(config_file)
+
+        # Prüfe ob Quellen und Ziele konfiguriert sind
+        has_sources = (
+            config_manager.config.get("sources")
+            and len(config_manager.config["sources"]) > 0
+        )
+        has_destinations = (
+            config_manager.config.get("destinations")
+            and len(config_manager.config["destinations"]) > 0
+        )
+
+        if not has_sources or not has_destinations:
+            logger.info(
+                f"Config unvollständig (sources={has_sources}, "
+                f"destinations={has_destinations}) → Wizard starten"
+            )
+            return True
+
+        logger.info("Gültige Konfiguration gefunden → Kein Wizard")
+        return False
+
+    except Exception as e:
+        logger.warning(f"Fehler beim Laden der Config: {e} → Wizard starten")
+        return True
 
 
 def save_wizard_config(wizard_config: dict) -> None:
