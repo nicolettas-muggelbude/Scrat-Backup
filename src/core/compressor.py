@@ -298,16 +298,20 @@ class Compressor:
             # Entpacke alle Dateien
             archive.extractall(path=output_dir)
 
-            # Sammle entpackte Dateien
+            # Sammle entpackte Dateien (nur Dateien, keine Verzeichnisse!)
             for idx, name in enumerate(all_names):
                 extracted_path = output_dir / name
-                extracted_files.append(extracted_path)
+
+                # Nur Dateien hinzufügen, keine Verzeichnisse
+                if extracted_path.is_file():
+                    extracted_files.append(extracted_path)
+                    logger.debug(f"Entpackt (Datei): {name}")
+                else:
+                    logger.debug(f"Entpackt (Verzeichnis, übersprungen): {name}")
 
                 # Progress-Callback
                 if progress_callback:
                     progress_callback(idx + 1, total_files, name)
-
-                logger.debug(f"Entpackt: {name}")
 
         logger.info(f"Entpacken abgeschlossen: {len(extracted_files)} Dateien")
         return extracted_files

@@ -578,10 +578,14 @@ class RestoreEngine:
             if source_path:
                 source_dir_name = Path(source_path).name
                 # Konstruiere Restore-Pfad: destination / Quellordner / relative_path
-                dest_path = self.config.destination_path / source_dir_name / relative_path
+                # Stelle sicher, dass relative_path als String/Path behandelt wird
+                dest_path = Path(self.config.destination_path) / source_dir_name / relative_path
             else:
                 # Fallback wenn source_path fehlt
-                dest_path = self.config.destination_path / relative_path
+                dest_path = Path(self.config.destination_path) / relative_path
+
+            # Debug-Logging
+            logger.debug(f"Restore-Pfad: {relative_path} → {dest_path}")
 
             # Finde extrahierte Datei
             # Suche nach Dateinamen in extracted_files
@@ -600,8 +604,18 @@ class RestoreEngine:
                 logger.warning(f"Extrahierte Datei nicht gefunden: {relative_path}")
                 continue
 
-            # Erstelle Ziel-Verzeichnis
+            # Prüfe ob source_file eine Datei ist (nicht Verzeichnis)
+            if not source_file.is_file():
+                logger.warning(f"Überspringe Verzeichnis: {source_file}")
+                continue
+
+            # Erstelle Ziel-Verzeichnis (NICHT die Datei selbst!)
             dest_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Sicherstellen, dass dest_path KEIN Verzeichnis ist
+            if dest_path.exists() and dest_path.is_dir():
+                logger.warning(f"Ziel ist bereits ein Verzeichnis: {dest_path}, lösche es")
+                dest_path.rmdir()
 
             # Kopiere Datei
             try:
