@@ -205,13 +205,33 @@ class RestoreTab(QWidget):
             self.save_password_checkbox = None
 
         # Optionen
-        self.overwrite_checkbox = QCheckBox("Existierende Dateien überschreiben")
+        self.restore_to_original_checkbox = QCheckBox(
+            "In Original-Verzeichnisse wiederherstellen"
+        )
+        self.restore_to_original_checkbox.setChecked(False)
+        self.restore_to_original_checkbox.setToolTip(
+            "Dateien werden in ihre ursprünglichen Ordner wiederhergestellt\n"
+            "(z.B. C:\\Users\\Musik statt scrat-restore\\Musik)"
+        )
+        layout.addWidget(self.restore_to_original_checkbox)
+
+        self.overwrite_checkbox = QCheckBox("Vorhandene Dateien überschreiben")
         self.overwrite_checkbox.setChecked(False)
+        self.overwrite_checkbox.setEnabled(False)  # Nur aktiv bei Original-Restore
+        self.overwrite_checkbox.setToolTip(
+            "Nur aktiv bei Original-Wiederherstellung.\n"
+            "Warnung: Überschreibt existierende Dateien ohne Rückfrage!"
+        )
         layout.addWidget(self.overwrite_checkbox)
 
         self.restore_permissions_checkbox = QCheckBox("Datei-Berechtigungen wiederherstellen")
         self.restore_permissions_checkbox.setChecked(True)
         layout.addWidget(self.restore_permissions_checkbox)
+
+        # Verbinde Checkbox-Logik: overwrite nur bei restore_to_original
+        self.restore_to_original_checkbox.stateChanged.connect(
+            self._on_restore_to_original_changed
+        )
 
         # Buttons
         button_layout = QHBoxLayout()
@@ -395,6 +415,30 @@ class RestoreTab(QWidget):
         except Exception as e:
             logger.error(f"Fehler beim Laden der Backups: {e}", exc_info=True)
 
+    def _on_restore_to_original_changed(self, state) -> None:
+        """
+        Callback wenn 'In Original-Verzeichnisse wiederherstellen' geändert wird
+
+        Aktiviert/Deaktiviert die 'Überschreiben' Checkbox und Zielordner-Auswahl
+        """
+        is_checked = self.restore_to_original_checkbox.isChecked()
+
+        # Überschreiben-Option nur bei Original-Restore
+        self.overwrite_checkbox.setEnabled(is_checked)
+        if not is_checked:
+            self.overwrite_checkbox.setChecked(False)
+
+        # Zielordner-Auswahl deaktivieren bei Original-Restore
+        self.destination_input.setEnabled(not is_checked)
+        self.browse_button.setEnabled(not is_checked)
+
+        if is_checked:
+            self.destination_input.setPlaceholderText(
+                "Original-Verzeichnisse (wird automatisch verwendet)"
+            )
+        else:
+            self.destination_input.setPlaceholderText("scrat-restore (Standard)")
+
     def _on_backup_selected(self) -> None:
         """Callback wenn Backup ausgewählt wurde"""
         selected_rows = self.backup_table.selectedItems()
@@ -572,6 +616,7 @@ class RestoreTab(QWidget):
         config = RestoreConfig(
             destination_path=dest_path,
             password=password,
+            restore_to_original=self.restore_to_original_checkbox.isChecked(),
             overwrite_existing=self.overwrite_checkbox.isChecked(),
             restore_permissions=self.restore_permissions_checkbox.isChecked(),
         )

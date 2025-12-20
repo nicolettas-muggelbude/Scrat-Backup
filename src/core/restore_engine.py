@@ -25,12 +25,14 @@ class RestoreConfig:
     Attributes:
         destination_path: Ziel-Pfad für wiederhergestellte Dateien
         password: Entschlüsselungs-Passwort
+        restore_to_original: In Original-Verzeichnisse wiederherstellen?
         overwrite_existing: Existierende Dateien überschreiben?
         restore_permissions: Datei-Permissions wiederherstellen?
     """
 
     destination_path: Path
     password: str
+    restore_to_original: bool = False
     overwrite_existing: bool = False
     restore_permissions: bool = True
 
@@ -578,20 +580,23 @@ class RestoreEngine:
             relative_path = file_meta["relative_path"]
             source_path = file_meta.get("source_path", "")
 
-            # Extrahiere Quellordner-Namen aus source_path
-            # z.B. C:\Users\Documents → Documents
-            if source_path:
-                source_dir_name = Path(source_path).name
-                # Konstruiere Restore-Pfad: destination / Quellordner / relative_path
-                # Stelle sicher, dass relative_path als String/Path behandelt wird
-                dest_path = Path(self.config.destination_path) / source_dir_name / relative_path
+            # Konstruiere Ziel-Pfad basierend auf restore_to_original Option
+            if self.config.restore_to_original and source_path:
+                # Original-Restore: Zurück zum ursprünglichen Ort
+                dest_path = Path(source_path) / relative_path
+                logger.info(f"[RESTORE] Modus: Original-Location")
             else:
-                # Fallback wenn source_path fehlt
-                dest_path = Path(self.config.destination_path) / relative_path
+                # Custom-Restore: In benutzerdefinierten Ordner
+                if source_path:
+                    source_dir_name = Path(source_path).name
+                    dest_path = Path(self.config.destination_path) / source_dir_name / relative_path
+                else:
+                    # Fallback wenn source_path fehlt
+                    dest_path = Path(self.config.destination_path) / relative_path
+                logger.info(f"[RESTORE] Modus: Custom-Location")
 
             # Debug-Logging
             logger.info(f"[RESTORE] source_path={source_path}")
-            logger.info(f"[RESTORE] source_dir_name={source_dir_name if source_path else 'NONE'}")
             logger.info(f"[RESTORE] relative_path={relative_path}")
             logger.info(f"[RESTORE] dest_path={dest_path}")
             logger.info(f"[RESTORE] dest_path.parent={dest_path.parent}")
@@ -615,15 +620,23 @@ class RestoreEngine:
             logger.info(f"[RESTORE] Erstelle Parent-Dir: {parent_dir}")
             parent_dir.mkdir(parents=True, exist_ok=True)
 
-            # Sicherstellen, dass dest_path KEIN Verzeichnis ist
+            # Prüfe ob Datei bereits existiert
             if dest_path.exists():
                 if dest_path.is_dir():
                     logger.warning(f"⚠️  FEHLER: Ziel existiert bereits als VERZEICHNIS: {dest_path}")
                     logger.warning(f"⚠️  Lösche Verzeichnis: {dest_path}")
                     import shutil as shutil_module
-                    shutil_module.rmtree(dest_path)  # rmdir() funktioniert nur bei leeren Dirs
+                    shutil_module.rmtree(dest_path)
                 else:
-                    logger.info(f"Ziel-Datei existiert bereits, wird überschrieben: {dest_path}")
+                    # Datei existiert bereits
+                    if not self.config.overwrite_existing:
+                        logger.warning(f"⏭️  Überspringe (existiert bereits): {dest_path}")
+                        progress.files_processed += 1
+                        progress.current_file = relative_path
+                        self._report_progress(progress)
+                        continue
+                    else:
+                        logger.info(f"Überschreibe existierende Datei: {dest_path}")
 
             # Kopiere Datei
             try:
