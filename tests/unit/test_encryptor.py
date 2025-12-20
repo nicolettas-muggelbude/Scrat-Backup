@@ -178,11 +178,11 @@ class TestEncryptor:
         encrypted_file = tmp_path / "encrypted.bin"
         decrypted_file = tmp_path / "decrypted.txt"
 
-        # Verschlüsseln
+        # Verschlüsseln (Nonce wird in Datei eingebettet)
         nonce = encryptor.encrypt_file(input_file, encrypted_file)
 
-        # Entschlüsseln
-        encryptor.decrypt_file(encrypted_file, decrypted_file, nonce)
+        # Entschlüsseln (Nonce wird aus Datei gelesen)
+        encryptor.decrypt_file(encrypted_file, decrypted_file)
 
         assert decrypted_file.exists()
 
@@ -202,10 +202,9 @@ class TestEncryptor:
         """Test: Entschlüsselung nicht-existierender Datei wirft Fehler"""
         input_file = tmp_path / "does_not_exist.bin"
         output_file = tmp_path / "output.txt"
-        nonce = secrets.token_bytes(Encryptor.NONCE_SIZE)
 
         with pytest.raises(FileNotFoundError):
-            encryptor.decrypt_file(input_file, output_file, nonce)
+            encryptor.decrypt_file(input_file, output_file)
 
     def test_encrypt_file_creates_output_directory(self, encryptor, tmp_path):
         """Test: Verschlüsselung erstellt Output-Verzeichnis"""

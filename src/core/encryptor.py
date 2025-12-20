@@ -173,22 +173,28 @@ class Encryptor:
             # (GCM-Mode funktioniert nicht gut mit Chunking wegen Authentication Tag)
             plaintext = f_in.read()
             ciphertext, used_nonce = self.encrypt_bytes(plaintext, nonce=nonce)
+
+            # Schreibe Nonce am Anfang der Datei (Standard-Praxis für AES-GCM)
+            f_out.write(used_nonce)
             f_out.write(ciphertext)
 
-        logger.info(f"Datei verschlüsselt: {output_path.name} ({len(ciphertext):,} Bytes)")
+        logger.info(
+            f"Datei verschlüsselt: {output_path.name} "
+            f"({len(used_nonce) + len(ciphertext):,} Bytes, inkl. {len(used_nonce)} Byte Nonce)"
+        )
         return used_nonce
 
-    def decrypt_file(self, input_path: Path, output_path: Path, nonce: bytes) -> None:
+    def decrypt_file(self, input_path: Path, output_path: Path) -> None:
         """
-        Entschlüsselt Datei (Streaming für große Dateien)
+        Entschlüsselt Datei (Nonce wird aus Datei gelesen)
 
         Args:
-            input_path: Verschlüsselte Datei
+            input_path: Verschlüsselte Datei (mit eingebettetem Nonce)
             output_path: Ziel-Datei (entschlüsselt)
-            nonce: Nonce der Verschlüsselung
 
         Raises:
             FileNotFoundError: Wenn verschlüsselte Datei nicht existiert
+            ValueError: Wenn Datei zu klein ist oder ungültiges Format hat
             cryptography.exceptions.InvalidTag: Bei falscher Authentifizierung
         """
         if not input_path.exists():
@@ -200,8 +206,25 @@ class Encryptor:
         file_size = input_path.stat().st_size
         logger.info(f"Entschlüssle Datei: {input_path.name} ({file_size:,} Bytes)")
 
+        # Datei muss mindestens Nonce-Größe + Authentication-Tag haben
+        min_size = self.NONCE_SIZE + 16  # GCM Tag ist 16 Bytes
+        if file_size < min_size:
+            raise ValueError(
+                f"Verschlüsselte Datei zu klein ({file_size} Bytes, "
+                f"erwartet mindestens {min_size} Bytes)"
+            )
+
         # Entschlüsseln
         with open(input_path, "rb") as f_in, open(output_path, "wb") as f_out:
+            # Lese Nonce vom Anfang der Datei (Standard-Praxis für AES-GCM)
+            nonce = f_in.read(self.NONCE_SIZE)
+            if len(nonce) != self.NONCE_SIZE:
+                raise ValueError(
+                    f"Konnte Nonce nicht lesen (erwartet {self.NONCE_SIZE} Bytes, "
+                    f"bekommen {len(nonce)} Bytes)"
+                )
+
+            # Lese Rest als Ciphertext
             ciphertext = f_in.read()
             plaintext = self.decrypt_bytes(ciphertext, nonce)
             f_out.write(plaintext)
