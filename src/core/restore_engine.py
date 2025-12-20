@@ -571,7 +571,17 @@ class RestoreEngine:
 
         for file_meta in file_metadata:
             relative_path = file_meta["relative_path"]
-            dest_path = self.config.destination_path / relative_path
+            source_path = file_meta.get("source_path", "")
+
+            # Extrahiere Quellordner-Namen aus source_path
+            # z.B. C:\Users\Documents → Documents
+            if source_path:
+                source_dir_name = Path(source_path).name
+                # Konstruiere Restore-Pfad: destination / Quellordner / relative_path
+                dest_path = self.config.destination_path / source_dir_name / relative_path
+            else:
+                # Fallback wenn source_path fehlt
+                dest_path = self.config.destination_path / relative_path
 
             # Finde extrahierte Datei
             # Suche nach Dateinamen in extracted_files
