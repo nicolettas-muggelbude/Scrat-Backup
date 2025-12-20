@@ -440,10 +440,22 @@ class RestoreEngine:
         Returns:
             Liste heruntergeladener Archive-Pfade
         """
-        # Finde Backup-Verzeichnis auf Storage
-        backup_id_str = backup.get("timestamp", "").replace(":", "-").replace(" ", "_")
-        if not backup_id_str:
-            # Fallback: Nutze ID
+        # Rekonstruiere backup_id wie BackupEngine es erstellt
+        # Format: YYYYMMDD_HHMMSS_type (z.B. "20251220_103931_full")
+        timestamp_str = backup.get("timestamp", "")
+        backup_type = backup.get("type", "full")
+
+        if timestamp_str:
+            # Parse ISO timestamp und konvertiere zu BackupEngine-Format
+            try:
+                from datetime import datetime
+
+                dt = datetime.fromisoformat(timestamp_str)
+                backup_id_str = dt.strftime("%Y%m%d_%H%M%S") + f"_{backup_type}"
+            except Exception:
+                # Fallback bei Parse-Fehler
+                backup_id_str = f"backup_{backup['id']}"
+        else:
             backup_id_str = f"backup_{backup['id']}"
 
         # Konstruiere Backup-Pfad
