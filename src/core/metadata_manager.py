@@ -222,12 +222,13 @@ class MetadataManager:
         """
         )
 
+        # Füge nur Basis-Version ein falls neu (Migrations-Logik updated später)
         cursor.execute(
-            "INSERT OR IGNORE INTO schema_info (version) VALUES (?)", (self.SCHEMA_VERSION,)
+            "INSERT OR IGNORE INTO schema_info (version) VALUES (?)", (1,)
         )
 
         self.connection.commit()
-        logger.info(f"Datenbank-Schema initialisiert (Version {self.SCHEMA_VERSION})")
+        logger.info("Datenbank-Schema initialisiert (Basis-Version)")
 
     def _run_migrations(self) -> None:
         """Führt notwendige Schema-Migrationen durch"""
@@ -238,13 +239,23 @@ class MetadataManager:
         result = cursor.fetchone()
         current_version = result[0] if result[0] is not None else 0
 
-        if current_version < self.SCHEMA_VERSION:
+        logger.info(f"Aktuelle Datenbank-Version: {current_version}")
+
+        # Migration von Version 1 zu Version 2: salt-Spalte hinzufügen
+        # Prüfe ob Migration nötig (entweder Version < 2 ODER Spalte fehlt)
+        needs_v2_migration = current_version < 2
+
+        # Zusätzlicher Check: Prüfe ob salt-Spalte existiert
+        cursor.execute("PRAGMA table_info(backups)")
+        columns = [row[1] for row in cursor.fetchall()]
+        has_salt_column = "salt" in columns
+
+        if needs_v2_migration or not has_salt_column:
             logger.info(
-                f"Führe Schema-Migration durch: Version {current_version} → {self.SCHEMA_VERSION}"
+                f"Führe Migration auf Version 2 durch (current={current_version}, has_salt={has_salt_column})"
             )
 
-            # Migration von Version 1 zu Version 2: salt-Spalte hinzufügen
-            if current_version < 2:
+            if not has_salt_column:
                 logger.info("Migration: Füge salt-Spalte zur backups-Tabelle hinzu")
                 try:
                     cursor.execute("ALTER TABLE backups ADD COLUMN salt BLOB")
@@ -255,12 +266,14 @@ class MetadataManager:
                     else:
                         raise
 
-                # Update Schema-Version
-                cursor.execute(
-                    "INSERT OR REPLACE INTO schema_info (version) VALUES (?)", (2,)
-                )
-                self.connection.commit()
-                logger.info("Migration auf Version 2 abgeschlossen")
+            # Update Schema-Version
+            cursor.execute(
+                "INSERT OR REPLACE INTO schema_info (version) VALUES (?)", (2,)
+            )
+            self.connection.commit()
+            logger.info("Migration auf Version 2 abgeschlossen")
+        else:
+            logger.info(f"Datenbank ist aktuell (Version {current_version})")
 
     def create_backup_record(
         self,
