@@ -19,6 +19,7 @@ class FileInfo:
 
     Attributes:
         path: Absoluter Pfad zur Datei
+        source_dir: Quell-Verzeichnis (wo der Scan gestartet wurde)
         relative_path: Relativer Pfad (ab Quell-Ordner)
         size: Dateigröße in Bytes
         modified: Letzte Änderungs-Zeitstempel
@@ -28,6 +29,7 @@ class FileInfo:
     """
 
     path: Path
+    source_dir: Path
     relative_path: Path
     size: int
     modified: datetime
@@ -169,6 +171,7 @@ class Scanner:
                     # FileInfo erstellen
                     file_info = FileInfo(
                         path=file_path,
+                        source_dir=source_path,
                         relative_path=relative_path,
                         size=size,
                         modified=modified,
@@ -214,6 +217,7 @@ class Scanner:
                 # Datei war im letzten Backup, aber jetzt nicht mehr da
                 deleted_file = FileInfo(
                     path=source_path / previous_file.relative_path,
+                    source_dir=source_path,
                     relative_path=previous_file.relative_path,
                     size=previous_file.size,
                     modified=previous_file.modified,

@@ -305,7 +305,7 @@ class BackupEngine:
 
                 self.metadata_manager.add_file_to_backup(
                     backup_id=db_backup_id,
-                    source_path=str(file_info.path),
+                    source_path=str(file_info.source_dir),  # ✅ Quellverzeichnis statt Dateipfad!
                     relative_path=str(file_info.relative_path),
                     file_size=file_info.size,
                     modified_timestamp=file_info.modified,
@@ -455,9 +455,23 @@ class BackupEngine:
                     if isinstance(modified_ts, str):
                         modified_ts = datetime.fromisoformat(modified_ts)
 
+                    # Rekonstruiere source_dir aus path und relative_path
+                    # (für alte Backups wo source_path = Dateipfad war)
+                    full_path = Path(pf["source_path"])
+                    rel_path = Path(pf["relative_path"])
+
+                    # Berechne source_dir: path ohne relative_path
+                    # z.B. C:/Music/68.jpg - 68.jpg = C:/Music
+                    if len(rel_path.parts) > 0:
+                        source_parts = full_path.parts[:-len(rel_path.parts)]
+                        calculated_source_dir = Path(*source_parts) if source_parts else full_path.parent
+                    else:
+                        calculated_source_dir = full_path.parent
+
                     file_info = FileInfo(
-                        path=Path(pf["source_path"]),
-                        relative_path=Path(pf["relative_path"]),
+                        path=full_path,
+                        source_dir=calculated_source_dir,
+                        relative_path=rel_path,
                         size=pf["file_size"],
                         modified=modified_ts,
                     )
@@ -571,7 +585,7 @@ class BackupEngine:
                 archive_name = encrypted_archives[0].name if encrypted_archives else ""
                 self.metadata_manager.add_file_to_backup(
                     backup_id=db_backup_id,
-                    source_path=str(file_info.path),
+                    source_path=str(file_info.source_dir),  # ✅ Quellverzeichnis statt Dateipfad!
                     relative_path=str(file_info.relative_path),
                     file_size=file_info.size,
                     modified_timestamp=file_info.modified,
