@@ -590,7 +590,11 @@ class RestoreEngine:
                 dest_path = Path(self.config.destination_path) / relative_path
 
             # Debug-Logging
-            logger.debug(f"Restore-Pfad: {relative_path} → {dest_path}")
+            logger.info(f"[RESTORE] source_path={source_path}")
+            logger.info(f"[RESTORE] source_dir_name={source_dir_name if source_path else 'NONE'}")
+            logger.info(f"[RESTORE] relative_path={relative_path}")
+            logger.info(f"[RESTORE] dest_path={dest_path}")
+            logger.info(f"[RESTORE] dest_path.parent={dest_path.parent}")
 
             # Finde extrahierte Datei
             # Direkter Lookup: extract_dir/relative_path
@@ -606,13 +610,20 @@ class RestoreEngine:
                 logger.warning(f"Überspringe Verzeichnis: {source_file}")
                 continue
 
-            # Erstelle Ziel-Verzeichnis (NICHT die Datei selbst!)
-            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            # WICHTIG: Erstelle nur das PARENT-Verzeichnis, NICHT dest_path selbst!
+            parent_dir = dest_path.parent
+            logger.info(f"[RESTORE] Erstelle Parent-Dir: {parent_dir}")
+            parent_dir.mkdir(parents=True, exist_ok=True)
 
             # Sicherstellen, dass dest_path KEIN Verzeichnis ist
-            if dest_path.exists() and dest_path.is_dir():
-                logger.warning(f"Ziel ist bereits ein Verzeichnis: {dest_path}, lösche es")
-                dest_path.rmdir()
+            if dest_path.exists():
+                if dest_path.is_dir():
+                    logger.warning(f"⚠️  FEHLER: Ziel existiert bereits als VERZEICHNIS: {dest_path}")
+                    logger.warning(f"⚠️  Lösche Verzeichnis: {dest_path}")
+                    import shutil as shutil_module
+                    shutil_module.rmtree(dest_path)  # rmdir() funktioniert nur bei leeren Dirs
+                else:
+                    logger.info(f"Ziel-Datei existiert bereits, wird überschrieben: {dest_path}")
 
             # Kopiere Datei
             try:
