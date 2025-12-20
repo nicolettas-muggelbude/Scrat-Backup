@@ -179,6 +179,7 @@ class BackupEngine:
                 destination_type=self.config.destination_type,
                 destination_path=str(self.config.destination_path),
                 encryption_key_hash=self.password_hash,
+                salt=self.encryptor.salt,
             )
 
             # Log: Backup gestartet
@@ -415,6 +416,7 @@ class BackupEngine:
                 destination_type=self.config.destination_type,
                 destination_path=str(self.config.destination_path),
                 encryption_key_hash=self.password_hash,
+                salt=self.encryptor.salt,
                 base_backup_id=base_backup_id,
             )
 

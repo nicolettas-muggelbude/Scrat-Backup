@@ -23,7 +23,7 @@ class MetadataManager:
     - Backup-Suche und Abfragen
     """
 
-    SCHEMA_VERSION = 1
+    SCHEMA_VERSION = 2  # Version 2: salt-Spalte hinzugefügt
 
     def __init__(self, db_path: Path):
         """
@@ -41,6 +41,7 @@ class MetadataManager:
         # Verbindung herstellen und Schema initialisieren
         self.connect()
         self._initialize_schema()
+        self._run_migrations()
 
     def connect(self) -> None:
         """Stellt Verbindung zur Datenbank her"""
@@ -228,12 +229,46 @@ class MetadataManager:
         self.connection.commit()
         logger.info(f"Datenbank-Schema initialisiert (Version {self.SCHEMA_VERSION})")
 
+    def _run_migrations(self) -> None:
+        """Führt notwendige Schema-Migrationen durch"""
+        cursor = self.connection.cursor()
+
+        # Hole aktuelle Schema-Version
+        cursor.execute("SELECT MAX(version) FROM schema_info")
+        result = cursor.fetchone()
+        current_version = result[0] if result[0] is not None else 0
+
+        if current_version < self.SCHEMA_VERSION:
+            logger.info(
+                f"Führe Schema-Migration durch: Version {current_version} → {self.SCHEMA_VERSION}"
+            )
+
+            # Migration von Version 1 zu Version 2: salt-Spalte hinzufügen
+            if current_version < 2:
+                logger.info("Migration: Füge salt-Spalte zur backups-Tabelle hinzu")
+                try:
+                    cursor.execute("ALTER TABLE backups ADD COLUMN salt BLOB")
+                    logger.info("✅ salt-Spalte hinzugefügt")
+                except sqlite3.OperationalError as e:
+                    if "duplicate column" in str(e).lower():
+                        logger.warning("salt-Spalte existiert bereits")
+                    else:
+                        raise
+
+                # Update Schema-Version
+                cursor.execute(
+                    "INSERT OR REPLACE INTO schema_info (version) VALUES (?)", (2,)
+                )
+                self.connection.commit()
+                logger.info("Migration auf Version 2 abgeschlossen")
+
     def create_backup_record(
         self,
         backup_type: str,
         destination_type: str,
         destination_path: str,
         encryption_key_hash: str,
+        salt: bytes,
         base_backup_id: Optional[int] = None,
     ) -> int:
         """
@@ -244,6 +279,7 @@ class MetadataManager:
             destination_type: 'usb', 'sftp', 'webdav', 'rclone'
             destination_path: Pfad zum Backup-Ziel
             encryption_key_hash: Hash des Verschlüsselungs-Keys
+            salt: Encryption-Salt (32 Bytes)
             base_backup_id: Bei incremental: ID des Base-Backups
 
         Returns:
@@ -255,8 +291,8 @@ class MetadataManager:
             """
             INSERT INTO backups (
                 timestamp, type, base_backup_id, destination_type,
-                destination_path, status, encryption_key_hash
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                destination_path, status, encryption_key_hash, salt
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
             (
                 datetime.now(),
@@ -266,6 +302,7 @@ class MetadataManager:
                 destination_path,
                 "running",
                 encryption_key_hash,
+                salt,
             ),
         )
 

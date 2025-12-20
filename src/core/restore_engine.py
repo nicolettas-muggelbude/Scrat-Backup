@@ -144,7 +144,8 @@ class RestoreEngine:
 
         # Initialisiere Komponenten
         self.compressor = Compressor()
-        self.encryptor = Encryptor(password=config.password)
+        # Encryptor wird erst erstellt, wenn Salt aus Backup-Metadaten geladen wurde
+        self.encryptor = None
 
         logger.info("Restore-Engine initialisiert")
 
@@ -177,6 +178,18 @@ class RestoreEngine:
                     f"Backup {backup_id} hat Status '{backup['status']}', "
                     f"nur 'completed' Backups können wiederhergestellt werden"
                 )
+
+            # Lade Salt aus Metadaten und erstelle Encryptor
+            salt = backup.get("salt")
+            if not salt:
+                raise ValueError(
+                    f"Backup {backup_id} hat keinen Salt gespeichert. "
+                    "Möglicherweise wurde es mit einer älteren Version erstellt."
+                )
+
+            # Initialisiere Encryptor mit korrektem Salt
+            self.encryptor = Encryptor(password=self.config.password, salt=salt)
+            logger.info(f"Encryptor initialisiert mit Salt aus Backup {backup_id}")
 
             # Log: Restore gestartet
             self.metadata_manager.add_log(
@@ -327,6 +340,18 @@ class RestoreEngine:
 
         base_backup_id = base_backup["id"]
         logger.info(f"Basis-Backup: {base_backup_id} vom {base_backup['timestamp']}")
+
+        # Lade Salt aus Metadaten und erstelle Encryptor
+        salt = base_backup.get("salt")
+        if not salt:
+            raise ValueError(
+                f"Basis-Backup {base_backup_id} hat keinen Salt gespeichert. "
+                "Möglicherweise wurde es mit einer älteren Version erstellt."
+            )
+
+        # Initialisiere Encryptor mit korrektem Salt
+        self.encryptor = Encryptor(password=self.config.password, salt=salt)
+        logger.info(f"Encryptor initialisiert mit Salt aus Backup {base_backup_id}")
 
         # Finde alle Incrementals nach dem Base-Backup bis zum Zeitpunkt
         incrementals = [
