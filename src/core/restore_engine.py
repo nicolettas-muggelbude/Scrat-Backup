@@ -440,17 +440,48 @@ class RestoreEngine:
         Returns:
             Liste heruntergeladener Archive-Pfade
         """
-        # Liste alle .enc Dateien im Backup-Verzeichnis
-        # (Vereinfachte Annahme: Alle .enc Dateien sind Archive)
-        # TODO: Nutze manifest.json für genaue Archive-Liste
+        # Finde Backup-Verzeichnis auf Storage
+        backup_id_str = backup.get("timestamp", "").replace(":", "-").replace(" ", "_")
+        if not backup_id_str:
+            # Fallback: Nutze ID
+            backup_id_str = f"backup_{backup['id']}"
 
+        # Konstruiere Backup-Pfad
+        # BackupEngine erstellt: destination_path / backup_id / *.7z.enc
+        backup_base = Path(backup["destination_path"])
+        backup_dir = backup_base / backup_id_str
+
+        logger.info(f"Suche Archive in: {backup_dir}")
+
+        if not backup_dir.exists():
+            raise ValueError(f"Backup-Verzeichnis nicht gefunden: {backup_dir}")
+
+        # Finde alle verschlüsselten Archive (.enc Dateien)
+        enc_files = list(backup_dir.glob("*.enc"))
+
+        if not enc_files:
+            raise ValueError(f"Keine verschlüsselten Archive gefunden in {backup_dir}")
+
+        logger.info(f"Gefunden: {len(enc_files)} verschlüsselte Archive")
+
+        # Für USB/Local Storage: Kopiere Archive ins temp_dir
         downloaded = []
+        for enc_file in enc_files:
+            dest_path = temp_dir / enc_file.name
+            logger.debug(f"Kopiere {enc_file.name} nach {dest_path}")
 
-        # Für lokales Storage: Kopiere direkt
-        # Für Remote: Download mit Progress
+            # Nutze Storage-Backend für Copy
+            # (Für jetzt: Direkte Kopie, später über storage.download())
+            import shutil
 
-        logger.info("Archive-Download noch nicht vollständig implementiert")
-        # Placeholder: Returniere leere Liste
+            shutil.copy2(enc_file, dest_path)
+            downloaded.append(dest_path)
+
+            # Progress aktualisieren
+            progress.bytes_processed += enc_file.stat().st_size
+            self._report_progress(progress)
+
+        logger.info(f"Archive heruntergeladen: {len(downloaded)}")
         return downloaded
 
     def _decrypt_archives(
