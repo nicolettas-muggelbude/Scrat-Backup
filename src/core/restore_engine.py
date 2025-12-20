@@ -560,14 +560,19 @@ class RestoreEngine:
 
         restored_count = 0
 
-        # Erstelle Mapping: relative_path -> extrahierte Datei
-        # Die extrahierten Dateien liegen im extract_dir mit ihrer ursprünglichen Struktur
-        extracted_map = {}
-        for extracted_file in extracted_files:
-            # extracted_file ist absoluter Pfad, z.B. /tmp/.scrat_backup_temp/extract/path/to/file.txt
-            # Wir müssen herausfinden, was der relative Pfad ist
-            # Der Compressor sollte die Struktur beibehalten haben
-            extracted_map[extracted_file.name] = extracted_file
+        # Bestimme extract_dir (wo die Dateien entpackt wurden)
+        # extracted_files liegen in temp_dir/extracted/relative_path
+        if extracted_files:
+            # Nimm erste Datei und finde extract_dir
+            first_file = extracted_files[0]
+            # Gehe hoch bis wir "extracted" finden
+            extract_dir = first_file.parent
+            while extract_dir.name != "extracted" and extract_dir.parent != extract_dir:
+                extract_dir = extract_dir.parent
+            logger.info(f"Extract-Dir: {extract_dir}")
+        else:
+            logger.warning("Keine extrahierten Dateien gefunden!")
+            return 0
 
         for file_meta in file_metadata:
             relative_path = file_meta["relative_path"]
@@ -588,20 +593,12 @@ class RestoreEngine:
             logger.debug(f"Restore-Pfad: {relative_path} → {dest_path}")
 
             # Finde extrahierte Datei
-            # Suche nach Dateinamen in extracted_files
-            source_file = None
-            for extracted_file in extracted_files:
-                # Prüfe ob der relative Pfad übereinstimmt
-                # extracted_file könnte z.B. /tmp/extract/Documents/file.txt sein
-                # relative_path ist z.B. Documents/file.txt
-                if extracted_file.name == Path(relative_path).name:
-                    # Einfaches Matching: nur Dateiname
-                    # TODO: Besseres Matching mit vollständigem Pfad
-                    source_file = extracted_file
-                    break
+            # Direkter Lookup: extract_dir/relative_path
+            source_file = extract_dir / relative_path
 
-            if not source_file:
-                logger.warning(f"Extrahierte Datei nicht gefunden: {relative_path}")
+            if not source_file.exists():
+                logger.warning(f"Extrahierte Datei nicht gefunden: {source_file}")
+                logger.debug(f"Gesucht: {relative_path} in {extract_dir}")
                 continue
 
             # Prüfe ob source_file eine Datei ist (nicht Verzeichnis)
