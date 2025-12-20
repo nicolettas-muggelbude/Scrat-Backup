@@ -556,25 +556,55 @@ class RestoreEngine:
         progress: RestoreProgress,
     ) -> int:
         """Kopiert extrahierte Dateien zu ihren Ziel-Pfaden"""
+        import shutil
+
         restored_count = 0
+
+        # Erstelle Mapping: relative_path -> extrahierte Datei
+        # Die extrahierten Dateien liegen im extract_dir mit ihrer ursprünglichen Struktur
+        extracted_map = {}
+        for extracted_file in extracted_files:
+            # extracted_file ist absoluter Pfad, z.B. /tmp/.scrat_backup_temp/extract/path/to/file.txt
+            # Wir müssen herausfinden, was der relative Pfad ist
+            # Der Compressor sollte die Struktur beibehalten haben
+            extracted_map[extracted_file.name] = extracted_file
 
         for file_meta in file_metadata:
             relative_path = file_meta["relative_path"]
             dest_path = self.config.destination_path / relative_path
 
             # Finde extrahierte Datei
-            # (Vereinfachung: Nehme an dass Pfad übereinstimmt)
-            # TODO: Verbessere Matching-Logik
+            # Suche nach Dateinamen in extracted_files
+            source_file = None
+            for extracted_file in extracted_files:
+                # Prüfe ob der relative Pfad übereinstimmt
+                # extracted_file könnte z.B. /tmp/extract/Documents/file.txt sein
+                # relative_path ist z.B. Documents/file.txt
+                if extracted_file.name == Path(relative_path).name:
+                    # Einfaches Matching: nur Dateiname
+                    # TODO: Besseres Matching mit vollständigem Pfad
+                    source_file = extracted_file
+                    break
+
+            if not source_file:
+                logger.warning(f"Extrahierte Datei nicht gefunden: {relative_path}")
+                continue
 
             # Erstelle Ziel-Verzeichnis
             dest_path.parent.mkdir(parents=True, exist_ok=True)
 
-            # Kopiere (Placeholder)
+            # Kopiere Datei
+            try:
+                shutil.copy2(source_file, dest_path)
+                logger.info(f"Wiederhergestellt: {relative_path} → {dest_path}")
+                restored_count += 1
+            except Exception as e:
+                logger.error(f"Fehler beim Kopieren von {relative_path}: {e}")
+                continue
+
             progress.files_processed += 1
             progress.current_file = relative_path
             self._report_progress(progress)
-
-            restored_count += 1
 
         return restored_count
 
