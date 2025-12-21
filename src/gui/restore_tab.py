@@ -205,9 +205,7 @@ class RestoreTab(QWidget):
             self.save_password_checkbox = None
 
         # Optionen
-        self.restore_to_original_checkbox = QCheckBox(
-            "In Original-Verzeichnisse wiederherstellen"
-        )
+        self.restore_to_original_checkbox = QCheckBox("In Original-Verzeichnisse wiederherstellen")
         self.restore_to_original_checkbox.setChecked(False)
         self.restore_to_original_checkbox.setToolTip(
             "Dateien werden in ihre ursprünglichen Ordner wiederhergestellt\n"
@@ -229,9 +227,7 @@ class RestoreTab(QWidget):
         layout.addWidget(self.restore_permissions_checkbox)
 
         # Verbinde Checkbox-Logik: overwrite nur bei restore_to_original
-        self.restore_to_original_checkbox.stateChanged.connect(
-            self._on_restore_to_original_changed
-        )
+        self.restore_to_original_checkbox.stateChanged.connect(self._on_restore_to_original_changed)
 
         # Buttons
         button_layout = QHBoxLayout()

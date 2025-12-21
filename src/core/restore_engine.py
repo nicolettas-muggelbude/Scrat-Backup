@@ -623,9 +623,12 @@ class RestoreEngine:
             # Prüfe ob Datei bereits existiert
             if dest_path.exists():
                 if dest_path.is_dir():
-                    logger.warning(f"⚠️  FEHLER: Ziel existiert bereits als VERZEICHNIS: {dest_path}")
+                    logger.warning(
+                        f"⚠️  FEHLER: Ziel existiert bereits als VERZEICHNIS: {dest_path}"
+                    )
                     logger.warning(f"⚠️  Lösche Verzeichnis: {dest_path}")
                     import shutil as shutil_module
+
                     shutil_module.rmtree(dest_path)
                 else:
                     # Datei existiert bereits

@@ -45,8 +45,7 @@ def check_first_run() -> bool:
 
         # Prüfe ob Quellen und Ziele konfiguriert sind
         has_sources = (
-            config_manager.config.get("sources")
-            and len(config_manager.config["sources"]) > 0
+            config_manager.config.get("sources") and len(config_manager.config["sources"]) > 0
         )
         has_destinations = (
             config_manager.config.get("destinations")
@@ -187,6 +186,7 @@ def run_gui() -> int:
                 logger.error(f"Fehler beim Speichern der Konfiguration: {e}", exc_info=True)
                 # Zeige Fehlermeldung, aber fahre trotzdem fort
                 from PySide6.QtWidgets import QMessageBox
+
                 QMessageBox.warning(
                     None,
                     "Warnung",

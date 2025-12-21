@@ -4,6 +4,7 @@ Enthält Tab-Navigation und zentrale UI-Komponenten
 """
 
 import logging
+import threading
 from pathlib import Path
 from typing import Optional
 
@@ -21,9 +22,10 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from src.core.backup_engine import BackupConfig, BackupEngine
 from src.core.config_manager import ConfigManager
 from src.core.metadata_manager import MetadataManager
-from src.core.scheduler import Scheduler
+from src.core.scheduler import Schedule, Scheduler
 from src.core.scheduler_worker import SchedulerWorker
 from src.gui.backup_tab import BackupTab
 from src.gui.event_bus import get_event_bus
@@ -501,7 +503,7 @@ class MainWindow(QMainWindow):
         # Dieser Callback wird vom Scheduler direkt aufgerufen (optional)
         # Die eigentliche Verarbeitung erfolgt in _on_scheduled_backup_due
 
-    def _on_scheduled_backup_due(self, schedule, is_missed: bool) -> None:
+    def _on_scheduled_backup_due(self, schedule: Schedule, is_missed: bool) -> None:
         """Handler für SchedulerWorker: Backup fällig"""
         logger.info(f"Backup fällig: '{schedule.name}' (Verpasst: {is_missed})")
 
@@ -527,12 +529,17 @@ class MainWindow(QMainWindow):
             f"Backup '{schedule.name}' wird gestartet...",
         )
 
-        # TODO: Triggere Backup über BackupEngine
-        # Für jetzt: Platzhalter
-        logger.info(f"TODO: Starte Backup für Zeitplan '{schedule.name}'")
-
-        # Simuliere Abschluss (in Realität: wenn Backup fertig)
-        # self.scheduler_worker.mark_job_finished(schedule.id)
+        # Starte Backup
+        try:
+            self._start_scheduled_backup(schedule)
+        except Exception as e:
+            logger.error(f"Fehler beim Starten des geplanten Backups: {e}", exc_info=True)
+            self.system_tray.show_message(
+                "Backup fehlgeschlagen",
+                f"Backup '{schedule.name}' konnte nicht gestartet werden:\n{e}",
+            )
+            # Markiere als abgeschlossen trotz Fehler
+            self.scheduler_worker.mark_job_finished(schedule.id)
 
     def _on_next_run_changed(self, schedule_id: int, next_run) -> None:
         """Handler für SchedulerWorker: Nächster Lauf geändert"""
@@ -551,6 +558,125 @@ class MainWindow(QMainWindow):
         """Handler für Scheduler-Fehler"""
         logger.error(f"Scheduler-Fehler: {error_message}")
         self.status_label.setText(f"Scheduler-Fehler: {error_message}")
+
+    def _start_scheduled_backup(self, schedule: Schedule) -> None:
+        """
+        Startet ein geplantes Backup
+
+        Args:
+            schedule: Zeitplan mit Backup-Konfiguration
+        """
+        # Hole Quellen aus Config basierend auf source_ids
+        sources_config = self.config_manager.config.get("sources", [])
+        source_paths = []
+
+        for source_id in schedule.source_ids:
+            # source_id ist Index in sources-Liste
+            if source_id < len(sources_config):
+                source = sources_config[source_id]
+                source_paths.append(Path(source["path"]))
+            else:
+                logger.warning(f"Quelle mit ID {source_id} nicht gefunden")
+
+        if not source_paths:
+            raise ValueError("Keine gültigen Quellen für geplantes Backup gefunden")
+
+        # Hole Ziel aus Config basierend auf destination_id
+        destinations_config = self.config_manager.config.get("destinations", [])
+        if schedule.destination_id >= len(destinations_config):
+            raise ValueError(f"Ziel mit ID {schedule.destination_id} nicht gefunden")
+
+        destination = destinations_config[schedule.destination_id]
+        dest_config = destination["config"]
+        dest_path = Path(dest_config.get("path", Path.home() / "scrat-backups"))
+
+        # Passwort: Hole aus Config (temporär - später Windows Credential Manager)
+        password = self.config_manager.config.get("encryption", {}).get("password")
+        if not password:
+            raise ValueError(
+                "Kein gespeichertes Passwort gefunden.\n\n"
+                "Geplante Backups benötigen ein gespeichertes Passwort.\n"
+                "Bitte speichere das Passwort in den Einstellungen."
+            )
+
+        # Erstelle BackupConfig
+        config = BackupConfig(
+            sources=source_paths,
+            destination_path=dest_path,
+            destination_type=destination["type"],
+            password=password,
+            compression_level=5,
+        )
+
+        # Starte Backup in Thread
+        backup_thread = threading.Thread(
+            target=self._run_scheduled_backup,
+            args=(schedule, config, self.metadata_manager.db_path),
+            daemon=True,
+        )
+        backup_thread.start()
+
+        logger.info(f"Geplantes Backup '{schedule.name}' gestartet ({schedule.backup_type})")
+
+    def _run_scheduled_backup(
+        self, schedule: Schedule, config: BackupConfig, db_path: Path
+    ) -> None:
+        """
+        Führt geplantes Backup aus (läuft in separatem Thread)
+
+        Args:
+            schedule: Zeitplan mit Backup-Typ
+            config: Backup-Konfiguration
+            db_path: Pfad zur Metadaten-Datenbank
+        """
+        thread_metadata_manager = None
+        try:
+            # Erstelle thread-lokalen MetadataManager (SQLite-Threading-Sicherheit)
+            thread_metadata_manager = MetadataManager(db_path)
+            logger.info(f"Thread-lokaler MetadataManager erstellt für '{schedule.name}'")
+
+            # Erstelle BackupEngine
+            backup_engine = BackupEngine(
+                metadata_manager=thread_metadata_manager,
+                config=config,
+                progress_callback=None,  # Keine UI-Updates bei geplanten Backups
+            )
+
+            # Führe Backup aus (basierend auf schedule.backup_type)
+            if schedule.backup_type == "full":
+                result = backup_engine.create_full_backup()
+            else:  # incremental
+                result = backup_engine.create_incremental_backup()
+
+            # Erfolg: Zeige Notification
+            logger.info(
+                f"Geplantes Backup '{schedule.name}' erfolgreich abgeschlossen: "
+                f"{result.files_backed_up} Dateien"
+            )
+
+            self.system_tray.show_message(
+                "Backup erfolgreich",
+                f"Geplantes Backup '{schedule.name}' abgeschlossen.\n"
+                f"{result.files_backed_up} Dateien gesichert.",
+            )
+
+        except Exception as e:
+            # Fehler: Zeige Notification
+            logger.error(f"Geplantes Backup '{schedule.name}' fehlgeschlagen: {e}", exc_info=True)
+
+            self.system_tray.show_message(
+                "Backup fehlgeschlagen",
+                f"Geplantes Backup '{schedule.name}' ist fehlgeschlagen:\n{str(e)[:100]}",
+            )
+
+        finally:
+            # Schließe thread-lokale Datenbankverbindung
+            if thread_metadata_manager:
+                thread_metadata_manager.disconnect()
+                logger.info("Thread-lokale DB-Verbindung geschlossen")
+
+            # Markiere Job als abgeschlossen
+            self.scheduler_worker.mark_job_finished(schedule.id)
 
     def _on_tray_show_window(self) -> None:
         """Handler für Tray: Hauptfenster anzeigen"""
@@ -595,6 +721,7 @@ class MainWindow(QMainWindow):
 
         # Beende die gesamte Anwendung
         from PySide6.QtWidgets import QApplication
+
         QApplication.instance().quit()
 
     def show_welcome_wizard(self) -> bool:

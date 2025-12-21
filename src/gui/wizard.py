@@ -157,9 +157,7 @@ class SourcesPage(QWizardPage):
 
     def _add_custom_folder(self):
         """Fügt einen weiteren Ordner zur Liste hinzu"""
-        folder = QFileDialog.getExistingDirectory(
-            self, "Ordner auswählen", str(Path.home())
-        )
+        folder = QFileDialog.getExistingDirectory(self, "Ordner auswählen", str(Path.home()))
         if folder:
             # Prüfe ob Ordner bereits in Liste
             for i in range(self.custom_folders_list.count()):
@@ -172,9 +170,7 @@ class SourcesPage(QWizardPage):
         """Entfernt ausgewählten Ordner aus Liste"""
         current_item = self.custom_folders_list.currentItem()
         if current_item:
-            self.custom_folders_list.takeItem(
-                self.custom_folders_list.row(current_item)
-            )
+            self.custom_folders_list.takeItem(self.custom_folders_list.row(current_item))
 
     def get_custom_folders(self) -> List[str]:
         """Gibt Liste aller weiteren Ordner zurück"""
@@ -583,7 +579,7 @@ class EncryptionPage(QWizardPage):
         """Wird aufgerufen wenn Seite angezeigt wird - stellt Passwort wieder her"""
         wizard = self.wizard()
         # Stelle Passwort aus Wizard-Instanzvariable wieder her
-        if hasattr(wizard, '_saved_password') and wizard._saved_password:
+        if hasattr(wizard, "_saved_password") and wizard._saved_password:
             self.password.setText(wizard._saved_password)
             self.password_confirm.setText(wizard._saved_password)
 

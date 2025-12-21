@@ -223,9 +223,7 @@ class MetadataManager:
         )
 
         # Füge nur Basis-Version ein falls neu (Migrations-Logik updated später)
-        cursor.execute(
-            "INSERT OR IGNORE INTO schema_info (version) VALUES (?)", (1,)
-        )
+        cursor.execute("INSERT OR IGNORE INTO schema_info (version) VALUES (?)", (1,))
 
         self.connection.commit()
         logger.info("Datenbank-Schema initialisiert (Basis-Version)")
@@ -267,9 +265,7 @@ class MetadataManager:
                         raise
 
             # Update Schema-Version
-            cursor.execute(
-                "INSERT OR REPLACE INTO schema_info (version) VALUES (?)", (2,)
-            )
+            cursor.execute("INSERT OR REPLACE INTO schema_info (version) VALUES (?)", (2,))
             self.connection.commit()
             logger.info("Migration auf Version 2 abgeschlossen")
         else:

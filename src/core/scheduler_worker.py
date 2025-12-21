@@ -35,12 +35,7 @@ class SchedulerWorker(QThread):
     next_run_changed = Signal(int, object)  # schedule_id, next_run (datetime)
     error_occurred = Signal(str)  # error_message
 
-    def __init__(
-        self,
-        scheduler: Scheduler,
-        check_interval: int = 60,
-        parent=None
-    ):
+    def __init__(self, scheduler: Scheduler, check_interval: int = 60, parent=None):
         """
         Initialisiert Scheduler-Worker
 
@@ -59,9 +54,7 @@ class SchedulerWorker(QThread):
         # Für Missed-Backup-Detection
         self.last_check_time: Optional[datetime] = None
 
-        logger.info(
-            f"SchedulerWorker initialisiert (Check-Intervall: {check_interval}s)"
-        )
+        logger.info(f"SchedulerWorker initialisiert (Check-Intervall: {check_interval}s)")
 
     def run(self) -> None:
         """

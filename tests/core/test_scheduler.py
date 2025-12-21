@@ -2,16 +2,17 @@
 Tests für Scheduler-Modul
 """
 
-import pytest
 from datetime import datetime, time, timedelta
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+import pytest
+
 from src.core.scheduler import (
     Schedule,
     ScheduledJob,
-    Scheduler,
     ScheduleFrequency,
+    Scheduler,
     Weekday,
 )
 

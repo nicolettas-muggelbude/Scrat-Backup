@@ -2,12 +2,13 @@
 Tests für SchedulerWorker-Modul
 """
 
-import pytest
 from datetime import datetime, time, timedelta
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 from PySide6.QtTest import QSignalSpy
 
-from src.core.scheduler import Schedule, Scheduler, ScheduleFrequency
+from src.core.scheduler import Schedule, ScheduleFrequency, Scheduler
 from src.core.scheduler_worker import SchedulerWorker
 
 
@@ -44,6 +45,7 @@ class TestSchedulerWorker:
 
         # Kurz warten bis gestartet
         from PySide6.QtTest import QTest
+
         QTest.qWait(100)
 
         assert worker.isRunning()
@@ -222,7 +224,7 @@ class TestSchedulerWorker:
     def test_error_signal_on_exception(self, worker, scheduler, qtbot):
         """Test: Error-Signal bei Exception"""
         # Mock _check_for_due_jobs um Exception zu werfen
-        with patch.object(worker, '_check_for_due_jobs', side_effect=Exception("Test Error")):
+        with patch.object(worker, "_check_for_due_jobs", side_effect=Exception("Test Error")):
             spy = QSignalSpy(worker.error_occurred)
 
             worker.start()

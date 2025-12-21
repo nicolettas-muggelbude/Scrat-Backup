@@ -463,8 +463,10 @@ class BackupEngine:
                     # Berechne source_dir: path ohne relative_path
                     # z.B. C:/Music/68.jpg - 68.jpg = C:/Music
                     if len(rel_path.parts) > 0:
-                        source_parts = full_path.parts[:-len(rel_path.parts)]
-                        calculated_source_dir = Path(*source_parts) if source_parts else full_path.parent
+                        source_parts = full_path.parts[: -len(rel_path.parts)]
+                        calculated_source_dir = (
+                            Path(*source_parts) if source_parts else full_path.parent
+                        )
                     else:
                         calculated_source_dir = full_path.parent
 
