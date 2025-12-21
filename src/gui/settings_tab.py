@@ -608,7 +608,9 @@ class SettingsTab(QWidget):
 
     def _add_schedule(self) -> None:
         """Handler für Zeitplan hinzufügen"""
-        dialog = ScheduleDialog(self, metadata_manager=self.metadata_manager)
+        dialog = ScheduleDialog(
+            self, metadata_manager=self.metadata_manager, config_manager=self.config_manager
+        )
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
             # Hole neuen Schedule
@@ -639,7 +641,12 @@ class SettingsTab(QWidget):
         schedule: Schedule = current.data(Qt.ItemDataRole.UserRole)
 
         # Öffne Dialog mit vorhandenen Daten
-        dialog = ScheduleDialog(self, schedule=schedule, metadata_manager=self.metadata_manager)
+        dialog = ScheduleDialog(
+            self,
+            schedule=schedule,
+            metadata_manager=self.metadata_manager,
+            config_manager=self.config_manager,
+        )
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
             # Hole aktualisierte Daten

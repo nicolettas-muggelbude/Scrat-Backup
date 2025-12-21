@@ -27,6 +27,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from src.core.config_manager import ConfigManager
 from src.core.metadata_manager import MetadataManager
 from src.core.scheduler import Schedule, ScheduleFrequency, Weekday
 
@@ -55,6 +56,7 @@ class ScheduleDialog(QDialog):
         parent: Optional[QWidget] = None,
         schedule: Optional[Schedule] = None,
         metadata_manager: Optional[MetadataManager] = None,
+        config_manager: Optional[ConfigManager] = None,
     ):
         """
         Initialisiert Dialog
@@ -62,13 +64,15 @@ class ScheduleDialog(QDialog):
         Args:
             parent: Parent-Widget
             schedule: Zu bearbeitender Zeitplan (None = Neu erstellen)
-            metadata_manager: MetadataManager für Quellen/Ziele
+            metadata_manager: MetadataManager für Backup-Metadaten
+            config_manager: ConfigManager für Quellen/Ziele
         """
         super().__init__(parent)
 
         self.schedule = schedule
         self.is_edit_mode = schedule is not None
         self.metadata_manager = metadata_manager
+        self.config_manager = config_manager or ConfigManager()
 
         self._setup_ui()
         self._connect_signals()
@@ -207,17 +211,20 @@ class ScheduleDialog(QDialog):
         self.sources_list = QListWidget()
         self.sources_list.setMaximumHeight(100)
 
-        # Lade Quellen aus Datenbank
-        if self.metadata_manager:
-            sources = self.metadata_manager.get_sources()
-            for source in sources:
-                item = QListWidgetItem(f"{source['name']} ({source['windows_path']})")
+        # Lade Quellen aus Config
+        sources = self.config_manager.config.get("sources", [])
+        if sources:
+            for idx, source in enumerate(sources):
+                # Zeige Name und Pfad
+                name = source.get("name", "Quelle")
+                path = source.get("path", "")
+                item = QListWidgetItem(f"{name} ({path})")
                 item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
                 item.setCheckState(Qt.CheckState.Checked)  # Default: alle ausgewählt
-                item.setData(Qt.ItemDataRole.UserRole, source["id"])
+                item.setData(Qt.ItemDataRole.UserRole, idx)  # Speichere Index
                 self.sources_list.addItem(item)
         else:
-            # Fallback: Platzhalter wenn kein MetadataManager
+            # Fallback: Keine Quellen konfiguriert
             item = QListWidgetItem("Keine Quellen konfiguriert")
             item.setFlags(Qt.ItemFlag.NoItemFlags)
             self.sources_list.addItem(item)
@@ -234,19 +241,18 @@ class ScheduleDialog(QDialog):
 
         self.destination_combo = QComboBox()
 
-        # Lade Ziele aus Datenbank
-        if self.metadata_manager:
-            destinations = self.metadata_manager.get_destinations()
-            for dest in destinations:
+        # Lade Ziele aus Config
+        destinations = self.config_manager.config.get("destinations", [])
+        if destinations:
+            for idx, dest in enumerate(destinations):
                 # Zeige Name und Typ
-                label = f"{dest['name']} ({dest['type'].upper()})"
-                self.destination_combo.addItem(label, dest["id"])
-
-            if not destinations:
-                self.destination_combo.addItem("Keine Ziele konfiguriert", None)
+                name = dest.get("name", "Ziel")
+                dest_type = dest.get("type", "unknown").upper()
+                label = f"{name} ({dest_type})"
+                self.destination_combo.addItem(label, idx)  # Speichere Index
         else:
-            # Fallback: Platzhalter wenn kein MetadataManager
-            self.destination_combo.addItem("Keine Ziele verfügbar", None)
+            # Fallback: Keine Ziele konfiguriert
+            self.destination_combo.addItem("Keine Ziele konfiguriert", None)
 
         layout.addRow("Backup-Ziel:", self.destination_combo)
 
