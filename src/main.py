@@ -116,21 +116,55 @@ def save_wizard_config(wizard_config: dict) -> None:
         if encryption_config:
             logger.info("Verschlüsselung konfiguriert (Passwort wird nicht gespeichert)")
 
-        # 4. Zeitplan in Config speichern
+        # 4. Zeitplan in Config speichern (im neuen Scheduler-Format)
         schedule = wizard_config.get("schedule", {})
         if schedule and schedule.get("enabled"):
             if not config_manager.config.get("schedules"):
                 config_manager.config["schedules"] = []
 
+            # Berechne source_ids: Indizes der gerade hinzugefügten Quellen
+            sources_count = len(config_manager.config.get("sources", []))
+            num_new_sources = len(wizard_config.get("sources", []))
+            # Die neuen Quellen wurden ans Ende der Liste angehängt
+            source_ids = list(range(sources_count - num_new_sources, sources_count))
+
+            # destination_id: Index des gerade hinzugefügten Ziels (letztes Element)
+            destinations_count = len(config_manager.config.get("destinations", []))
+            destination_id = destinations_count - 1 if destinations_count > 0 else 0
+
+            # Konvertiere interval-String zu frequency
+            interval_str = schedule.get("interval", "Täglich")
+            frequency_map = {
+                "Täglich": "daily",
+                "Wöchentlich": "weekly",
+                "Monatlich": "monthly",
+            }
+            frequency = frequency_map.get(interval_str, "daily")
+
+            # Berechne ID für Zeitplan (nächste freie ID)
+            existing_schedules = config_manager.config.get("schedules", [])
+            next_id = max([s.get("id", 0) for s in existing_schedules], default=0) + 1
+
+            # Erstelle Zeitplan im Scheduler-Format
             schedule_entry = {
+                "id": next_id,
                 "name": "Automatisches Backup",
                 "enabled": True,
-                "interval": schedule.get("interval", "Täglich"),
+                "frequency": frequency,
+                "time": "03:00",  # Default: 3:00 Uhr
+                "weekdays": [1, 2, 3, 4, 5],  # Mo-Fr für wöchentlich
+                "day_of_month": 1,  # 1. Tag des Monats für monatlich
+                "source_ids": source_ids,
+                "destination_id": destination_id,
+                "backup_type": "incremental",  # Default: Incremental
                 "retention": schedule.get("retention", 3),
                 "created_at": datetime.now().isoformat(),
             }
             config_manager.config["schedules"].append(schedule_entry)
-            logger.info(f"Zeitplan hinzugefügt: {schedule.get('interval')}")
+            logger.info(
+                f"Zeitplan hinzugefügt: {frequency} um 03:00 Uhr, "
+                f"{len(source_ids)} Quellen, Ziel-ID {destination_id}"
+            )
 
         # 5. Speichere Konfiguration
         config_manager.save()
