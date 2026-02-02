@@ -2,6 +2,22 @@
 
 ## Priorität: Hoch
 
+### Wizard V3 - Noch fehlende Features
+
+- [ ] **Restore-Flow im Wizard**
+  - Neue Page für Backup-Auswahl
+  - Durchsuchen vorhandener Backups
+  - Auswahl: Vollständige Wiederherstellung vs. Einzelne Dateien
+  - Zielort-Auswahl (Original-Location vs. Eigener Pfad)
+  - Integration mit restore_engine.py
+
+- [ ] **System Tray mit Theme-Toggle**
+  - Tray-Icon implementieren (läuft im Hintergrund)
+  - Kontextmenü: Backup starten, Restore, Einstellungen, Beenden
+  - Theme-Toggle im Tray-Menü (Hell/Dunkel/Auto)
+  - Benachrichtigungen bei Backup-Start/Ende
+  - Autostart-Option (plattformübergreifend)
+
 ### Hilfefunktion / Guided Tour
 - [ ] **Setup-Wizard: Hilfe-Button auf jeder Seite**
   - Kontextbezogene Hilfe für jede Wizard-Seite
