@@ -39,8 +39,15 @@ from core.template_manager import TemplateManager, Template
 from templates.handlers.base import TemplateHandler
 from gui.dynamic_template_form import DynamicTemplateForm
 from gui.wizard_pages import StartPage, SourceSelectionPage
+from gui.theme import get_color
 
 logger = logging.getLogger(__name__)
+
+# ============================================================================
+# THEME COLORS
+# ============================================================================
+
+ACCENT_COLOR = get_color("primary")  # Zentral aus theme.py
 
 
 # ============================================================================
@@ -141,17 +148,17 @@ class ModePage(QWizardPage):
         card = QFrame()
         card.setFrameShape(QFrame.Shape.StyledPanel)
         card.setStyleSheet(
-            """
-            QFrame {
+            f"""
+            QFrame {{
                 background-color: white;
                 border: 2px solid #cccccc;
                 border-radius: 10px;
                 padding: 20px;
-            }
-            QFrame:hover {
-                border-color: #2196F3;
+            }}
+            QFrame:hover {{
+                border-color: {ACCENT_COLOR};
                 background-color: #f5f5f5;
-            }
+            }}
         """
         )
         card.setMinimumSize(280, 260)
@@ -332,23 +339,23 @@ class TemplateDestinationPage(QWizardPage):
 
         # Style basierend auf Verfügbarkeit
         if is_available:
-            style = """
-                QPushButton {
+            style = f"""
+                QPushButton {{
                     background-color: white;
                     border: 2px solid #cccccc;
                     border-radius: 6px;
                     padding: 6px;
                     font-size: 10px;
-                }
-                QPushButton:hover {
-                    border-color: #2196F3;
+                }}
+                QPushButton:hover {{
+                    border-color: {ACCENT_COLOR};
                     background-color: #e3f2fd;
-                }
-                QPushButton:checked {
-                    border-color: #2196F3;
-                    background-color: #2196F3;
+                }}
+                QPushButton:checked {{
+                    border-color: {ACCENT_COLOR};
+                    background-color: {ACCENT_COLOR};
                     color: white;
-                }
+                }}
             """
         else:
             style = """
@@ -695,10 +702,14 @@ class NewFinishPage(QWizardPage):
 class SetupWizardV2(QWizard):
     """Setup-Wizard V2 mit TemplateManager-Integration und neuem Flow"""
 
-    def __init__(self, parent: Optional[QWidget] = None):
+    def __init__(self, parent: Optional[QWidget] = None, version: str = ""):
         super().__init__(parent)
 
-        self.setWindowTitle("Scrat-Backup Einrichtung")
+        # Fenstertitel mit Version (falls übergeben)
+        title = "Scrat-Backup Einrichtung"
+        if version:
+            title += f" v{version}"
+        self.setWindowTitle(title)
         self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
         self.setOption(QWizard.WizardOption.HaveHelpButton, False)
         self.setMinimumSize(800, 600)

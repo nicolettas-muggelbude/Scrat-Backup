@@ -132,7 +132,7 @@ class TestTheme:
 
     def test_get_color(self):
         """Test Farbe abrufen"""
-        assert get_color("primary") == "#0078D4"
+        assert get_color("primary") == "#B8860B"
         assert get_color("success") == "#107C10"
         assert get_color("error") == "#D13438"
         # Unbekannte Farbe

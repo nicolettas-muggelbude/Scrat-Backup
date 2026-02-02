@@ -29,9 +29,12 @@ if __name__ == "__main__":
     # Wizard importieren
     from gui.wizard_v2 import SetupWizardV2
 
+    # Version importieren
+    from src import __version__
+
     # QApplication erstellen
     app = QApplication(sys.argv)
-    app.setApplicationName("Scrat-Backup Wizard V2")
+    app.setApplicationName(f"Scrat-Backup Wizard v{__version__}")
     app.setOrganizationName("Scrat")
 
     # Qt-Übersetzungen laden (für deutschen Dialog)
@@ -48,7 +51,7 @@ if __name__ == "__main__":
     print(f"Theme: {theme_manager.get_theme_display_name()}")
 
     # Wizard erstellen und anzeigen
-    wizard = SetupWizardV2()
+    wizard = SetupWizardV2(version=__version__)
     wizard.show()
 
     # Event-Loop starten

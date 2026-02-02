@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
 )
 
 from core.config_manager import ConfigManager
+from gui.theme import get_color
 
 logger = logging.getLogger(__name__)
 
@@ -366,6 +367,9 @@ class SourceSelectionPage(QWizardPage):
     - Übersicht der gewählten Quellen
     """
 
+    # Signal wenn sich Quellen ändern
+    sourcesChanged = Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -383,8 +387,8 @@ class SourceSelectionPage(QWizardPage):
         # UI erstellen
         self._init_ui()
 
-        # Registriere Felder
-        self.registerField("sources*", self, "selectedSources")
+        # Registriere Felder mit Change-Signals
+        self.registerField("sources*", self, "selectedSources", "sourcesChanged")
         self.registerField("excludes", self, "excludePatterns")
 
     def _init_ui(self):
@@ -524,17 +528,48 @@ class SourceSelectionPage(QWizardPage):
         # Windows-spezifisch
         if system == "Windows":
             excludes.extend([
+                # System
                 "Thumbs.db",
                 "desktop.ini",
                 "~$*",  # Office temporäre Dateien
                 "$RECYCLE.BIN/",
+
+                # Cache & Temp
+                "AppData/Local/Temp/",
+                "AppData/Local/Microsoft/Windows/Explorer/",  # Thumbnails
+                "AppData/Local/Microsoft/Windows/INetCache/",  # IE Cache
+                "AppData/Local/*/Cache/",  # App-Caches
+                "AppData/Local/*/cache/",
+                "AppData/Local/*/cache2/",
+
+                # Browser-Cache
+                "AppData/Local/Google/Chrome/*/Cache/",
+                "AppData/Local/Microsoft/Edge/*/Cache/",
+                "AppData/Local/Mozilla/Firefox/*/cache2/",
             ])
 
         # Linux-spezifisch
         elif system == "Linux":
             excludes.extend([
+                # Papierkorb
                 ".Trash-*/",
+                ".local/share/Trash/",
+
+                # Cache
+                ".cache/",
                 ".thumbnails/",
+
+                # Browser-Cache
+                ".mozilla/firefox/*/Cache/",
+                ".mozilla/firefox/*/cache2/",
+                ".config/google-chrome/*/Cache/",
+                ".config/chromium/*/Cache/",
+
+                # App-spezifische Caches
+                ".config/*/cache/",
+                ".local/share/*/cache/",
+
+                # Sonstiges
                 "*.~lock.*",  # LibreOffice
                 ".directory",  # KDE
                 ".~*",  # Backup-Dateien
@@ -543,21 +578,63 @@ class SourceSelectionPage(QWizardPage):
         # macOS-spezifisch
         elif system == "Darwin":
             excludes.extend([
+                # System
                 ".DS_Store",
                 ".AppleDouble/",
                 ".LSOverride",
                 ".Spotlight-V100/",
                 ".Trashes",
+
+                # Cache
+                "Library/Caches/",
+                ".cache/",
+
+                # Browser-Cache
+                "Library/Application Support/Google/Chrome/*/Cache/",
+                "Library/Application Support/Firefox/*/cache2/",
+                "Library/Safari/LocalStorage/",
+
+                # App-spezifische Caches
+                "Library/Application Support/*/cache/",
+                "Library/Application Support/*/Cache/",
             ])
 
         return excludes
 
     def _create_libraries_group(self) -> QGroupBox:
-        """Erstellt Standard-Bibliotheken-Gruppe"""
-        group = QGroupBox("📚 Standard-Bibliotheken")
+        """Erstellt Standard-Bibliotheken-Gruppe mit Schnellauswahl"""
+        group = QGroupBox("📚 Standard-Bibliotheken & Schnellauswahl")
         group.setStyleSheet("QGroupBox { font-weight: bold; }")
 
         layout = QVBoxLayout(group)
+
+        # Schnellauswahl-Buttons OBEN
+        quick_layout = QHBoxLayout()
+        quick_label = QLabel("Schnellauswahl:")
+        quick_label.setStyleSheet("color: #666; font-size: 11px; font-weight: normal;")
+        quick_layout.addWidget(quick_label)
+
+        # Buttons für häufige Ordner
+        quick_folders = {
+            "🏠 Home": str(Path.home()),
+            "🖥️ Desktop": str(Path.home() / "Desktop"),
+            "📄 Dokumente": str(Path.home() / "Documents"),
+        }
+
+        self.quick_buttons = {}  # Speichere Buttons für später
+        for label, path in quick_folders.items():
+            if Path(path).exists():
+                btn = QPushButton(label)
+                btn.setStyleSheet("font-size: 11px; padding: 4px 8px;")
+                btn.setCheckable(True)  # Toggle-Button
+                btn.clicked.connect(lambda checked, p=path, l=label: self._on_quick_folder_clicked(p, l, checked))
+                quick_layout.addWidget(btn)
+                self.quick_buttons[label] = btn
+
+        quick_layout.addStretch()
+        layout.addLayout(quick_layout)
+
+        layout.addSpacing(10)
 
         if not self.standard_libraries:
             no_libs = QLabel("⚠️ Keine Standard-Bibliotheken gefunden")
@@ -566,8 +643,7 @@ class SourceSelectionPage(QWizardPage):
         else:
             # Info
             info = QLabel(
-                "Die folgenden Ordner werden automatisch erkannt. "
-                "Wähle aus, welche du sichern möchtest:"
+                "Oder wähle einzelne Ordner aus:"
             )
             info.setWordWrap(True)
             info.setStyleSheet("color: #666; font-size: 12px; font-weight: normal;")
@@ -588,8 +664,8 @@ class SourceSelectionPage(QWizardPage):
                 if name in ["Dokumente", "Bilder", "Videos"]:
                     checkbox.setChecked(True)
 
-                # Bei Änderung: Update
-                checkbox.stateChanged.connect(self._on_sources_changed)
+                # Bei Änderung: Update & Home-Button Check
+                checkbox.stateChanged.connect(self._on_library_changed)
 
                 self.library_checkboxes[name] = checkbox
                 layout.addWidget(checkbox)
@@ -631,28 +707,7 @@ class SourceSelectionPage(QWizardPage):
 
         layout.addLayout(path_layout)
 
-        # Schnellauswahl (Tastatur-zugänglich)
-        quick_layout = QHBoxLayout()
-        quick_label = QLabel("Schnellauswahl:")
-        quick_label.setStyleSheet("color: #666; font-size: 11px;")
-        quick_layout.addWidget(quick_label)
-
-        # Buttons für häufige Ordner
-        quick_folders = {
-            "🏠 Home": str(Path.home()),
-            "🖥️ Desktop": str(Path.home() / "Desktop"),
-            "📄 Dokumente": str(Path.home() / "Documents"),
-        }
-
-        for label, path in quick_folders.items():
-            if Path(path).exists():
-                btn = QPushButton(label)
-                btn.setStyleSheet("font-size: 11px; padding: 4px 8px;")
-                btn.clicked.connect(lambda checked, p=path: self._add_quick_folder(p))
-                quick_layout.addWidget(btn)
-
-        quick_layout.addStretch()
-        layout.addLayout(quick_layout)
+        layout.addSpacing(10)
 
         # Liste der benutzerdefinierten Ordner
         self.custom_list = QListWidget()
@@ -772,9 +827,49 @@ class SourceSelectionPage(QWizardPage):
         self._add_folder_to_list(folder_path)
         self.path_input.clear()
 
-    def _add_quick_folder(self, path: str):
-        """Fügt Ordner aus Schnellauswahl hinzu"""
-        self._add_folder_to_list(Path(path))
+    def _on_quick_folder_clicked(self, path: str, label: str, checked: bool):
+        """Wird aufgerufen wenn ein Schnellauswahl-Button geklickt wird"""
+        folder_path = Path(path)
+
+        if checked:
+            # Button wurde aktiviert - Ordner hinzufügen
+            self._add_folder_to_list(folder_path)
+
+            # Wenn "Home" ausgewählt wurde: Bibliotheken deaktivieren
+            if "Home" in label:
+                for checkbox in self.library_checkboxes.values():
+                    checkbox.setEnabled(False)
+                    checkbox.setChecked(False)
+                    checkbox.setStyleSheet("font-size: 13px; color: #999;")
+
+                # Desktop & Dokumente-Buttons deaktivieren (redundant)
+                for btn_label, btn in self.quick_buttons.items():
+                    if btn_label != label:  # Nicht den Home-Button selbst
+                        btn.setEnabled(False)
+        else:
+            # Button wurde deaktiviert - Ordner entfernen
+            if str(folder_path) in self.custom_sources:
+                self.custom_sources.remove(str(folder_path))
+
+                # Entferne aus Liste-Widget wenn vorhanden
+                if str(folder_path) in self.custom_widgets:
+                    item, widget = self.custom_widgets[str(folder_path)]
+                    row = self.custom_list.row(item)
+                    self.custom_list.takeItem(row)
+                    del self.custom_widgets[str(folder_path)]
+
+            # Wenn "Home" deaktiviert wurde: Bibliotheken wieder aktivieren
+            if "Home" in label:
+                for checkbox in self.library_checkboxes.values():
+                    checkbox.setEnabled(True)
+                    checkbox.setStyleSheet("font-size: 13px;")
+
+                # Desktop & Dokumente-Buttons wieder aktivieren
+                for btn_label, btn in self.quick_buttons.items():
+                    if btn_label != label:
+                        btn.setEnabled(True)
+
+            self._on_sources_changed()
 
     def _add_folder_to_list(self, folder_path: Path):
         """Zentrale Methode zum Hinzufügen eines Ordners zur Liste"""
@@ -820,9 +915,9 @@ class SourceSelectionPage(QWizardPage):
         widget_layout = QHBoxLayout(widget)
         widget_layout.setContentsMargins(10, 8, 10, 8)
 
-        # Icon + Ordnername (fett, blau)
+        # Icon + Ordnername (fett, Akzentfarbe)
         label = QLabel(f"📁 {folder_name}")
-        label.setStyleSheet("font-size: 14px; font-weight: bold; color: #0078D4; background: transparent;")
+        label.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {get_color('primary')}; background: transparent;")
         widget_layout.addWidget(label)
 
         widget_layout.addStretch()
@@ -895,9 +990,35 @@ class SourceSelectionPage(QWizardPage):
                     }
                 """)
 
+    def _on_library_changed(self):
+        """Wird aufgerufen wenn Bibliotheken-Auswahl sich ändert"""
+        # Prüfe ob irgendeine Bibliothek ausgewählt ist
+        any_library_checked = any(cb.isChecked() for cb in self.library_checkboxes.values())
+
+        # Wenn Bibliotheken ausgewählt sind: Home-Button deaktivieren
+        if "🏠 Home" in self.quick_buttons:
+            home_btn = self.quick_buttons["🏠 Home"]
+            if any_library_checked:
+                home_btn.setEnabled(False)
+                # Wenn Home vorher aktiv war: deaktivieren
+                if home_btn.isChecked():
+                    home_btn.setChecked(False)
+            else:
+                home_btn.setEnabled(True)
+
+        self._on_sources_changed()
+
     def _on_sources_changed(self):
         """Wird aufgerufen wenn Quellen sich ändern"""
-        self.completeChanged.emit()
+        logger.info(f"Sources changed: {len(self.custom_sources)} custom, Property: '{self.selectedSources}'")
+        self.sourcesChanged.emit()  # Für registerField
+        self.completeChanged.emit()  # Für isComplete-Prüfung
+
+    def isComplete(self) -> bool:
+        """Prüft ob mindestens eine Quelle ausgewählt wurde"""
+        result = bool(self.selectedSources)
+        logger.info(f"isComplete called: {result} (sources: '{self.selectedSources}')")
+        return result
 
     # Properties für Wizard-Felder
     @property

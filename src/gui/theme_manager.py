@@ -208,7 +208,7 @@ QPushButton:disabled {
 }
 
 QPushButton[primary="true"] {
-    background-color: #0078D4;
+    background-color: #B8860B;
     color: #ffffff;
     border: none;
 }
@@ -235,7 +235,7 @@ QLineEdit:hover {
 }
 
 QLineEdit:focus {
-    border: 2px solid #0078D4;
+    border: 2px solid #B8860B;
     padding: 5px 9px;
 }
 
@@ -254,7 +254,7 @@ QTextEdit, QPlainTextEdit {
 }
 
 QTextEdit:focus, QPlainTextEdit:focus {
-    border: 2px solid #0078D4;
+    border: 2px solid #B8860B;
 }
 
 /* ===== COMBO BOX ===== */
@@ -272,7 +272,7 @@ QComboBox:hover {
 }
 
 QComboBox:focus {
-    border: 2px solid #0078D4;
+    border: 2px solid #B8860B;
 }
 
 QComboBox::drop-down {
@@ -292,7 +292,7 @@ QComboBox QAbstractItemView {
     background-color: #2d2d2d;
     color: #ffffff;
     border: 1px solid #3f3f3f;
-    selection-background-color: #0078D4;
+    selection-background-color: #B8860B;
     selection-color: #ffffff;
     outline: none;
 }
@@ -312,12 +312,12 @@ QCheckBox::indicator {
 }
 
 QCheckBox::indicator:hover {
-    border: 1px solid #0078D4;
+    border: 1px solid #B8860B;
 }
 
 QCheckBox::indicator:checked {
-    background-color: #0078D4;
-    border: 1px solid #0078D4;
+    background-color: #B8860B;
+    border: 1px solid #B8860B;
 }
 
 QRadioButton {
@@ -334,11 +334,11 @@ QRadioButton::indicator {
 }
 
 QRadioButton::indicator:hover {
-    border: 1px solid #0078D4;
+    border: 1px solid #B8860B;
 }
 
 QRadioButton::indicator:checked {
-    background-color: #0078D4;
+    background-color: #B8860B;
     border: 5px solid #2d2d2d;
 }
 
@@ -353,7 +353,7 @@ QProgressBar {
 }
 
 QProgressBar::chunk {
-    background-color: #0078D4;
+    background-color: #B8860B;
     border-radius: 3px;
 }
 
@@ -416,7 +416,7 @@ QListView::item:hover, QTreeView::item:hover, QTableView::item:hover {
 }
 
 QListView::item:selected, QTreeView::item:selected, QTableView::item:selected {
-    background-color: #0078D4;
+    background-color: #B8860B;
     color: #ffffff;
 }
 
@@ -456,8 +456,8 @@ QTabBar::tab:hover {
 }
 
 QTabBar::tab:selected {
-    color: #0078D4;
-    border-bottom: 2px solid #0078D4;
+    color: #B8860B;
+    border-bottom: 2px solid #B8860B;
     background-color: #2d2d2d;
 }
 
@@ -489,7 +489,7 @@ QMenu::item {
 }
 
 QMenu::item:selected {
-    background-color: #0078D4;
+    background-color: #B8860B;
     color: #ffffff;
 }
 
@@ -550,7 +550,7 @@ QSpinBox:hover, QDoubleSpinBox:hover {
 }
 
 QSpinBox:focus, QDoubleSpinBox:focus {
-    border: 2px solid #0078D4;
+    border: 2px solid #B8860B;
 }
 """
 

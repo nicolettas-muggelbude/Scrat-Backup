@@ -523,8 +523,17 @@
   - **Cross-Platform:** Funktioniert identisch auf Windows, Linux, macOS
   - **Einschränkung:** QFileDialog selbst nicht vollständig tastatur-bedienbar (Qt-Limitation)
 
+- [x] Wizard V3 - Weitere Verbesserungen (2026-02-02)
+  - Version-Integration über Parameter-Übergabe (run_wizard.py → wizard_v2.py)
+  - Akzentfarbe globalisiert (get_color("primary") aus theme.py)
+  - sourcesChanged Signal für reaktiven Weiter-Button
+  - DynamicTemplateForm erweitert:
+    - drive_selector Feldtyp (USB-Laufwerk-Auswahl mit Refresh)
+    - checkbox Feldtyp implementiert
+  - **USB-Template vollständig funktionsfähig! 💾**
+
 ---
 
 **Letzte Aktualisierung:** 2026-02-02
 **Version:** 0.2.0-dev
-**Status:** Pre-Release (Wizard V3 produktionsreif)
+**Status:** Pre-Release (Wizard V3 produktionsreif, USB-Template funktioniert)

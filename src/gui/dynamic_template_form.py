@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QFormLayout,
     QHBoxLayout,
@@ -92,6 +93,10 @@ class DynamicTemplateForm(QWidget):
                 self._add_password_field(field_config)
             elif field_type == "combo":
                 self._add_combo_field(field_config)
+            elif field_type == "drive_selector":
+                self._add_drive_selector_field(field_config)
+            elif field_type == "checkbox":
+                self._add_checkbox_field(field_config)
             elif field_type == "button":
                 self._add_button_field(field_config)
             elif field_type == "status":
@@ -175,6 +180,63 @@ class DynamicTemplateForm(QWidget):
 
         self.fields[name] = combo
         self.form_layout.addRow(label_text, combo)
+
+    def _add_drive_selector_field(self, config: dict):
+        """Fügt USB-Laufwerk-Auswahl hinzu"""
+        name = config["name"]
+        label = config.get("label", name)
+        required = config.get("required", False)
+        auto_refresh = config.get("auto_refresh", True)
+        help_text = config.get("help", "")
+
+        label_text = f"{label} *" if required else label
+
+        # Layout für ComboBox + Refresh-Button
+        layout = QHBoxLayout()
+
+        # ComboBox
+        combo = QComboBox()
+        combo.setMinimumWidth(300)
+
+        if help_text:
+            combo.setToolTip(help_text)
+
+        combo.currentTextChanged.connect(self._on_field_changed)
+
+        # Refresh-Button
+        refresh_btn = QPushButton("🔄")
+        refresh_btn.setMaximumWidth(40)
+        refresh_btn.setToolTip("Laufwerke neu laden")
+        refresh_btn.clicked.connect(lambda: self._refresh_drives(combo))
+
+        layout.addWidget(combo)
+        layout.addWidget(refresh_btn)
+
+        self.fields[name] = combo
+        self.form_layout.addRow(label_text, layout)
+
+        # Initial laden
+        if auto_refresh:
+            self._refresh_drives(combo)
+
+    def _add_checkbox_field(self, config: dict):
+        """Fügt Checkbox hinzu"""
+        name = config["name"]
+        label = config.get("label", name)
+        default = config.get("default", False)
+        help_text = config.get("help", "")
+
+        checkbox = QCheckBox(label)
+        checkbox.setChecked(default)
+
+        if help_text:
+            checkbox.setToolTip(help_text)
+
+        checkbox.stateChanged.connect(self._on_field_changed)
+
+        self.fields[name] = checkbox
+        # Checkbox ohne Label in Formular (Label ist in der Checkbox selbst)
+        self.form_layout.addRow("", checkbox)
 
     def _add_button_field(self, config: dict):
         """Fügt Button hinzu"""
@@ -371,6 +433,42 @@ class DynamicTemplateForm(QWidget):
                 f"Verbindungstest fehlgeschlagen:\n{e}"
             )
 
+    def _refresh_drives(self, combo: QComboBox):
+        """Lädt USB-Laufwerke neu"""
+        if not self.handler or not hasattr(self.handler, "detect_usb_drives"):
+            logger.warning("Handler hat keine detect_usb_drives-Methode")
+            combo.addItem("Keine Laufwerke gefunden")
+            return
+
+        try:
+            drives = self.handler.detect_usb_drives()
+
+            combo.clear()
+
+            if drives:
+                for drive in drives:
+                    path = drive.get("path", "")
+                    label = drive.get("label", "")
+                    size = drive.get("size", "")
+
+                    # Display: "D:\ - USB-Stick (16 GB)"
+                    display_text = path
+                    if label:
+                        display_text += f" - {label}"
+                    if size:
+                        display_text += f" ({size})"
+
+                    combo.addItem(display_text, path)  # Display-Text, User-Data = Pfad
+
+                logger.info(f"USB-Laufwerke geladen: {len(drives)}")
+            else:
+                combo.addItem("Kein USB-Laufwerk gefunden")
+                logger.warning("Keine USB-Laufwerke gefunden")
+
+        except Exception as e:
+            logger.error(f"Fehler beim Laden der Laufwerke: {e}")
+            combo.addItem(f"Fehler: {e}")
+
     def _action_oauth_login(self, values: dict):
         """Führt OAuth-Login durch"""
         if not hasattr(self.handler, "_run_oauth_flow"):
@@ -467,7 +565,14 @@ class DynamicTemplateForm(QWidget):
             if isinstance(widget, QLineEdit):
                 values[name] = widget.text()
             elif isinstance(widget, QComboBox):
-                values[name] = widget.currentText()
+                # Für drive_selector: UserData (Pfad) statt Display-Text
+                user_data = widget.currentData()
+                if user_data:
+                    values[name] = user_data
+                else:
+                    values[name] = widget.currentText()
+            elif isinstance(widget, QCheckBox):
+                values[name] = widget.isChecked()
             elif isinstance(widget, QLabel):
                 # Status-Felder überspringen
                 pass
@@ -496,9 +601,22 @@ class DynamicTemplateForm(QWidget):
                         return (False, f"Feld '{label}' ist erforderlich")
 
                 elif isinstance(widget, QComboBox):
-                    if not widget.currentText().strip():
+                    # Prüfe UserData oder Text
+                    user_data = widget.currentData()
+                    text = widget.currentText().strip()
+                    if not user_data and not text:
                         label = config.get("label", name)
                         return (False, f"Feld '{label}' ist erforderlich")
+                    # Zusätzliche Prüfung für drive_selector
+                    if text.startswith("Kein") or text.startswith("Fehler"):
+                        label = config.get("label", name)
+                        return (False, f"{label}: {text}")
+
+                elif isinstance(widget, QCheckBox):
+                    # Checkbox muss gecheckt sein wenn required
+                    if not widget.isChecked():
+                        label = config.get("label", name)
+                        return (False, f"'{label}' muss aktiviert sein")
 
             # Prüfe Validation-Pattern
             validation = config.get("validation")
@@ -522,3 +640,5 @@ class DynamicTemplateForm(QWidget):
                 widget.setText(str(value))
             elif isinstance(widget, QComboBox):
                 widget.setCurrentText(str(value))
+            elif isinstance(widget, QCheckBox):
+                widget.setChecked(bool(value))

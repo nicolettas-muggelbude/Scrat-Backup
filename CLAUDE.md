@@ -1779,3 +1779,22 @@ python -c "import sys; sys.path.insert(0, 'src'); from templates.handlers.usb_ha
 |            | **Einschränkungen:**                       |
 |            | - QFileDialog selbst nicht vollständig tastatur-bedienbar (Qt-Limitation) |
 |            | - Workaround: Textfeld + Schnellauswahl (vollständig barrierefrei) |
+| 2026-02-02 | **🎨 Design & Funktionalität-Verbesserungen** |
+|            | **Version-Integration:**                   |
+|            | - Version wird als Parameter übergeben (run_wizard.py → wizard_v2.py) |
+|            | - Kein Import-Konflikt mehr                |
+|            | - Titel: "Scrat-Backup Einrichtung v0.2.0" |
+|            | **Akzentfarbe globalisiert:**              |
+|            | - ACCENT_COLOR = get_color("primary") aus theme.py |
+|            | - Zentrale Definition statt Hard-Coding    |
+|            | - Alle blauen Farben durch Akzentfarbe ersetzt |
+|            | **Weiter-Button Problem behoben:**         |
+|            | - sourcesChanged Signal zur SourceSelectionPage hinzugefügt |
+|            | - registerField mit Signal verbunden       |
+|            | - Weiter-Button aktiviert sich korrekt     |
+|            | **DynamicTemplateForm erweitert:**         |
+|            | - drive_selector: USB-Laufwerk-Auswahl mit Refresh |
+|            | - checkbox: Checkbox-Feldtyp implementiert |
+|            | - _refresh_drives(): Lädt USB-Laufwerke dynamisch |
+|            | - Vollständige USB-Template Unterstützung  |
+|            | **USB-Template funktionsfähig! 💾**        |

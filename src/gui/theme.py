@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 # Farb-Palette (Windows 11 Style)
 COLORS = {
     # Primärfarben
-    "primary": "#0078D4",  # Windows Blue
+    "primary": "#B8860B",  # Windows Blue
     "primary_hover": "#005A9E",
     "primary_pressed": "#004578",
     # Hintergrund
@@ -32,9 +32,9 @@ COLORS = {
     "success": "#107C10",
     "warning": "#F7630C",
     "error": "#D13438",
-    "info": "#0078D4",
+    "info": "#B8860B",
     # Accent (kann vom User customized werden)
-    "accent": "#0078D4",
+    "accent": "#B8860B",
 }
 
 
