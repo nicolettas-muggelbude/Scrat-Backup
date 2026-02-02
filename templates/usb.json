@@ -1,0 +1,51 @@
+{
+  "id": "usb",
+  "version": "1.0",
+  "display_name": "USB-Laufwerk",
+  "icon": "💾",
+  "description": "Backup auf USB-Stick oder externe Festplatte",
+  "category": "local",
+  "storage_type": "local",
+  "handler": "usb_handler",
+  "platforms": [
+    "windows",
+    "linux",
+    "darwin"
+  ],
+  "ui_fields": [
+    {
+      "name": "drive",
+      "type": "drive_selector",
+      "label": "USB-Laufwerk auswählen",
+      "required": true,
+      "auto_refresh": true,
+      "help": "Wähle das USB-Laufwerk für deine Backups"
+    },
+    {
+      "name": "path",
+      "type": "text",
+      "label": "Unterordner",
+      "placeholder": "Backups",
+      "default": "Backups",
+      "required": false,
+      "help": "Optionaler Unterordner auf dem USB-Laufwerk"
+    },
+    {
+      "name": "verify_writable",
+      "type": "checkbox",
+      "label": "Schreibzugriff testen",
+      "default": true,
+      "help": "Prüft ob Backups auf das Laufwerk geschrieben werden können"
+    }
+  ],
+  "config_mapping": {
+    "type": "local",
+    "path": "${drive}/${path}",
+    "name": "USB-Backup (${drive_label})"
+  },
+  "availability_check": {
+    "type": "usb_drives",
+    "min_count": 1,
+    "error_message": "Kein USB-Laufwerk gefunden. Bitte USB-Stick oder externe Festplatte anschließen."
+  }
+}

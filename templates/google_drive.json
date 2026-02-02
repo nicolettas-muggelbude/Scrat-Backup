@@ -1,0 +1,58 @@
+{
+  "id": "google_drive",
+  "version": "1.0",
+  "display_name": "Google Drive",
+  "icon": "📊",
+  "description": "Backup in Google Drive Cloud-Speicher",
+  "category": "cloud",
+  "storage_type": "rclone",
+  "handler": "google_drive_handler",
+  "platforms": [
+    "windows",
+    "linux",
+    "darwin"
+  ],
+  "ui_fields": [
+    {
+      "name": "auth_status",
+      "type": "status",
+      "label": "Authentifizierung",
+      "dynamic": true,
+      "check_method": "check_authentication"
+    },
+    {
+      "name": "login_button",
+      "type": "button",
+      "label": "Mit Google anmelden",
+      "action": "oauth_login",
+      "style": "primary",
+      "icon": "🔐",
+      "condition": "!authenticated"
+    },
+    {
+      "name": "path",
+      "type": "text",
+      "label": "Ordner in Google Drive",
+      "placeholder": "Backups",
+      "default": "Backups",
+      "required": false,
+      "help": "Unterordner in Google Drive für Backups"
+    }
+  ],
+  "config_mapping": {
+    "type": "rclone",
+    "remote": "gdrive",
+    "path": "${path}",
+    "name": "Google Drive Backup"
+  },
+  "availability_check": {
+    "type": "dependency",
+    "dependencies": [
+      {
+        "name": "rclone",
+        "install_url": "https://rclone.org/install/",
+        "install_instructions": "rclone ist erforderlich für Google Drive-Backups."
+      }
+    ]
+  }
+}

@@ -1,0 +1,69 @@
+{
+  "id": "nextcloud",
+  "version": "1.0",
+  "display_name": "Nextcloud",
+  "icon": "☁️",
+  "description": "Backup auf Nextcloud-Server (selbst gehostet oder Provider)",
+  "category": "cloud",
+  "storage_type": "webdav",
+  "handler": "nextcloud_handler",
+  "platforms": [
+    "windows",
+    "linux",
+    "darwin"
+  ],
+  "ui_fields": [
+    {
+      "name": "url",
+      "type": "text",
+      "label": "Nextcloud-URL",
+      "placeholder": "https://cloud.example.com",
+      "required": true,
+      "validation": "^https?://.*",
+      "help": "Die URL deiner Nextcloud-Instanz"
+    },
+    {
+      "name": "user",
+      "type": "text",
+      "label": "Benutzername",
+      "required": true,
+      "help": "Dein Nextcloud-Benutzername"
+    },
+    {
+      "name": "password",
+      "type": "password",
+      "label": "Passwort oder App-Passwort",
+      "required": true,
+      "store": "keyring",
+      "help": "App-Passwort empfohlen (Einstellungen → Sicherheit)"
+    },
+    {
+      "name": "path",
+      "type": "text",
+      "label": "Ordner",
+      "placeholder": "Backups",
+      "default": "Backups",
+      "required": false,
+      "help": "Ordner in Nextcloud für Backups"
+    },
+    {
+      "name": "test_button",
+      "type": "button",
+      "label": "Verbindung testen",
+      "action": "test_connection",
+      "icon": "✅",
+      "style": "success"
+    }
+  ],
+  "config_mapping": {
+    "type": "webdav",
+    "url": "${url}/remote.php/dav/files/${user}",
+    "user": "${user}",
+    "password": "${password}",
+    "path": "${path}",
+    "name": "Nextcloud-Backup"
+  },
+  "availability_check": {
+    "type": "always_available"
+  }
+}

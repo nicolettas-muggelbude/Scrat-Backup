@@ -84,13 +84,13 @@
 
 ### Dark Mode / Theme-Unterstützung
 
-- [ ] **Automatische Dark-Mode-Erkennung**
-  - Windows 10/11 Dark Mode Setting abfragen
-  - PyQt6: QPalette.ColorRole.Window prüfen
+- [x] **Automatische Dark-Mode-Erkennung** ✅
+  - System-Theme-Detection (Windows/Linux/macOS)
+  - ThemeManager mit plattformübergreifender Auto-Detection
   - Automatisch umschalten beim OS-Wechsel
   - App-Neustart nicht erforderlich
 
-- [ ] **Dark Mode Theme**
+- [x] **Dark Mode Theme** ✅
   - Dark Theme für alle Widgets
   - Angepasste Farben:
     - Hintergrund: #1e1e1e (dunkelgrau)
@@ -116,7 +116,7 @@
   - Keine App-Neustart erforderlich
 
 - [ ] **Hochkontrast-Modus**
-  - Windows Hochkontrast-Einstellungen respektieren
+  - System-Hochkontrast-Einstellungen respektieren (Windows/Linux/macOS)
   - Spezielle Hochkontrast-Farben
   - Barrierefreiheit für sehbehinderte Nutzer
 
@@ -128,11 +128,12 @@
 
 ### Barrierefreiheit (Accessibility)
 
-- [ ] **Tastatur-Navigation**
-  - Alle UI-Elemente per Tab-Taste erreichbar
-  - Tastenkombinationen für häufige Aktionen (z.B. Strg+B für Backup)
-  - Focus-Indikatoren deutlich sichtbar
-  - Keine Maus-Only-Funktionen
+- [x] **Tastatur-Navigation** ✅ (Wizard)
+  - Alle Wizard-Elemente per Tab-Taste erreichbar
+  - Textfeld für direkte Pfad-Eingabe
+  - Schnellauswahl-Buttons (Home, Desktop, Dokumente)
+  - Focus-Indikatoren sichtbar
+  - Workaround für QFileDialog (Qt-Limitation)
 
 - [ ] **Screen-Reader-Unterstützung**
   - Alle Buttons und Felder mit aussagekräftigen Labels
@@ -140,12 +141,12 @@
   - Status-Ansagen bei langen Operationen ("Backup läuft, 45% abgeschlossen")
   - ARIA-ähnliche Semantik in PyQt6 (wo möglich)
 
-- [ ] **Visuelle Barrierefreiheit**
-  - Kontrast-Verhältnis mindestens 4.5:1 (WCAG AA Standard)
-  - Hochkontrast-Modus (Windows-Integration)
-  - Schriftgröße anpassbar (Strg++ / Strg+-)
-  - Keine Information nur durch Farbe vermittelt
-  - Icons + Text (nicht nur Icons)
+- [x] **Visuelle Barrierefreiheit** ✅ (teilweise)
+  - Verbesserter Kontrast (Hover: #e8e8e8, Selection: #d0d0d0)
+  - [ ] Hochkontrast-Modus (Windows-Integration) - noch offen
+  - [ ] Schriftgröße anpassbar (Strg++ / Strg+-) - noch offen
+  - Icons + Text bei allen Buttons (📁, 🏠, 🖥️, 📄)
+  - Keine Information nur durch Farbe
 
 - [ ] **Farbenblindheit-freundliche Farbpaletten**
   - **Color Universal Design (CUD)** implementieren
@@ -193,10 +194,10 @@
   - Fortschrittsanzeigen bei langen Vorgängen
 
 - [ ] **Testen mit Assistiven Technologien**
-  - NVDA Screen-Reader (Windows, kostenlos)
-  - Windows-Bildschirmlupe
-  - Windows-Sprachausgabe
-  - Nur-Tastatur-Navigation testen
+  - **Windows:** NVDA/Sprachausgabe, Bildschirmlupe
+  - **Linux:** Orca Screen-Reader, Compiz Lupe
+  - **macOS:** VoiceOver, Zoom
+  - Nur-Tastatur-Navigation auf allen Plattformen testen
 
 ## Priorität: Mittel
 
@@ -489,8 +490,25 @@
   - Passwort-Bug gefixt
   - Bessere Darstellung von "Alte Backups behalten"
 
+- [x] Template-System & Wizard V2 (2026-02-01)
+  - TemplateManager mit 7 Templates (USB, OneDrive, Google Drive, Nextcloud, Dropbox, Synology, QNAP)
+  - DynamicTemplateForm mit Handler-Actions
+  - Template-basierte Konfiguration funktionsfähig
+
+- [x] Wizard V3 - Barrierefreiheit & UX (2026-02-02)
+  - Dark Mode mit automatischer System-Erkennung (Windows/Linux/macOS)
+  - Einheitliches Design (StartPage & ModePage ohne Frames)
+  - Tastatur-Navigation in Wizard implementiert
+  - Textfeld + Schnellauswahl für Ordner-Eingabe
+  - Plattformspezifische Features (Ausschlüsse, Bibliotheken)
+  - Besserer Kontrast (Hover & Selection)
+  - Deutsche Qt-Übersetzungen geladen
+  - Icons bei allen Ordner-Einträgen (📁)
+  - **Cross-Platform:** Funktioniert identisch auf Windows, Linux, macOS
+  - **Einschränkung:** QFileDialog selbst nicht vollständig tastatur-bedienbar (Qt-Limitation)
+
 ---
 
-**Letzte Aktualisierung:** 2025-12-02
-**Version:** 0.1.0-dev
-**Status:** Pre-Release (Phase 11: Polishing)
+**Letzte Aktualisierung:** 2026-02-02
+**Version:** 0.2.0-dev
+**Status:** Pre-Release (Wizard V3 produktionsreif)

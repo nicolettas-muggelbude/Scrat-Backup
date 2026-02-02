@@ -1,0 +1,102 @@
+{
+  "id": "qnap",
+  "version": "1.0",
+  "display_name": "QNAP NAS",
+  "icon": "🖴",
+  "description": "Backup auf QNAP NAS via SMB/CIFS",
+  "category": "nas",
+  "storage_type": "smb",
+  "handler": "qnap_handler",
+  "platforms": [
+    "windows",
+    "linux",
+    "darwin"
+  ],
+  "ui_fields": [
+    {
+      "name": "host",
+      "type": "text",
+      "label": "QNAP IP/Hostname",
+      "placeholder": "192.168.1.100 oder qnap.local",
+      "required": true,
+      "validation": "^[a-zA-Z0-9.-]+$",
+      "help": "IP-Adresse oder Hostname deines QNAP"
+    },
+    {
+      "name": "share",
+      "type": "combo",
+      "label": "Freigabe",
+      "editable": true,
+      "placeholder": "backups",
+      "required": true,
+      "dynamic_options": "scan_shares",
+      "help": "SMB-Freigabe auf dem QNAP"
+    },
+    {
+      "name": "scan_button",
+      "type": "button",
+      "label": "Freigaben scannen",
+      "action": "scan_shares",
+      "icon": "🔍"
+    },
+    {
+      "name": "user",
+      "type": "text",
+      "label": "Benutzername",
+      "required": true,
+      "help": "QNAP-Benutzername"
+    },
+    {
+      "name": "password",
+      "type": "password",
+      "label": "Passwort",
+      "required": true,
+      "store": "keyring",
+      "help": "QNAP-Passwort (wird sicher gespeichert)"
+    },
+    {
+      "name": "path",
+      "type": "text",
+      "label": "Unterordner",
+      "placeholder": "/scrat-backups",
+      "default": "/scrat-backups",
+      "required": false
+    },
+    {
+      "name": "test_button",
+      "type": "button",
+      "label": "Verbindung testen",
+      "action": "test_connection",
+      "icon": "✅",
+      "style": "success"
+    }
+  ],
+  "config_mapping": {
+    "type": "smb",
+    "server": "${host}",
+    "port": 445,
+    "share": "${share}",
+    "user": "${user}",
+    "password": "${password}",
+    "path": "${path}",
+    "name": "QNAP-Backup (${host})"
+  },
+  "availability_check": {
+    "type": "dependency",
+    "dependencies": [
+      {
+        "name": "smbclient",
+        "platform_specific": {
+          "linux": {
+            "check": "which smbclient",
+            "install": "sudo apt install smbclient"
+          },
+          "windows": {
+            "check": "builtin",
+            "install": null
+          }
+        }
+      }
+    ]
+  }
+}

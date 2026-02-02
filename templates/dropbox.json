@@ -1,0 +1,58 @@
+{
+  "id": "dropbox",
+  "version": "1.0",
+  "display_name": "Dropbox",
+  "icon": "📦",
+  "description": "Backup in Dropbox Cloud-Speicher",
+  "category": "cloud",
+  "storage_type": "rclone",
+  "handler": "dropbox_handler",
+  "platforms": [
+    "windows",
+    "linux",
+    "darwin"
+  ],
+  "ui_fields": [
+    {
+      "name": "auth_status",
+      "type": "status",
+      "label": "Authentifizierung",
+      "dynamic": true,
+      "check_method": "check_authentication"
+    },
+    {
+      "name": "login_button",
+      "type": "button",
+      "label": "Mit Google anmelden",
+      "action": "oauth_login",
+      "style": "primary",
+      "icon": "🔐",
+      "condition": "!authenticated"
+    },
+    {
+      "name": "path",
+      "type": "text",
+      "label": "Ordner in Dropbox",
+      "placeholder": "Backups",
+      "default": "Backups",
+      "required": false,
+      "help": "Unterordner in Dropbox für Backups"
+    }
+  ],
+  "config_mapping": {
+    "type": "rclone",
+    "remote": "dropbox",
+    "path": "${path}",
+    "name": "Dropbox Backup"
+  },
+  "availability_check": {
+    "type": "dependency",
+    "dependencies": [
+      {
+        "name": "rclone",
+        "install_url": "https://rclone.org/install/",
+        "install_instructions": "rclone ist erforderlich für Dropbox-Backups."
+      }
+    ]
+  }
+}

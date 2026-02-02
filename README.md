@@ -6,12 +6,12 @@
 
 **Schütze deine Daten wie Scrat seine Eicheln!**
 
-*Ein benutzerfreundliches, verschlüsseltes Backup-Programm für Windows-Privatnutzer*
+*Ein benutzerfreundliches, plattformübergreifendes Backup-Programm mit Verschlüsselung*
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![Development Status](https://img.shields.io/badge/status-beta%20(v0.2.0)-yellow)](https://github.com/nicolettas-muggelbude/Scrat-Backup)
-[![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)](https://www.microsoft.com/windows)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)](#)
 
 [Features](#-features) •
 [Installation](#-installation) •
@@ -26,7 +26,12 @@
 
 ## 📋 Übersicht
 
-**Scrat-Backup** ist ein **Open-Source-Backup-Tool**, das speziell für **Windows-Privatnutzer** entwickelt wurde. Wie ein Eichhörnchen seine Eicheln für den Winter sichert, schützt Scrat-Backup deine wertvollen Daten mit **verschlüsselten, komprimierten Backups**.
+**Scrat-Backup** ist ein **plattformübergreifendes Open-Source-Backup-Tool** für **Privatnutzer**. Wie ein Eichhörnchen seine Eicheln für den Winter sichert, schützt Scrat-Backup deine wertvollen Daten mit **verschlüsselten, komprimierten Backups**.
+
+**Unterstützte Plattformen:**
+- 🪟 **Windows** 10/11
+- 🐧 **Linux** (alle Distributionen)
+- 🍎 **macOS** (10.15+)
 
 ### 🎯 Für wen ist Scrat-Backup?
 
@@ -34,6 +39,7 @@
 - 🏠 **Heimanwender** mit wichtigen Dokumenten, Fotos, Videos
 - 🔒 **Sicherheitsbewusste** die Verschlüsselung schätzen
 - 💾 **Multi-Storage-Nutzer** (USB, NAS, Cloud)
+- 🌍 **Cross-Platform-Nutzer** (gleiche Backups auf allen Systemen)
 
 ---
 
@@ -42,7 +48,7 @@
 ### 🔐 Sicherheit
 - ✅ **AES-256-GCM Verschlüsselung** für alle Backups (Pflicht!)
 - ✅ **PBKDF2** Key-Derivation (100.000 Iterationen)
-- ✅ **Windows Credential Manager** Integration (Passwort speichern)
+- ✅ **Sichere Passwort-Speicherung** (Windows Credential Manager, Linux/macOS Keyring)
 - ✅ **Kein Plaintext** - sensible Daten immer verschlüsselt
 
 ### 💾 Backup-Funktionen
@@ -67,11 +73,15 @@
 - ✅ **Wiederherstellung auf beliebigen Systemen** (unabhängig vom Original-User)
 
 ### 🖥️ Benutzeroberfläche
-- ✅ **Windows 11-Stil GUI** (PyQt6)
-- ✅ **Setup-Wizard** für Erstkonfiguration (komplett auf Deutsch!)
-  - Persönliche Ordner (Dokumente, Bilder, Musik, Videos, Desktop, Downloads)
-  - Automatische Laufwerk-Erkennung
-  - Alle 5 Storage-Backends integriert
+- ✅ **Moderne GUI** mit nativer Optik (PySide6/Qt6)
+- ✅ **Setup-Wizard V3** mit Template-System
+  - Komplett auf Deutsch mit Qt-Übersetzungen
+  - Template-basierte Konfiguration (7 Templates verfügbar)
+  - Persönliche Ordner mit automatischer Erkennung
+  - **Plattformspezifisch**: Automatische Anpassung an Windows/Linux/macOS
+  - Barrierefreie Ordner-Auswahl (Textfeld + Schnellauswahl)
+- ✅ **Dark Mode** mit automatischer System-Erkennung (alle Plattformen)
+- ✅ **Barrierefreiheit**: Vollständige Tastatur-Navigation im Wizard
 - ✅ **Backup-Tab** mit Quellen/Ziele-Auswahl
 - ✅ **Restore-Tab** mit Backup-Details
 - ✅ **Settings-Tab** mit umfassenden Konfigurationen
@@ -106,6 +116,13 @@
   - UI-Verbesserungen (Backup/Restore-Tabs)
   - Input-Validierung & Error-Handling
   - Setup-Wizard komplett überarbeitet (Deutsch, Auto-Erkennung)
+- [x] **Wizard V3** (2026-02-01/02)
+  - Template-System mit 7 Templates (USB, OneDrive, Google Drive, Nextcloud, Dropbox, Synology, QNAP)
+  - DynamicTemplateForm mit Handler-Actions
+  - Dark Mode mit Auto-Detection
+  - Barrierefreiheit: Tastatur-Navigation, Textfeld + Schnellauswahl
+  - Einheitliches Design (ohne Frames)
+  - Deutsche Qt-Übersetzungen
 
 ### 🔨 Phase 12: Packaging & Beta-Release (In Arbeit)
 - [x] PyInstaller-Konfiguration
@@ -117,11 +134,13 @@
 
 ### 📅 Geplant (siehe [TODO.md](TODO.md))
 - [ ] Hilfefunktion / Guided Tour
-- [ ] Barrierefreiheit (Tastatur-Navigation, Screen-Reader)
+- [x] Barrierefreiheit: Tastatur-Navigation ✅ (Wizard)
+- [ ] Barrierefreiheit: Screen-Reader-Unterstützung (in Arbeit)
 - [ ] Internationalisierung (Englisch, weitere Sprachen)
-- [ ] Dark Mode
+- [x] Dark Mode ✅ (mit Auto-Detection)
+- [ ] Restore-Flow im Wizard
 - [ ] Update-Funktion
-- [ ] Release 1.0 (Q2 2025)
+- [ ] Release 1.0 (Q2 2026)
 
 **Aktueller Meilenstein:** Public Beta Testing 🎯
 
@@ -133,16 +152,53 @@
 
 **Download: [Releases](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases)**
 
-#### Variante 1: Portable ZIP (Empfohlen für Beta)
+#### Windows 10/11
+
+**Variante 1: Portable ZIP (Empfohlen)**
 1. Lade `ScratBackup-v0.2.0-beta-windows.zip` herunter
 2. Entpacke das ZIP-Archiv
 3. Starte `ScratBackup.exe`
 4. Folge dem Setup-Wizard
 
-#### Variante 2: Installer (Optional)
+**Variante 2: Installer**
 1. Lade `ScratBackup-v0.2.0-beta-Setup.exe` herunter
 2. Führe den Installer aus
 3. Starte über Startmenü oder Desktop-Icon
+
+#### Linux (alle Distributionen)
+
+```bash
+# Python 3.12+ und pip installieren (falls nicht vorhanden)
+sudo apt install python3.12 python3-pip  # Debian/Ubuntu
+sudo dnf install python3.12 python3-pip  # Fedora
+sudo pacman -S python python-pip         # Arch
+
+# Scrat-Backup klonen und installieren
+git clone https://github.com/nicolettas-muggelbude/Scrat-Backup.git
+cd scrat-backup
+pip install -r requirements.txt
+
+# Starten
+python3 src/main.py
+```
+
+#### macOS (10.15+)
+
+```bash
+# Homebrew installieren (falls nicht vorhanden)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Python 3.12 installieren
+brew install python@3.12
+
+# Scrat-Backup klonen und installieren
+git clone https://github.com/nicolettas-muggelbude/Scrat-Backup.git
+cd scrat-backup
+pip3 install -r requirements.txt
+
+# Starten
+python3 src/main.py
+```
 
 **⚠️ Beta-Hinweis:** Dies ist eine Testversion. Bitte melde Bugs auf [GitHub Issues](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues).
 
@@ -294,10 +350,12 @@ Siehe [TODO.md](TODO.md) für die vollständige Roadmap.
 
 **Priorität: Hoch**
 - [ ] Hilfefunktion / Guided Tour
-- [ ] Barrierefreiheit (A11y)
+- [x] Barrierefreiheit (A11y) - Tastatur-Navigation ✅
+- [ ] Barrierefreiheit - Screen-Reader, Hochkontrast
 - [ ] Internationalisierung (i18n)
-- [ ] Dark Mode
+- [x] Dark Mode ✅
 - [ ] Farbenblindheit-freundliche Farben
+- [ ] Restore-Flow im Wizard
 
 **Priorität: Mittel**
 - [ ] Update-Funktion
@@ -394,8 +452,8 @@ Sende eine E-Mail an: **security@scrat-backup.example**
 ![Coverage](https://img.shields.io/badge/coverage-80%25+-success)
 ![Python](https://img.shields.io/badge/python-3.12+-blue)
 ![License](https://img.shields.io/badge/license-GPLv3-green)
-![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-blue)
-![Status](https://img.shields.io/badge/status-pre--release-orange)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)
+![Status](https://img.shields.io/badge/status-beta%20v0.2.0-yellow)
 
 ---
 

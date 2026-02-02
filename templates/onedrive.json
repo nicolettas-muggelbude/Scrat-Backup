@@ -1,0 +1,77 @@
+{
+  "id": "onedrive",
+  "version": "1.0",
+  "display_name": "Microsoft OneDrive",
+  "icon": "☁️",
+  "description": "Backup in die Microsoft OneDrive Cloud (persönlich oder Business)",
+  "category": "cloud",
+  "storage_type": "rclone",
+  "handler": "onedrive_handler",
+  "platforms": [
+    "windows",
+    "linux",
+    "darwin"
+  ],
+  "ui_fields": [
+    {
+      "name": "account_type",
+      "type": "radio",
+      "label": "OneDrive-Typ",
+      "options": [
+        {
+          "value": "personal",
+          "label": "OneDrive Personal",
+          "description": "Privates Microsoft-Konto"
+        },
+        {
+          "value": "business",
+          "label": "OneDrive for Business",
+          "description": "Microsoft 365 / Office 365"
+        }
+      ],
+      "default": "personal",
+      "required": true
+    },
+    {
+      "name": "auth_status",
+      "type": "status",
+      "label": "Authentifizierung",
+      "dynamic": true,
+      "check_method": "check_authentication"
+    },
+    {
+      "name": "login_button",
+      "type": "button",
+      "label": "Mit Microsoft anmelden",
+      "action": "oauth_login",
+      "style": "primary",
+      "icon": "🔐",
+      "condition": "!authenticated"
+    },
+    {
+      "name": "path",
+      "type": "text",
+      "label": "Ordner in OneDrive",
+      "placeholder": "Backups",
+      "default": "Backups",
+      "required": false,
+      "help": "Unterordner in OneDrive für Backups"
+    }
+  ],
+  "config_mapping": {
+    "type": "rclone",
+    "remote": "onedrive",
+    "path": "${path}",
+    "name": "OneDrive-Backup"
+  },
+  "availability_check": {
+    "type": "dependency",
+    "dependencies": [
+      {
+        "name": "rclone",
+        "install_url": "https://rclone.org/install/",
+        "install_instructions": "rclone ist erforderlich für OneDrive-Backups. [Automatisch installieren]"
+      }
+    ]
+  }
+}

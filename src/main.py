@@ -9,11 +9,12 @@ from datetime import datetime
 from pathlib import Path
 
 from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import QTranslator, QLibraryInfo
 
 from src.core.config_manager import ConfigManager
 from src.gui.main_window import MainWindow
-from src.gui.theme import apply_theme
-from src.gui.wizard import SetupWizard
+from src.gui.theme_manager import ThemeManager, Theme
+from src.gui.wizard_v2 import SetupWizardV2
 
 # Logging konfigurieren
 logging.basicConfig(
@@ -72,13 +73,24 @@ def save_wizard_config(wizard_config: dict) -> None:
     Speichert Wizard-Konfiguration in ConfigManager
 
     Args:
-        wizard_config: Dictionary aus SetupWizard.get_config()
+        wizard_config: Dictionary aus SetupWizardV2.get_config()
+                       Format: {
+                           "action": "backup",
+                           "sources": ["path1", "path2"],
+                           "excludes": ["*.tmp", ...],
+                           "template_id": "usb",
+                           "template_config": {...},
+                           "start_backup_now": False,
+                           "start_tray": True
+                       }
     """
     config_manager = ConfigManager()
 
     try:
         # 1. Quellen in Config speichern
         sources = wizard_config.get("sources", [])
+        excludes = wizard_config.get("excludes", [])
+
         if not config_manager.config.get("sources"):
             config_manager.config["sources"] = []
 
@@ -89,34 +101,45 @@ def save_wizard_config(wizard_config: dict) -> None:
                 "path": source_path,
                 "name": path_obj.name if path_obj.name else "Quelle",
                 "enabled": True,
-                "exclude_patterns": [],
+                "exclude_patterns": excludes,  # Nutze Ausschlüsse vom Wizard
             }
             config_manager.config["sources"].append(source_entry)
             logger.info(f"Quelle hinzugefügt: {source_path}")
 
         # 2. Ziel in Config speichern
-        storage = wizard_config.get("storage", {})
-        if storage:
+        template_id = wizard_config.get("template_id")
+        template_config = wizard_config.get("template_config", {})
+
+        if template_id and template_config:
             if not config_manager.config.get("destinations"):
                 config_manager.config["destinations"] = []
 
+            # Template-Name für bessere Anzeige
+            template_names = {
+                "usb": "USB-Laufwerk",
+                "onedrive": "OneDrive",
+                "google_drive": "Google Drive",
+                "dropbox": "Dropbox",
+                "nextcloud": "Nextcloud",
+                "synology": "Synology NAS",
+                "qnap": "QNAP NAS",
+            }
+            template_name = template_names.get(template_id, template_id.replace("_", " ").title())
+
             destination_entry = {
-                "name": f"Backup-Ziel ({storage.get('type', 'unknown')})",
-                "type": storage.get("type", "usb"),
-                "config": storage,
+                "name": f"{template_name}",
+                "type": template_config.get("type", template_id),
+                "config": template_config,
                 "enabled": True,
             }
             config_manager.config["destinations"].append(destination_entry)
-            logger.info(f"Ziel hinzugefügt: {storage.get('type')}")
+            logger.info(f"Ziel hinzugefügt: {template_name} ({template_id})")
 
-        # 3. Verschlüsselungs-Passwort im Windows Credential Manager speichern
-        # Für jetzt: Nicht speichern, User muss bei jedem Backup eingeben
-        # TODO: Windows Credential Manager Integration
-        encryption_config = wizard_config.get("encryption", {})
-        if encryption_config:
-            logger.info("Verschlüsselung konfiguriert (Passwort wird nicht gespeichert)")
+        # 3. TODO: Verschlüsselung (wird in zukünftiger Version implementiert)
+        # encryption_config = wizard_config.get("encryption", {})
 
-        # 4. Zeitplan in Config speichern (im neuen Scheduler-Format)
+        # 4. TODO: Zeitplan (wird in zukünftiger Version implementiert)
+        # Aktuell: Kein Zeitplan-Page im neuen Wizard
         schedule = wizard_config.get("schedule", {})
         if schedule and schedule.get("enabled"):
             if not config_manager.config.get("schedules"):
@@ -193,9 +216,18 @@ def run_gui() -> int:
     app.setOrganizationName("Scrat")
     logger.info("QApplication erstellt")
 
-    # Theme anwenden
-    apply_theme(app)
-    logger.info("Theme angewendet")
+    # Qt-Übersetzungen laden (für deutschen Dialog)
+    translator = QTranslator(app)
+    translations_path = QLibraryInfo.path(QLibraryInfo.LibraryPath.TranslationsPath)
+    if translator.load("qtbase_de", translations_path):
+        app.installTranslator(translator)
+        logger.info("Deutsche Qt-Übersetzungen geladen")
+    else:
+        logger.warning("Deutsche Qt-Übersetzungen nicht gefunden")
+
+    # Theme Manager initialisieren (Auto Dark Mode + Manueller Toggle)
+    theme_manager = ThemeManager(app)
+    logger.info(f"Theme Manager initialisiert: {theme_manager.get_theme_display_name()}")
 
     # Prüfe ob erster Start
     logger.info("Prüfe ob erster Start...")
@@ -203,14 +235,15 @@ def run_gui() -> int:
     logger.info(f"check_first_run() = {is_first_run}")
 
     if is_first_run:
-        logger.info(">>> WIZARD WIRD GESTARTET <<<")
+        logger.info(">>> WIZARD V2 WIRD GESTARTET <<<")
 
-        # Setup-Wizard anzeigen
-        wizard = SetupWizard()
+        # Setup-Wizard V2 anzeigen (mit neuen Pages)
+        wizard = SetupWizardV2()
         if wizard.exec():
             # Wizard abgeschlossen
             config = wizard.get_config()
-            logger.info(f"Setup abgeschlossen: {len(config['sources'])} Quellen konfiguriert")
+            sources = config.get('sources', [])
+            logger.info(f"Setup abgeschlossen: {len(sources)} Quellen konfiguriert")
 
             # Speichere Konfiguration
             try:
