@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -82,7 +82,7 @@ class ModePage(QWizardPage):
         layout = QVBoxLayout()
 
         # Eichel-Icon
-        icon_path = Path(__file__).parent.parent.parent / "assets" / "scrat_icon.png"
+        icon_path = Path(__file__).parent.parent.parent / "assets" / "icons" / "scrat-128.png"
         if icon_path.exists():
             icon_label = QLabel()
             pixmap = QPixmap(str(icon_path)).scaled(
@@ -230,6 +230,16 @@ class TemplateDestinationPage(QWizardPage):
         self.dynamic_form: Optional[DynamicTemplateForm] = None
 
         layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        # Eine QScrollArea für die gesamte Seite
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+
+        self.scroll_widget = QWidget()
+        self.scroll_layout = QVBoxLayout(self.scroll_widget)
+        self.scroll_layout.setSpacing(16)
 
         # Info
         info = QLabel(
@@ -237,29 +247,21 @@ class TemplateDestinationPage(QWizardPage):
             "für dein gewähltes Ziel optimiert."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #666; font-size: 12px; margin-bottom: 10px;")
-        layout.addWidget(info)
+        info.setStyleSheet("color: #666; font-size: 12px; margin-bottom: 4px;")
+        self.scroll_layout.addWidget(info)
 
-        # Template-Auswahl (Scrollbar)
-        scroll = QScrollArea()
-        scroll.setWidgetResizable(True)
-        scroll.setFrameShape(QFrame.Shape.NoFrame)
-
-        self.scroll_widget = QWidget()
-        self.scroll_layout = QVBoxLayout(self.scroll_widget)
-
-        # Lade Templates (wird in initializePage() gefüllt)
+        # Lade Templates
         self._load_templates()
+
+        # Dynamisches Formular (in der gleichen ScrollArea wie Kacheln)
+        self.form_container = QWidget()
+        self.form_layout = QVBoxLayout(self.form_container)
+        self.form_container.setVisible(False)
+        self.scroll_layout.addWidget(self.form_container)
 
         self.scroll_layout.addStretch()
         scroll.setWidget(self.scroll_widget)
         layout.addWidget(scroll)
-
-        # Dynamisches Formular
-        self.form_container = QWidget()
-        self.form_layout = QVBoxLayout(self.form_container)
-        self.form_container.setVisible(False)
-        layout.addWidget(self.form_container)
 
         self.setLayout(layout)
 
@@ -329,13 +331,13 @@ class TemplateDestinationPage(QWizardPage):
             is_available, availability_msg = handler.check_availability()
 
         # Button-Text mit Status
-        button_text = f"{template.icon}\n{template.display_name}"
+        button_text = f"{template.icon}\n\n{template.display_name}"
         if not is_available:
             button_text += "\n⚠️"
 
         btn = QPushButton(button_text)
-        btn.setMinimumSize(100, 60)
-        btn.setMaximumSize(120, 70)
+        btn.setMinimumSize(120, 100)
+        btn.setMaximumSize(150, 115)
 
         # Style basierend auf Verfügbarkeit
         if is_available:
@@ -344,8 +346,8 @@ class TemplateDestinationPage(QWizardPage):
                     background-color: white;
                     border: 2px solid #cccccc;
                     border-radius: 6px;
-                    padding: 6px;
-                    font-size: 10px;
+                    padding: 10px 8px;
+                    font-size: 14px;
                 }}
                 QPushButton:hover {{
                     border-color: {ACCENT_COLOR};
@@ -363,8 +365,8 @@ class TemplateDestinationPage(QWizardPage):
                     background-color: #f5f5f5;
                     border: 2px solid #e0e0e0;
                     border-radius: 6px;
-                    padding: 6px;
-                    font-size: 10px;
+                    padding: 10px 8px;
+                    font-size: 14px;
                     color: #999;
                 }
                 QPushButton:hover {
@@ -713,6 +715,11 @@ class SetupWizardV2(QWizard):
         self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
         self.setOption(QWizard.WizardOption.HaveHelpButton, False)
         self.setMinimumSize(800, 600)
+
+        # Window-Icon setzen
+        icon_path = Path(__file__).parent.parent.parent / "assets" / "icons" / "scrat.ico"
+        if icon_path.exists():
+            self.setWindowIcon(QIcon(str(icon_path)))
 
         # Button-Texte
         self.setButtonText(QWizard.WizardButton.BackButton, "Zurück")

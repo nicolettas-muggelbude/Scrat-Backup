@@ -240,10 +240,7 @@ QCheckBox::indicator:checked {{
     border: 1px solid {COLORS['primary']};
 }}
 
-QCheckBox::indicator:checked:after {{
-    content: "✓";
-    color: {COLORS['text_on_primary']};
-}}
+/* Checkmark wird durch background-color gesetzt – ::after/content nicht von Qt unterstützt */
 
 /* ===== RADIO BUTTON ===== */
 QRadioButton {{

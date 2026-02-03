@@ -125,24 +125,37 @@ class UsbHandler(TemplateHandler):
             ]
         """
         system = platform.system()
+        logger.info(f"USB-Erkennung: platform.system() = '{system}'")
 
         if system == "Windows":
-            return self._detect_windows_drives()
+            drives = self._detect_windows_drives()
         elif system == "Linux":
-            return self._detect_linux_drives()
+            drives = self._detect_linux_drives()
         elif system == "Darwin":  # macOS
-            return self._detect_macos_drives()
+            drives = self._detect_macos_drives()
         else:
             logger.warning(f"Unbekanntes System: {system}")
-            return []
+            drives = []
+
+        logger.info(f"USB-Erkennung: {len(drives)} Laufwerk(e) gefunden")
+        return drives
 
     def _detect_windows_drives(self) -> List[dict]:
-        """Windows: GetDriveTypeW == 2 (Removable)"""
+        """
+        Windows: Erkennbare Laufwerke
+        - Typ 2 (Removable): USB-Sticks
+        - Typ 3 (Fixed) außer Systemlaufwerk: Externe Festplatten
+        """
         drives = []
 
         try:
             import ctypes
             import string
+
+            # Systemlaufwerk ausschließen (z.B. C:)
+            system_drive = os.environ.get("SystemDrive", "C:").upper().rstrip("\\")
+
+            logger.info(f"USB-Erkennung: Systemlaufwerk = '{system_drive}'")
 
             for letter in string.ascii_uppercase:
                 drive_path = f"{letter}:\\"
@@ -150,22 +163,30 @@ class UsbHandler(TemplateHandler):
                 if not Path(drive_path).exists():
                     continue
 
-                # GetDriveTypeW: 2 = Removable, 3 = Fixed
+                # GetDriveTypeW: 2 = Removable, 3 = Fixed, 4 = Network, 6 = CD-ROM
                 drive_type = ctypes.windll.kernel32.GetDriveTypeW(drive_path)
+                logger.info(f"USB-Erkennung: {letter}: existiert, Typ={drive_type}")
 
-                if drive_type == 2:  # Removable (USB)
-                    # Hole Volume-Info für Label
-                    label = self._get_windows_volume_label(drive_path)
-                    size = self._get_drive_size(drive_path)
+                # Systemlaufwerk überspringen
+                if f"{letter}:".upper() == system_drive:
+                    logger.info(f"USB-Erkennung: {letter}: übersprungen (Systemlaufwerk)")
+                    continue
 
-                    drives.append({
-                        "path": drive_path,
-                        "label": label or f"Laufwerk {letter}:",
-                        "size": size,
-                        "is_usb": True,
-                    })
+                if drive_type not in (2, 3):
+                    logger.info(f"USB-Erkennung: {letter}: übersprungen (Typ {drive_type})")
+                    continue
 
-                    logger.debug(f"USB-Laufwerk gefunden: {letter}: ({label})")
+                label = self._get_windows_volume_label(drive_path)
+                size = self._get_drive_size(drive_path)
+
+                drives.append({
+                    "path": drive_path,
+                    "label": label or f"Laufwerk {letter}:",
+                    "size": size,
+                    "is_usb": drive_type == 2,
+                })
+
+                logger.debug(f"Laufwerk gefunden: {letter}: Typ={drive_type} ({label})")
 
         except Exception as e:
             logger.error(f"Fehler bei Windows-Laufwerks-Erkennung: {e}")
