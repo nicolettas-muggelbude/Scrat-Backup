@@ -341,7 +341,9 @@ class StartPage(QWizardPage):
             return PAGE_FINISH
 
         elif self.selected_action in ["edit", "add_destination"]:
-            # Einstellungen ändern / Ziel hinzufügen → Direkt zu Destination
+            # TODO: "edit" sollte auch PAGE_SOURCE durchlaufen, damit Quellen
+            # geändert werden können. Aktuell wird nur das Ziel angezeigt.
+            # Direkt zu Destination
             return PAGE_DESTINATION
 
         elif self.selected_action == "expert":
@@ -387,9 +389,16 @@ class SourceSelectionPage(QWizardPage):
         # UI erstellen
         self._init_ui()
 
-        # Registriere Felder mit Change-Signals
-        self.registerField("sources*", self, "selectedSources", "sourcesChanged")
-        self.registerField("excludes", self, "excludePatterns")
+        # Versteckte QLineEdits als Feld-Träger (PySide6 kann @property nicht über Qt-Property lesen)
+        self._sources_edit = QLineEdit(self)
+        self._sources_edit.setVisible(False)
+        self._excludes_edit = QLineEdit(self)
+        self._excludes_edit.setVisible(False)
+        self._excludes_edit.setText(self.excludePatterns)  # Excludes sind statisch
+
+        # Registriere Felder auf den versteckten QLineEdits
+        self.registerField("sources*", self._sources_edit)
+        self.registerField("excludes", self._excludes_edit)
 
     def _init_ui(self):
         """Initialisiert UI"""
@@ -1010,9 +1019,10 @@ class SourceSelectionPage(QWizardPage):
 
     def _on_sources_changed(self):
         """Wird aufgerufen wenn Quellen sich ändern"""
-        logger.info(f"Sources changed: {len(self.custom_sources)} custom, Property: '{self.selectedSources}'")
-        self.sourcesChanged.emit()  # Für registerField
-        self.completeChanged.emit()  # Für isComplete-Prüfung
+        sources_str = self.selectedSources
+        logger.info(f"Sources changed: {len(self.custom_sources)} custom, value: '{sources_str}'")
+        self._sources_edit.setText(sources_str)  # Aktualisiert das Feld für wizard.field()
+        self.completeChanged.emit()
 
     def isComplete(self) -> bool:
         """Prüft ob mindestens eine Quelle ausgewählt wurde"""

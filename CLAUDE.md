@@ -50,7 +50,7 @@ src/
 │   │   ├── qnap_handler.py
 │   │   └── nextcloud_handler.py  # WebDAV
 │   └── (JSON-Definitionen werden vom TemplateManager geladen)
-├── main.py                       # Einstiegspunkt, save_wizard_config()
+├── main.py                       # Einstiegspunkt, save_wizard_config(), start_backup_after_wizard()
 └── templates/                    # *.json – usb, onedrive, synology, google_drive, dropbox, nextcloud, qnap
 ```
 
@@ -66,12 +66,16 @@ src/
 - **Barrierefreiheit:** Radio-Buttons, Tastatur-Navigation, Textfeld für Pfad-Eingabe, Schnellauswahl-Buttons
 - **Lokalisierung:** QTranslator für deutsche Qt-Dialoge
 - **USB-Template:** vollständig funktionsfähig inkl. drive_selector + Refresh
+- **Backup nach Wizard:** `start_backup_after_wizard()` in `main.py` – Fortschrittsanzeige (QProgressDialog, nicht schließbar bis fertig), Thread-sichere Fortschritts-Updates
+- **App-Logo:** Eichel-Icon auf allen Fenstern (QApplication-Level `setWindowIcon` in `main.py` + `run_wizard.py`)
+- **TemplateCard-Kacheln:** QFrame-basierte Kacheln mit 24px-Icons, Hover/Check-Styles, rahmenlos (ersetzt QPushButton)
 
 ---
 
 ## Offene TODOs
 
 ### Wizard / GUI
+- [ ] **"Backup ändern" überspringt SourceSelectionPage** – aktuell nur Ziel änderbar, Quellen werden übersprungen (TODO in `wizard_pages.py`, StartPage `nextId()`)
 - [ ] Tray-Icon mit Theme-Toggle
 - [ ] Restore-Flow (eigener Wizard)
 - [ ] Schedule-Page (Zeitplan im Wizard)
@@ -112,6 +116,8 @@ src/
 | Wizard nach Ersteinrichtung | StartPage zeigt Übersicht: Ändern / Ziel hinzufügen / Restore / Experten-Modus |
 | Version im Wizard | Wird als Parameter von `run_wizard.py` übergeben, kein direkter Import |
 | Credential-Speicher | `keyring` (Windows: DPAPI, Linux: SecretService/`secretstorage`) |
+| USB-Destination-Typ | `destination["type"]` = template_id (`"usb"`), nicht `"local"` – Pfad aus `drive` + `path` zusammensetzen |
+| Fortschritts-Dialog | QProgressDialog ohne Schließ-Button (`CustomizeWindowHint \| WindowTitleHint`), Fortschritt via shared dict zwischen Backup-Thread und Qt-Event-Loop |
 
 ### Wizard-Seitenfolge & Routing
 - Page-IDs: `PAGE_START`, `PAGE_SOURCE`, `PAGE_DESTINATION`, `PAGE_FINISH`

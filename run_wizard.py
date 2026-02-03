@@ -32,10 +32,17 @@ if __name__ == "__main__":
     # Version importieren
     from src import __version__
 
+    from PySide6.QtGui import QIcon
+
     # QApplication erstellen
     app = QApplication(sys.argv)
     app.setApplicationName(f"Scrat-Backup Wizard v{__version__}")
     app.setOrganizationName("Scrat")
+
+    # App-Icon setzen (wird von allen Fenstern geerbt)
+    icon_path = project_root / "assets" / "icons" / "scrat.ico"
+    if icon_path.exists():
+        app.setWindowIcon(QIcon(str(icon_path)))
 
     # Qt-Übersetzungen laden (für deutschen Dialog)
     translator = QTranslator(app)
@@ -50,9 +57,27 @@ if __name__ == "__main__":
     theme_manager = ThemeManager(app)
     print(f"Theme: {theme_manager.get_theme_display_name()}")
 
-    # Wizard erstellen und anzeigen
-    wizard = SetupWizardV2(version=__version__)
-    wizard.show()
+    # Config-Speicherung importieren
+    from src.main import save_wizard_config, start_backup_after_wizard
 
-    # Event-Loop starten
-    sys.exit(app.exec())
+    # Wizard erstellen und modal ausführen
+    wizard = SetupWizardV2(version=__version__)
+    result = wizard.exec()
+
+    if result:
+        config = wizard.get_config()
+        logging.info(f"Wizard abgeschlossen: {config}")
+        try:
+            save_wizard_config(config)
+            logging.info("Konfiguration erfolgreich gespeichert")
+        except Exception as e:
+            logging.error(f"Fehler beim Speichern: {e}")
+
+        # Backup starten wenn gewünscht
+        if config.get("start_backup_now"):
+            logging.info("Backup wird gestartet...")
+            start_backup_after_wizard(config)
+    else:
+        logging.info("Wizard abgebrochen")
+
+    sys.exit(0)

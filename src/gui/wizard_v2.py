@@ -211,6 +211,107 @@ class ModePage(QWizardPage):
 
 
 # ============================================================================
+# TEMPLATE CARD – Kachel mit separaten Icon/Name-Größen
+# ============================================================================
+
+class TemplateCard(QFrame):
+    """Klickbare Kachel: Icon groß, Name klein, Hover/Checked-Styles"""
+    clicked = Signal()
+
+    def __init__(self, icon: str, name: str, is_available: bool, accent_color: str, parent=None):
+        super().__init__(parent)
+        self._checked = False
+        self._is_available = is_available
+        self._accent_color = accent_color
+
+        self.setFrameShape(QFrame.Shape.NoFrame)
+        self.setMinimumSize(120, 100)
+        self.setMaximumSize(150, 115)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+
+        layout = QVBoxLayout(self)
+        layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.setSpacing(2)
+        layout.setContentsMargins(6, 6, 6, 6)
+
+        # Icon-Label (groß)
+        self.icon_label = QLabel(icon)
+        self.icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.icon_label.setStyleSheet("border: none; background: transparent;")
+        layout.addWidget(self.icon_label)
+
+        # Name-Label (klein, word-wrap)
+        self.name_label = QLabel(name)
+        self.name_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.name_label.setWordWrap(True)
+        self.name_label.setStyleSheet("border: none; background: transparent;")
+        layout.addWidget(self.name_label)
+
+        # Warnung bei nicht verfügbar
+        if not is_available:
+            self.warn_label = QLabel("⚠️")
+            self.warn_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.warn_label.setStyleSheet("border: none; background: transparent; font-size: 11px;")
+            layout.addWidget(self.warn_label)
+
+        self._update_style()
+
+    # --- Checkable-Interface (wie QPushButton) ---
+    def isCheckable(self):
+        return True
+
+    def isChecked(self):
+        return self._checked
+
+    def setChecked(self, checked: bool):
+        self._checked = checked
+        self._update_style()
+
+    # --- Maus-Events ---
+    def mousePressEvent(self, event):
+        self.clicked.emit()
+        super().mousePressEvent(event)
+
+    def enterEvent(self, event):
+        if not self._checked:
+            if self._is_available:
+                self.setStyleSheet(
+                    f"TemplateCard {{ background-color: #e3f2fd; border: 2px solid {self._accent_color}; border-radius: 6px; }}"
+                )
+            else:
+                self.setStyleSheet(
+                    "TemplateCard { background-color: #fff3e0; border: 2px solid #ff9800; border-radius: 6px; }"
+                )
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        if not self._checked:
+            self._update_style()
+        super().leaveEvent(event)
+
+    # --- Style-Update basierend auf Zustand ---
+    def _update_style(self):
+        if self._checked:
+            self.setStyleSheet(
+                f"TemplateCard {{ background-color: {self._accent_color}; border: 2px solid {self._accent_color}; border-radius: 6px; }}"
+            )
+            self.icon_label.setStyleSheet("border: none; background: transparent; font-size: 24px; color: white;")
+            self.name_label.setStyleSheet("border: none; background: transparent; font-size: 13px; color: white;")
+        elif self._is_available:
+            self.setStyleSheet(
+                "TemplateCard { background-color: white; border: 2px solid #cccccc; border-radius: 6px; }"
+            )
+            self.icon_label.setStyleSheet("border: none; background: transparent; font-size: 24px;")
+            self.name_label.setStyleSheet("border: none; background: transparent; font-size: 13px;")
+        else:
+            self.setStyleSheet(
+                "TemplateCard { background-color: #f5f5f5; border: 2px solid #e0e0e0; border-radius: 6px; }"
+            )
+            self.icon_label.setStyleSheet("border: none; background: transparent; font-size: 24px; color: #999;")
+            self.name_label.setStyleSheet("border: none; background: transparent; font-size: 13px; color: #999;")
+
+
+# ============================================================================
 # TEMPLATE DESTINATION PAGE (NEU: Mit TemplateManager)
 # ============================================================================
 
@@ -263,10 +364,15 @@ class TemplateDestinationPage(QWizardPage):
         scroll.setWidget(self.scroll_widget)
         layout.addWidget(scroll)
 
+        # Verstecktes QLineEdit als Feld-Träger für template_id
+        self._template_id_edit = QLineEdit()
+        self._template_id_edit.setVisible(False)
+        layout.addWidget(self._template_id_edit)
+
         self.setLayout(layout)
 
-        # Registriere Feld
-        self.registerField("template_id*", self, "selected_template_id")
+        # Registriere Feld auf dem versteckten QLineEdit (zuverlässiger als @property)
+        self.registerField("template_id*", self._template_id_edit)
 
     def _load_templates(self):
         """Lädt Templates aus TemplateManager"""
@@ -320,8 +426,8 @@ class TemplateDestinationPage(QWizardPage):
 
         self.scroll_layout.addLayout(grid)
 
-    def _create_template_button(self, template: Template) -> QPushButton:
-        """Erstellt Template-Button"""
+    def _create_template_button(self, template: Template) -> TemplateCard:
+        """Erstellt Template-Kachel"""
         # Prüfe Verfügbarkeit
         handler = self._get_handler_for_template(template)
         is_available = True
@@ -330,67 +436,21 @@ class TemplateDestinationPage(QWizardPage):
         if handler:
             is_available, availability_msg = handler.check_availability()
 
-        # Button-Text mit Status
-        button_text = f"{template.icon}\n\n{template.display_name}"
-        if not is_available:
-            button_text += "\n⚠️"
-
-        btn = QPushButton(button_text)
-        btn.setMinimumSize(120, 100)
-        btn.setMaximumSize(150, 115)
-
-        # Style basierend auf Verfügbarkeit
-        if is_available:
-            style = f"""
-                QPushButton {{
-                    background-color: white;
-                    border: 2px solid #cccccc;
-                    border-radius: 6px;
-                    padding: 10px 8px;
-                    font-size: 14px;
-                }}
-                QPushButton:hover {{
-                    border-color: {ACCENT_COLOR};
-                    background-color: #e3f2fd;
-                }}
-                QPushButton:checked {{
-                    border-color: {ACCENT_COLOR};
-                    background-color: {ACCENT_COLOR};
-                    color: white;
-                }}
-            """
-        else:
-            style = """
-                QPushButton {
-                    background-color: #f5f5f5;
-                    border: 2px solid #e0e0e0;
-                    border-radius: 6px;
-                    padding: 10px 8px;
-                    font-size: 14px;
-                    color: #999;
-                }
-                QPushButton:hover {
-                    border-color: #ff9800;
-                    background-color: #fff3e0;
-                }
-                QPushButton:checked {
-                    border-color: #ff9800;
-                    background-color: #ff9800;
-                    color: white;
-                }
-            """
-
-        btn.setStyleSheet(style)
-        btn.setCheckable(True)
-        btn.clicked.connect(lambda: self._on_template_selected(template, btn))
+        card = TemplateCard(
+            icon=template.icon,
+            name=template.display_name,
+            is_available=is_available,
+            accent_color=ACCENT_COLOR,
+        )
+        card.clicked.connect(lambda: self._on_template_selected(template, card))
 
         # Tooltip
         tooltip = template.description
         if not is_available:
             tooltip += f"\n\n⚠️ Nicht verfügbar: {availability_msg}"
-        btn.setToolTip(tooltip)
+        card.setToolTip(tooltip)
 
-        return btn
+        return card
 
     def _get_handler_for_template(self, template: Template):
         """Lädt Handler für Template (ohne Exception)"""
@@ -409,15 +469,16 @@ class TemplateDestinationPage(QWizardPage):
             logger.debug(f"Konnte Handler für {template.id} nicht laden: {e}")
             return None
 
-    def _on_template_selected(self, template: Template, button: QPushButton):
+    def _on_template_selected(self, template: Template, card: TemplateCard):
         """Handler für Template-Auswahl"""
-        # Deselektiere andere Buttons
-        for btn in self.findChildren(QPushButton):
-            if btn != button and btn.isCheckable():
-                btn.setChecked(False)
+        # Deselektiere andere Kacheln
+        for other in self.findChildren(TemplateCard):
+            if other != card:
+                other.setChecked(False)
 
-        button.setChecked(True)
+        card.setChecked(True)
         self.selected_template = template
+        self._template_id_edit.setText(template.id)
 
         # Lade Handler
         self._load_handler(template)

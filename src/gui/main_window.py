@@ -78,12 +78,10 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(1000, 700)
         self.resize(1200, 800)
 
-        # Setze Eichel-Icon
-        icon_path = Path(__file__).parent.parent.parent / "assets" / "scrat_icon.png"
+        # Setze Eichel-Icon (Fallback, falls nicht auf App-Ebene gesetzt)
+        icon_path = Path(__file__).parent.parent.parent / "assets" / "icons" / "scrat.ico"
         if icon_path.exists():
             self.setWindowIcon(QIcon(str(icon_path)))
-        else:
-            logger.warning(f"Icon nicht gefunden: {icon_path}")
 
     def _create_tabs(self) -> None:
         """Erstellt Tab-Widget mit allen Haupt-Tabs"""

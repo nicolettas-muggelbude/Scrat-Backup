@@ -10,6 +10,7 @@ from pathlib import Path
 
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QTranslator, QLibraryInfo
+from PySide6.QtGui import QIcon
 
 from src.core.config_manager import ConfigManager
 from src.gui.main_window import MainWindow
@@ -87,6 +88,14 @@ def save_wizard_config(wizard_config: dict) -> None:
     config_manager = ConfigManager()
 
     try:
+        action = wizard_config.get("action", "backup")
+
+        # Bei Ersteinrichtung oder Änderung: vorherige Quellen/Ziele ersetzen
+        # Bei "add_destination": nur neue Destination hinzufügen
+        if action in ("backup", "edit"):
+            config_manager.config["sources"] = []
+            config_manager.config["destinations"] = []
+
         # 1. Quellen in Config speichern
         sources = wizard_config.get("sources", [])
         excludes = wizard_config.get("excludes", [])
@@ -199,6 +208,178 @@ def save_wizard_config(wizard_config: dict) -> None:
         raise
 
 
+def start_backup_after_wizard(wizard_config: dict) -> None:
+    """
+    Startet erstes Backup nach Wizard-Abschluss.
+    Muster aus backup_tab.py: Password-Dialog → BackupConfig → Thread.
+    """
+    import threading
+    import time
+    from PySide6.QtWidgets import QApplication, QMessageBox
+    from src.gui.password_dialog import get_password
+    from src.core.backup_engine import BackupEngine, BackupConfig
+    from src.core.metadata_manager import MetadataManager
+
+    # Passwort vom User holen
+    password, ok = get_password(
+        None,
+        title="Backup-Passwort",
+        message="Bitte gib das Passwort für dein Backup ein:",
+        show_save_option=True,
+    )
+
+    if not ok or not password:
+        QMessageBox.warning(
+            None,
+            "Abgebrochen",
+            "Backup wurde abgebrochen – kein Passwort eingegeben.",
+        )
+        return
+
+    # Quellen aus gespeicherter Config lesen
+    config_manager = ConfigManager()
+    sources = [
+        Path(s["path"])
+        for s in config_manager.config.get("sources", [])
+        if s.get("enabled", True)
+    ]
+
+    if not sources:
+        QMessageBox.warning(None, "Fehler", "Keine Backup-Quellen konfiguriert.")
+        return
+
+    # Ziel aus gespeicherter Config (letztes = soeben vom Wizard gespeichertes)
+    destinations = config_manager.config.get("destinations", [])
+    if not destinations:
+        QMessageBox.warning(None, "Fehler", "Kein Backup-Ziel konfiguriert.")
+        return
+
+    destination = destinations[-1]
+    dest_config = destination.get("config", {})
+    dest_type = destination.get("type", "local")
+
+    # Zielpfad zusammenbauen
+    # USB-Templates speichern "drive" (Laufwerk) + "path" (Unterordner) separat
+    drive = dest_config.get("drive", "")
+    if drive:
+        sub_path = dest_config.get("path", "")
+        dest_path = Path(drive) / sub_path if sub_path else Path(drive)
+    else:
+        dest_path = Path(dest_config.get("path", str(Path.home() / "scrat-backups")))
+
+    # Ausschluss-Muster
+    excludes = set(wizard_config.get("excludes", []))
+
+    # Metadaten-DB Pfad
+    db_path = Path.home() / ".scrat-backup" / "metadata.db"
+
+    backup_config = BackupConfig(
+        sources=sources,
+        destination_path=dest_path,
+        destination_type=dest_type,
+        password=password,
+        exclude_patterns=excludes if excludes else None,
+        compression_level=5,
+    )
+
+    logger.info(
+        f"Backup starten: {len(sources)} Quellen → {dest_path} (Typ: {dest_type})"
+    )
+
+    from PySide6.QtWidgets import QProgressDialog
+    from src.core.backup_engine import BackupProgress
+
+    # Gemeinsamer Zustand zwischen Thread und Hauptthread
+    shared = {"progress": None, "error": None, "result": None}
+
+    def _progress_callback(progress: BackupProgress):
+        shared["progress"] = progress
+
+    def _run():
+        metadata_manager = None
+        try:
+            metadata_manager = MetadataManager(db_path)
+            engine = BackupEngine(
+                metadata_manager=metadata_manager,
+                config=backup_config,
+                progress_callback=_progress_callback,
+            )
+            shared["result"] = engine.create_full_backup()
+            logger.info(f"Backup erfolgreich: {shared['result']}")
+        except Exception as e:
+            logger.error(f"Backup fehlgeschlagen: {e}", exc_info=True)
+            shared["error"] = str(e)
+        finally:
+            if metadata_manager:
+                metadata_manager.disconnect()
+
+    # Fortschritts-Dialog (nicht schließbar, bleibt oben bis Backup fertig)
+    from PySide6.QtCore import Qt as QtCore
+    progress_dialog = QProgressDialog(
+        "Backup wird erstellt...", None, 0, 100
+    )
+    progress_dialog.setWindowTitle("Scrat-Backup – Erstes Backup")
+    progress_dialog.setMinimumWidth(420)
+    progress_dialog.setWindowFlags(
+        QtCore.WindowType.Dialog
+        | QtCore.WindowType.WindowStaysOnTopHint
+        | QtCore.WindowType.CustomizeWindowHint
+        | QtCore.WindowType.WindowTitleHint
+        # kein WindowCloseButtonHint → kein X-Button
+    )
+    progress_dialog.show()
+
+    thread = threading.Thread(target=_run, daemon=False)
+    thread.start()
+
+    # Auf Thread warten, dabei Events verarbeiten und Dialog aktualisieren
+    while thread.is_alive():
+        p = shared.get("progress")
+        if p:
+            if p.phase == "scanning":
+                progress_dialog.setLabelText(
+                    f"Scanne Dateien...\n{p.current_file or ''}"
+                )
+                progress_dialog.setValue(5)
+            elif p.phase == "compressing":
+                if p.files_total > 0:
+                    pct = int(10 + (p.files_processed / p.files_total) * 65)
+                else:
+                    pct = 10
+                progress_dialog.setLabelText(
+                    f"Komprimiere... {p.files_processed}/{p.files_total} Dateien\n"
+                    f"{p.current_file or ''}"
+                )
+                progress_dialog.setValue(pct)
+            elif p.phase == "encrypting":
+                progress_dialog.setLabelText("Verschlüssele Backup...")
+                progress_dialog.setValue(80)
+            elif p.phase == "saving_metadata":
+                progress_dialog.setLabelText("Speichere Metadaten...")
+                progress_dialog.setValue(95)
+
+        QApplication.processEvents()
+        time.sleep(0.1)
+
+    progress_dialog.close()
+
+    # Ergebnis anzeigen
+    if shared.get("error"):
+        QMessageBox.critical(
+            None,
+            "Backup fehlgeschlagen",
+            f"Das Backup konnte nicht erstellt werden:\n\n{shared['error']}",
+        )
+    else:
+        QMessageBox.information(
+            None,
+            "Backup abgeschlossen",
+            f"Das erste Backup wurde erfolgreich erstellt!\n\n"
+            f"Quellen: {len(sources)}\n"
+            f"Ziel: {dest_path}",
+        )
+
+
 def run_gui() -> int:
     """
     Startet GUI-Anwendung
@@ -214,6 +395,12 @@ def run_gui() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName("Scrat-Backup")
     app.setOrganizationName("Scrat")
+
+    # App-Icon setzen (wird von allen Fenstern geerbt)
+    icon_path = Path(__file__).parent.parent / "assets" / "icons" / "scrat.ico"
+    if icon_path.exists():
+        app.setWindowIcon(QIcon(str(icon_path)))
+
     logger.info("QApplication erstellt")
 
     # Qt-Übersetzungen laden (für deutschen Dialog)
@@ -251,7 +438,6 @@ def run_gui() -> int:
                 logger.info("Konfiguration erfolgreich gespeichert")
             except Exception as e:
                 logger.error(f"Fehler beim Speichern der Konfiguration: {e}", exc_info=True)
-                # Zeige Fehlermeldung, aber fahre trotzdem fort
                 from PySide6.QtWidgets import QMessageBox
 
                 QMessageBox.warning(
@@ -260,6 +446,11 @@ def run_gui() -> int:
                     f"Die Konfiguration konnte nicht vollständig gespeichert werden:\n{e}\n\n"
                     f"Das Hauptfenster wird trotzdem geöffnet.",
                 )
+
+            # Backup starten wenn gewünscht
+            if config.get("start_backup_now"):
+                logger.info("Backup wird nach Wizard gestartet...")
+                start_backup_after_wizard(config)
         else:
             # Wizard abgebrochen
             logger.info("Setup abgebrochen")
