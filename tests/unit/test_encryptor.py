@@ -179,7 +179,7 @@ class TestEncryptor:
         decrypted_file = tmp_path / "decrypted.txt"
 
         # Verschlüsseln (Nonce wird in Datei eingebettet)
-        nonce = encryptor.encrypt_file(input_file, encrypted_file)
+        _nonce = encryptor.encrypt_file(input_file, encrypted_file)  # noqa: F841
 
         # Entschlüsseln (Nonce wird aus Datei gelesen)
         encryptor.decrypt_file(encrypted_file, decrypted_file)

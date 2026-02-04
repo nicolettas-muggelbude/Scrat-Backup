@@ -9,7 +9,7 @@ from typing import Optional
 
 from PySide6.QtCore import QThread, Signal
 
-from src.core.scheduler import Schedule, Scheduler
+from src.core.scheduler import Scheduler
 
 logger = logging.getLogger(__name__)
 

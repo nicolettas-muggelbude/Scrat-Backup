@@ -14,14 +14,14 @@ _project_root = str(Path(__file__).resolve().parent.parent)
 if _project_root not in sys.path:
     sys.path.insert(0, _project_root)
 
-from PySide6.QtCore import QLibraryInfo, QTranslator
-from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import QLibraryInfo, QTranslator  # noqa: E402
+from PySide6.QtGui import QIcon  # noqa: E402
+from PySide6.QtWidgets import QApplication  # noqa: E402
 
-from src.core.config_manager import ConfigManager
-from src.gui.main_window import MainWindow
-from src.gui.theme_manager import Theme, ThemeManager
-from src.gui.wizard_v2 import SetupWizardV2
+from src.core.config_manager import ConfigManager  # noqa: E402
+from src.gui.main_window import MainWindow  # noqa: E402
+from src.gui.theme_manager import ThemeManager  # noqa: E402
+from src.gui.wizard_v2 import SetupWizardV2  # noqa: E402
 
 # Logging konfigurieren
 logging.basicConfig(

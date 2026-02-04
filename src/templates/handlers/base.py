@@ -6,7 +6,7 @@ Abstraktion für plattformspezifische Implementierungen
 import logging
 import platform
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 

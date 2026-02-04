@@ -5,7 +5,6 @@ Unterstützt Windows, Linux und macOS
 
 import logging
 import platform
-import shutil
 import sys
 from pathlib import Path
 from typing import Optional
@@ -203,8 +202,9 @@ X-GNOME-Autostart-enabled=true
             plist_file = launch_agents_dir / f"com.{self.app_name.lower()}.plist"
 
             # plist-Inhalt
+            apple_dtd = "http://www.apple.com/DTDs/PropertyList-1.0.dtd"
             plist_content = f"""<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "{apple_dtd}">
 <plist version="1.0">
 <dict>
     <key>Label</key>

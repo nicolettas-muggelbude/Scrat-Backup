@@ -387,7 +387,7 @@ class RestoreTab(QWidget):
                         created = datetime.fromisoformat(backup["created_at"])
                         completed = datetime.fromisoformat(backup["completed_at"])
                         duration_seconds = (completed - created).total_seconds()
-                    except:
+                    except Exception:
                         pass
                 if duration_seconds > 0:
                     if duration_seconds < 60:
@@ -632,7 +632,7 @@ class RestoreTab(QWidget):
         self,
         backup_id: int,
         config: "RestoreConfig",
-        storage_backend: "StorageBackend",
+        storage_backend: "StorageBackend",  # noqa: F821
         db_path: Path,
     ) -> None:
         """

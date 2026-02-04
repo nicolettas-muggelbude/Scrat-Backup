@@ -6,7 +6,7 @@ Barrierefreundlich mit Radio-Buttons
 import logging
 import platform
 from pathlib import Path
-from typing import List, Optional
+from typing import List
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
@@ -307,7 +307,6 @@ class StartPage(QWizardPage):
             ID der nächsten Seite
         """
         # Page-IDs (korrespondieren zu wizard_v2.py)
-        PAGE_SOURCE = 1
         PAGE_MODE = 2
         PAGE_DESTINATION = 3
         PAGE_FINISH = 5
@@ -371,7 +370,8 @@ class SourceSelectionPage(QWizardPage):
         # UI erstellen
         self._init_ui()
 
-        # Versteckte QLineEdits als Feld-Träger (PySide6 kann @property nicht über Qt-Property lesen)
+        # Versteckte QLineEdits als Feld-Träger
+        # (PySide6 kann @property nicht über Qt-Property lesen)
         self._sources_edit = QLineEdit(self)
         self._sources_edit.setVisible(False)
         self._excludes_edit = QLineEdit(self)
@@ -612,7 +612,9 @@ class SourceSelectionPage(QWizardPage):
                 btn.setStyleSheet("font-size: 11px; padding: 4px 8px;")
                 btn.setCheckable(True)  # Toggle-Button
                 btn.clicked.connect(
-                    lambda checked, p=path, l=label: self._on_quick_folder_clicked(p, l, checked)
+                    lambda checked, p=path, lbl=label: (
+                        self._on_quick_folder_clicked(p, lbl, checked)
+                    )
                 )
                 quick_layout.addWidget(btn)
                 self.quick_buttons[label] = btn
@@ -894,7 +896,8 @@ class SourceSelectionPage(QWizardPage):
         # Icon + Ordnername (fett, Akzentfarbe)
         label = QLabel(f"📁 {folder_name}")
         label.setStyleSheet(
-            f"font-size: 14px; font-weight: bold; color: {get_color('primary')}; background: transparent;"
+            f"font-size: 14px; font-weight: bold; "
+            f"color: {get_color('primary')}; background: transparent;"
         )
         widget_layout.addWidget(label)
 

@@ -196,7 +196,7 @@ class RestoreEngine:
             # Log: Restore gestartet
             self.metadata_manager.add_log(
                 level="INFO",
-                message=f"Wiederherstellung gestartet",
+                message="Wiederherstellung gestartet",
                 backup_id=backup_id,
                 details=f"Ziel: {self.config.destination_path}",
             )
@@ -259,10 +259,13 @@ class RestoreEngine:
                 # Log: Restore erfolgreich
                 self.metadata_manager.add_log(
                     level="INFO",
-                    message=f"Wiederherstellung erfolgreich abgeschlossen",
+                    message="Wiederherstellung erfolgreich abgeschlossen",
                     backup_id=backup_id,
-                    details=f"Dateien: {files_restored}, Bytes: {progress.bytes_total / 1024 / 1024:.1f}MB, "
-                    f"Dauer: {duration:.1f}s",
+                    details=(
+                        f"Dateien: {files_restored}, "
+                        f"Bytes: {progress.bytes_total / 1024 / 1024:.1f}MB, "
+                        f"Dauer: {duration:.1f}s"
+                    ),
                 )
 
                 return RestoreResult(
@@ -289,7 +292,7 @@ class RestoreEngine:
             try:
                 self.metadata_manager.add_log(
                     level="ERROR",
-                    message=f"Wiederherstellung fehlgeschlagen",
+                    message="Wiederherstellung fehlgeschlagen",
                     backup_id=backup_id,
                     details=str(e),
                 )
@@ -584,7 +587,7 @@ class RestoreEngine:
             if self.config.restore_to_original and source_path:
                 # Original-Restore: Zurück zum ursprünglichen Ort
                 dest_path = Path(source_path) / relative_path
-                logger.info(f"[RESTORE] Modus: Original-Location")
+                logger.info("[RESTORE] Modus: Original-Location")
             else:
                 # Custom-Restore: In benutzerdefinierten Ordner
                 if source_path:
@@ -593,7 +596,7 @@ class RestoreEngine:
                 else:
                     # Fallback wenn source_path fehlt
                     dest_path = Path(self.config.destination_path) / relative_path
-                logger.info(f"[RESTORE] Modus: Custom-Location")
+                logger.info("[RESTORE] Modus: Custom-Location")
 
             # Debug-Logging
             logger.info(f"[RESTORE] source_path={source_path}")

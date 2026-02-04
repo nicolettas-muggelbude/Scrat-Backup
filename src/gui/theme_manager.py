@@ -112,7 +112,7 @@ class ThemeManager(QObject):
             if hasattr(hints, "colorScheme"):
                 scheme = hints.colorScheme()
                 return scheme == Qt.ColorScheme.Dark
-        except:
+        except Exception:
             pass
 
         # Fallback: Prüfe Palette-Helligkeit

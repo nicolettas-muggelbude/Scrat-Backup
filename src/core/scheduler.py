@@ -373,7 +373,7 @@ class Scheduler:
                 "/F",  # Force (überschreibe wenn existiert)
             ]
 
-            result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+            subprocess.run(cmd, capture_output=True, text=True, check=True)
             logger.info(f"Windows Task '{task_name}' erfolgreich registriert")
             return True
 

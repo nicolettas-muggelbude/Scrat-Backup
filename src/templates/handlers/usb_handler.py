@@ -7,7 +7,6 @@ import logging
 import os
 import platform
 import shutil
-import tempfile
 from pathlib import Path
 from typing import List, Optional, Tuple
 

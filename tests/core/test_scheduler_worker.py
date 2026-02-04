@@ -3,7 +3,7 @@ Tests für SchedulerWorker-Modul
 """
 
 from datetime import datetime, time, timedelta
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import patch
 
 import pytest
 from PySide6.QtTest import QSignalSpy

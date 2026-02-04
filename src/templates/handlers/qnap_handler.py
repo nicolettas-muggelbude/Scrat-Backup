@@ -368,7 +368,7 @@ class QnapHandler(TemplateHandler):
                 return (False, {}, result.stderr.decode().strip())
 
             # Parse du-Ausgabe
-            output = result.stdout.decode()
+            _output = result.stdout.decode()  # noqa: F841
             # TODO: Parse disk usage
 
             return (True, {"status": "ok"}, None)

@@ -8,7 +8,6 @@ import platform
 import subprocess
 import sys
 from abc import ABC, abstractmethod
-from pathlib import Path
 from typing import Optional
 
 logger = logging.getLogger(__name__)
@@ -155,7 +154,7 @@ class LinuxCronScheduler(PlatformScheduler):
                 logger.info(f"Cron-Job '{task_name}' erfolgreich registriert")
                 return True
             else:
-                logger.error(f"Fehler beim Schreiben der crontab")
+                logger.error("Fehler beim Schreiben der crontab")
                 return False
 
         except Exception as e:
@@ -187,7 +186,7 @@ class LinuxCronScheduler(PlatformScheduler):
                 logger.info(f"Cron-Job '{task_name}' erfolgreich entfernt")
                 return True
             else:
-                logger.error(f"Fehler beim Schreiben der crontab")
+                logger.error("Fehler beim Schreiben der crontab")
                 return False
 
         except Exception as e:

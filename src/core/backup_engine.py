@@ -187,7 +187,9 @@ class BackupEngine:
                 level="INFO",
                 message=f"Vollbackup gestartet: {backup_id}",
                 backup_id=db_backup_id,
-                details=f"Quellen: {len(self.config.sources)}, Ziel: {self.config.destination_path}",
+                details=(
+                    f"Quellen: {len(self.config.sources)}, " f"Ziel: {self.config.destination_path}"
+                ),
             )
 
             # Progress initialisieren
@@ -339,10 +341,14 @@ class BackupEngine:
             # Log: Backup erfolgreich
             self.metadata_manager.add_log(
                 level="INFO",
-                message=f"Vollbackup erfolgreich abgeschlossen",
+                message="Vollbackup erfolgreich abgeschlossen",
                 backup_id=db_backup_id,
-                details=f"Dateien: {len(all_files)}, Original: {total_size / 1024 / 1024:.1f}MB, "
-                f"Komprimiert: {size_compressed / 1024 / 1024:.1f}MB, Dauer: {duration:.1f}s",
+                details=(
+                    f"Dateien: {len(all_files)}, "
+                    f"Original: {total_size / 1024 / 1024:.1f}MB, "
+                    f"Komprimiert: {size_compressed / 1024 / 1024:.1f}MB, "
+                    f"Dauer: {duration:.1f}s"
+                ),
             )
 
             return BackupResult(
@@ -363,7 +369,7 @@ class BackupEngine:
             try:
                 self.metadata_manager.add_log(
                     level="ERROR",
-                    message=f"Vollbackup fehlgeschlagen",
+                    message="Vollbackup fehlgeschlagen",
                     backup_id=db_backup_id,
                     details=str(e),
                 )
@@ -621,10 +627,14 @@ class BackupEngine:
             # Log: Backup erfolgreich
             self.metadata_manager.add_log(
                 level="INFO",
-                message=f"Inkrementelles Backup erfolgreich abgeschlossen",
+                message="Inkrementelles Backup erfolgreich abgeschlossen",
                 backup_id=db_backup_id,
-                details=f"Dateien: {len(all_changed_files)}, Original: {total_size / 1024 / 1024:.1f}MB, "
-                f"Komprimiert: {size_compressed / 1024 / 1024:.1f}MB, Dauer: {duration:.1f}s",
+                details=(
+                    f"Dateien: {len(all_changed_files)}, "
+                    f"Original: {total_size / 1024 / 1024:.1f}MB, "
+                    f"Komprimiert: {size_compressed / 1024 / 1024:.1f}MB, "
+                    f"Dauer: {duration:.1f}s"
+                ),
             )
 
             return BackupResult(
@@ -645,7 +655,7 @@ class BackupEngine:
             try:
                 self.metadata_manager.add_log(
                     level="ERROR",
-                    message=f"Inkrementelles Backup fehlgeschlagen",
+                    message="Inkrementelles Backup fehlgeschlagen",
                     backup_id=db_backup_id,
                     details=str(e),
                 )

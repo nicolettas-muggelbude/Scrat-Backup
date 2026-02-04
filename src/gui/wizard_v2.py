@@ -14,20 +14,14 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
-    QComboBox,
-    QDialog,
     QFrame,
     QGridLayout,
     QGroupBox,
-    QHBoxLayout,
     QLabel,
     QLineEdit,
-    QListWidget,
     QMessageBox,
-    QPushButton,
     QRadioButton,
     QScrollArea,
-    QSpinBox,
     QVBoxLayout,
     QWidget,
     QWizard,
@@ -36,11 +30,11 @@ from PySide6.QtWidgets import (
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.template_manager import Template, TemplateManager
-from gui.dynamic_template_form import DynamicTemplateForm
-from gui.theme import get_color
-from gui.wizard_pages import SourceSelectionPage, StartPage
-from templates.handlers.base import TemplateHandler
+from core.template_manager import Template, TemplateManager  # noqa: E402
+from gui.dynamic_template_form import DynamicTemplateForm  # noqa: E402
+from gui.theme import get_color  # noqa: E402
+from gui.wizard_pages import SourceSelectionPage, StartPage  # noqa: E402
+from templates.handlers.base import TemplateHandler  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -283,11 +277,14 @@ class TemplateCard(QFrame):
         if not self._checked:
             if self._is_available:
                 self.setStyleSheet(
-                    f"TemplateCard {{ background-color: #e3f2fd; border: 2px solid {self._accent_color}; border-radius: 6px; }}"
+                    "TemplateCard { background-color: #e3f2fd; "
+                    f"border: 2px solid {self._accent_color}; "
+                    "border-radius: 6px; }"
                 )
             else:
                 self.setStyleSheet(
-                    "TemplateCard { background-color: #fff3e0; border: 2px solid #ff9800; border-radius: 6px; }"
+                    "TemplateCard { background-color: #fff3e0; "
+                    "border: 2px solid #ff9800; border-radius: 6px; }"
                 )
         super().enterEvent(event)
 
@@ -300,7 +297,9 @@ class TemplateCard(QFrame):
     def _update_style(self):
         if self._checked:
             self.setStyleSheet(
-                f"TemplateCard {{ background-color: {self._accent_color}; border: 2px solid {self._accent_color}; border-radius: 6px; }}"
+                f"TemplateCard {{ background-color: {self._accent_color}; "
+                f"border: 2px solid {self._accent_color}; "
+                "border-radius: 6px; }"
             )
             self.icon_label.setStyleSheet(
                 "border: none; background: transparent; font-size: 24px; color: white;"
@@ -310,13 +309,15 @@ class TemplateCard(QFrame):
             )
         elif self._is_available:
             self.setStyleSheet(
-                "TemplateCard { background-color: white; border: 2px solid #cccccc; border-radius: 6px; }"
+                "TemplateCard { background-color: white; "
+                "border: 2px solid #cccccc; border-radius: 6px; }"
             )
             self.icon_label.setStyleSheet("border: none; background: transparent; font-size: 24px;")
             self.name_label.setStyleSheet("border: none; background: transparent; font-size: 13px;")
         else:
             self.setStyleSheet(
-                "TemplateCard { background-color: #f5f5f5; border: 2px solid #e0e0e0; border-radius: 6px; }"
+                "TemplateCard { background-color: #f5f5f5; "
+                "border: 2px solid #e0e0e0; border-radius: 6px; }"
             )
             self.icon_label.setStyleSheet(
                 "border: none; background: transparent; font-size: 24px; color: #999;"
@@ -707,7 +708,7 @@ class NewFinishPage(QWizardPage):
             "expert": "🔧 Experten-Modus",
         }
         action_label = action_labels.get(action, action)
-        summary_text += f"<tr><td style='padding: 8px; color: #666;'><b>Aktion:</b></td>"
+        summary_text += "<tr><td style='padding: 8px; color: #666;'><b>Aktion:</b></td>"
         summary_text += f"<td style='padding: 8px;'>{action_label}</td></tr>"
 
         # 2. Quellen (nur bei Backup)
@@ -715,7 +716,10 @@ class NewFinishPage(QWizardPage):
             sources = wizard.field("sources")
             if sources:
                 sources_list = sources.split(",")
-                summary_text += f"<tr><td style='padding: 8px; color: #666; vertical-align: top;'><b>Quellen:</b></td>"
+                summary_text += (
+                    "<tr><td style='padding: 8px; color: #666; "
+                    "vertical-align: top;'><b>Quellen:</b></td>"
+                )
                 summary_text += f"<td style='padding: 8px;'>{len(sources_list)} Ordner<br>"
 
                 # Erste 5 Quellen anzeigen
@@ -726,7 +730,11 @@ class NewFinishPage(QWizardPage):
                     )
 
                 if len(sources_list) > 5:
-                    summary_text += f"<span style='color: #999; font-size: 11px;'>... und {len(sources_list) - 5} weitere</span>"
+                    remaining = len(sources_list) - 5
+                    summary_text += (
+                        "<span style='color: #999; font-size: 11px;'>"
+                        f"... und {remaining} weitere</span>"
+                    )
 
                 summary_text += "</td></tr>"
 
@@ -735,10 +743,13 @@ class NewFinishPage(QWizardPage):
             if excludes:
                 excludes_list = excludes.split(",")
                 summary_text += (
-                    f"<tr><td style='padding: 8px; color: #666;'><b>Ausschlüsse:</b></td>"
+                    "<tr><td style='padding: 8px; color: #666;'>" "<b>Ausschlüsse:</b></td>"
                 )
                 summary_text += f"<td style='padding: 8px;'>{len(excludes_list)} Muster "
-                summary_text += f"<span style='color: #999; font-size: 11px;'>(*.tmp, *.cache, ...)</span></td></tr>"
+                summary_text += (
+                    "<span style='color: #999; font-size: 11px;'>"
+                    "(*.tmp, *.cache, ...)</span></td></tr>"
+                )
 
         # 3. Backup-Ziel
         template_id = wizard.field("template_id")
@@ -757,7 +768,7 @@ class NewFinishPage(QWizardPage):
                     template_icon = dest_page.selected_template.icon
                     template_display = dest_page.selected_template.display_name
 
-            summary_text += f"<tr><td style='padding: 8px; color: #666;'><b>Backup-Ziel:</b></td>"
+            summary_text += "<tr><td style='padding: 8px; color: #666;'>" "<b>Backup-Ziel:</b></td>"
             summary_text += (
                 f"<td style='padding: 8px;'>{template_icon} {template_display}</td></tr>"
             )
@@ -766,8 +777,14 @@ class NewFinishPage(QWizardPage):
 
         # Hinweis bei Restore
         if action == "restore":
-            summary_text += "<br><p style='background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 5px;'>"
-            summary_text += "⚠️ <b>Hinweis:</b> Der Restore-Flow wird in einer zukünftigen Version implementiert.<br>"
+            summary_text += (
+                "<br><p style='background-color: #fff3cd; color: #856404; "
+                "padding: 15px; border-radius: 5px;'>"
+            )
+            summary_text += (
+                "⚠️ <b>Hinweis:</b> Der Restore-Flow wird in einer "
+                "zukünftigen Version implementiert.<br>"
+            )
             summary_text += (
                 "Aktuell kannst du Backups manuell über das Hauptfenster wiederherstellen."
             )

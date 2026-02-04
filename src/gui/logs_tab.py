@@ -4,7 +4,7 @@ Zeigt Log-Einträge aus der Datenbank an
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Optional
 

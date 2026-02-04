@@ -226,7 +226,8 @@ class MetadataManager:
 
         if needs_v2_migration or not has_salt_column:
             logger.info(
-                f"Führe Migration auf Version 2 durch (current={current_version}, has_salt={has_salt_column})"
+                f"Führe Migration auf Version 2 durch "
+                f"(current={current_version}, has_salt={has_salt_column})"
             )
 
             if not has_salt_column:

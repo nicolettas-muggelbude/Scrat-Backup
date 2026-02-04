@@ -4,9 +4,8 @@ Unterstützt Windows, Linux und macOS
 """
 
 import logging
-import subprocess
 from typing import Optional, Tuple
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 
 from .base import TemplateHandler
 

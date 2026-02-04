@@ -2,8 +2,6 @@
 Unit-Tests für USBStorage
 """
 
-from pathlib import Path
-
 import pytest
 
 from src.storage.usb_storage import USBStorage

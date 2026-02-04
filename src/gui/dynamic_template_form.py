@@ -5,7 +5,7 @@ Generiert automatisch UI-Formulare aus Template-Definitionen
 
 import logging
 import re
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (

@@ -2,9 +2,7 @@
 Integration-Tests für Backup-Engine
 """
 
-import shutil
 import time
-from pathlib import Path
 
 import pytest
 
@@ -248,7 +246,7 @@ class TestIncrementalBackup:
         time.sleep(1)
 
         # Erstelle inkrementelles Backup
-        incr_result = engine.create_incremental_backup()
+        _incr_result = engine.create_incremental_backup()  # noqa: F841
 
         # Prüfe, dass gelöschte Datei in DB markiert ist
         backups = metadata_db.get_all_backups()
