@@ -31,8 +31,7 @@ class OnedriveHandler(TemplateHandler):
         if not self._is_rclone_installed():
             return (
                 False,
-                "rclone ist nicht installiert. "
-                "OneDrive-Backups benötigen rclone.",
+                "rclone ist nicht installiert. " "OneDrive-Backups benötigen rclone.",
             )
 
         return (True, None)
@@ -284,8 +283,7 @@ class OnedriveHandler(TemplateHandler):
             # Fallback: Download-Link
             return (
                 False,
-                "Bitte installiere rclone manuell: "
-                "https://rclone.org/downloads/",
+                "Bitte installiere rclone manuell: " "https://rclone.org/downloads/",
             )
 
         except Exception as e:

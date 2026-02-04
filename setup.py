@@ -35,8 +35,7 @@ setup(
         "Documentation": "https://github.com/your-username/scrat-backup/blob/main/claude.md",
         "Source Code": "https://github.com/your-username/scrat-backup",
     },
-    packages=find_packages(where="src"),
-    package_dir={"": "src"},
+    packages=find_packages(),
     classifiers=[
         # Development Status
         "Development Status :: 2 - Pre-Alpha",

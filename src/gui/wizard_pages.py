@@ -10,22 +10,22 @@ from typing import List, Optional
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
-    QVBoxLayout,
+    QButtonGroup,
+    QCheckBox,
+    QFileDialog,
+    QFrame,
+    QGroupBox,
     QHBoxLayout,
     QLabel,
-    QRadioButton,
-    QWizardPage,
-    QButtonGroup,
-    QFrame,
-    QCheckBox,
-    QPushButton,
+    QLineEdit,
     QListWidget,
     QListWidgetItem,
-    QFileDialog,
-    QGroupBox,
+    QPushButton,
+    QRadioButton,
     QScrollArea,
+    QVBoxLayout,
     QWidget,
-    QLineEdit,
+    QWizardPage,
 )
 
 from core.config_manager import ConfigManager
@@ -75,14 +75,9 @@ class StartPage(QWizardPage):
         self.setTitle("Willkommen bei Scrat-Backup! 🐿️")
 
         if self.has_config:
-            self.setSubTitle(
-                "Dein Backup-System ist bereits eingerichtet. "
-                "Was möchtest du tun?"
-            )
+            self.setSubTitle("Dein Backup-System ist bereits eingerichtet. " "Was möchtest du tun?")
         else:
-            self.setSubTitle(
-                "Richte dein Backup-System ein oder stelle Dateien wieder her."
-            )
+            self.setSubTitle("Richte dein Backup-System ein oder stelle Dateien wieder her.")
 
         # Layout
         layout = QVBoxLayout(self)
@@ -95,9 +90,7 @@ class StartPage(QWizardPage):
                 "Wähle eine der folgenden Optionen:"
             )
         else:
-            info = QLabel(
-                "Was möchtest du tun?"
-            )
+            info = QLabel("Was möchtest du tun?")
 
         info.setWordWrap(True)
         info.setStyleSheet("color: #666; font-size: 13px; margin-bottom: 10px;")
@@ -136,8 +129,7 @@ class StartPage(QWizardPage):
             config_manager = ConfigManager(config_file)
 
             has_sources = (
-                config_manager.config.get("sources")
-                and len(config_manager.config["sources"]) > 0
+                config_manager.config.get("sources") and len(config_manager.config["sources"]) > 0
             )
             has_destinations = (
                 config_manager.config.get("destinations")
@@ -155,9 +147,7 @@ class StartPage(QWizardPage):
 
         # Option 1: Backup einrichten
         backup_frame = self._create_option_radio(
-            "backup",
-            "📦 Backup einrichten",
-            "Sichere deine wichtigen Dateien regelmäßig"
+            "backup", "📦 Backup einrichten", "Sichere deine wichtigen Dateien regelmäßig"
         )
         layout.addWidget(backup_frame)
 
@@ -168,7 +158,7 @@ class StartPage(QWizardPage):
         restore_frame = self._create_option_radio(
             "restore",
             "♻️ Backup wiederherstellen (Restore)",
-            "Stelle Dateien aus einem vorhandenen Backup wieder her"
+            "Stelle Dateien aus einem vorhandenen Backup wieder her",
         )
         layout.addWidget(restore_frame)
 
@@ -182,9 +172,7 @@ class StartPage(QWizardPage):
 
         # Option 1: Einstellungen ändern
         edit_frame = self._create_option_radio(
-            "edit",
-            "⚙️ Backup-Einstellungen ändern",
-            "Ändere Quellen, Ziele oder Zeitplan"
+            "edit", "⚙️ Backup-Einstellungen ändern", "Ändere Quellen, Ziele oder Zeitplan"
         )
         layout.addWidget(edit_frame)
 
@@ -195,7 +183,7 @@ class StartPage(QWizardPage):
         add_frame = self._create_option_radio(
             "add_destination",
             "➕ Neues Backup-Ziel hinzufügen",
-            "Füge ein weiteres Backup-Ziel hinzu"
+            "Füge ein weiteres Backup-Ziel hinzu",
         )
         layout.addWidget(add_frame)
 
@@ -206,7 +194,7 @@ class StartPage(QWizardPage):
         restore_frame = self._create_option_radio(
             "restore",
             "♻️ Backup wiederherstellen (Restore)",
-            "Stelle Dateien aus einem deiner Backups wieder her"
+            "Stelle Dateien aus einem deiner Backups wieder her",
         )
         layout.addWidget(restore_frame)
 
@@ -215,9 +203,7 @@ class StartPage(QWizardPage):
 
         # Option 4: Experten-Modus
         expert_frame = self._create_option_radio(
-            "expert",
-            "🔧 Experten-Modus",
-            "Vollständige Kontrolle über alle Einstellungen"
+            "expert", "🔧 Experten-Modus", "Vollständige Kontrolle über alle Einstellungen"
         )
         layout.addWidget(expert_frame)
 
@@ -226,12 +212,7 @@ class StartPage(QWizardPage):
             self.radio_buttons["edit"].setChecked(True)
             self.selected_action = "edit"
 
-    def _create_option_radio(
-        self,
-        action_id: str,
-        title: str,
-        description: str
-    ) -> QWidget:
+    def _create_option_radio(self, action_id: str, title: str, description: str) -> QWidget:
         """
         Erstellt eine Option als Radio-Button mit Beschreibung
         (Style wie ModePage - ohne Frame/Border)
@@ -357,6 +338,7 @@ class StartPage(QWizardPage):
 # ============================================================================
 # SOURCE SELECTION PAGE - Was sichern?
 # ============================================================================
+
 
 class SourceSelectionPage(QWizardPage):
     """
@@ -510,24 +492,20 @@ class SourceSelectionPage(QWizardPage):
             "*.log",
             "*.bak",
             "*~",
-
             # Editor-Dateien
             "*.swp",  # Vim swap files
             "*.swo",
             ".*.sw?",
-
             # Versionskontrolle
             ".git/",
             ".svn/",
             ".hg/",
-
             # Build & Dependencies
             "node_modules/",
             "__pycache__/",
             "*.pyc",
             ".venv/",
             "venv/",
-
             # IDE
             ".vscode/",
             ".idea/",
@@ -536,77 +514,74 @@ class SourceSelectionPage(QWizardPage):
 
         # Windows-spezifisch
         if system == "Windows":
-            excludes.extend([
-                # System
-                "Thumbs.db",
-                "desktop.ini",
-                "~$*",  # Office temporäre Dateien
-                "$RECYCLE.BIN/",
-
-                # Cache & Temp
-                "AppData/Local/Temp/",
-                "AppData/Local/Microsoft/Windows/Explorer/",  # Thumbnails
-                "AppData/Local/Microsoft/Windows/INetCache/",  # IE Cache
-                "AppData/Local/*/Cache/",  # App-Caches
-                "AppData/Local/*/cache/",
-                "AppData/Local/*/cache2/",
-
-                # Browser-Cache
-                "AppData/Local/Google/Chrome/*/Cache/",
-                "AppData/Local/Microsoft/Edge/*/Cache/",
-                "AppData/Local/Mozilla/Firefox/*/cache2/",
-            ])
+            excludes.extend(
+                [
+                    # System
+                    "Thumbs.db",
+                    "desktop.ini",
+                    "~$*",  # Office temporäre Dateien
+                    "$RECYCLE.BIN/",
+                    # Cache & Temp
+                    "AppData/Local/Temp/",
+                    "AppData/Local/Microsoft/Windows/Explorer/",  # Thumbnails
+                    "AppData/Local/Microsoft/Windows/INetCache/",  # IE Cache
+                    "AppData/Local/*/Cache/",  # App-Caches
+                    "AppData/Local/*/cache/",
+                    "AppData/Local/*/cache2/",
+                    # Browser-Cache
+                    "AppData/Local/Google/Chrome/*/Cache/",
+                    "AppData/Local/Microsoft/Edge/*/Cache/",
+                    "AppData/Local/Mozilla/Firefox/*/cache2/",
+                ]
+            )
 
         # Linux-spezifisch
         elif system == "Linux":
-            excludes.extend([
-                # Papierkorb
-                ".Trash-*/",
-                ".local/share/Trash/",
-
-                # Cache
-                ".cache/",
-                ".thumbnails/",
-
-                # Browser-Cache
-                ".mozilla/firefox/*/Cache/",
-                ".mozilla/firefox/*/cache2/",
-                ".config/google-chrome/*/Cache/",
-                ".config/chromium/*/Cache/",
-
-                # App-spezifische Caches
-                ".config/*/cache/",
-                ".local/share/*/cache/",
-
-                # Sonstiges
-                "*.~lock.*",  # LibreOffice
-                ".directory",  # KDE
-                ".~*",  # Backup-Dateien
-            ])
+            excludes.extend(
+                [
+                    # Papierkorb
+                    ".Trash-*/",
+                    ".local/share/Trash/",
+                    # Cache
+                    ".cache/",
+                    ".thumbnails/",
+                    # Browser-Cache
+                    ".mozilla/firefox/*/Cache/",
+                    ".mozilla/firefox/*/cache2/",
+                    ".config/google-chrome/*/Cache/",
+                    ".config/chromium/*/Cache/",
+                    # App-spezifische Caches
+                    ".config/*/cache/",
+                    ".local/share/*/cache/",
+                    # Sonstiges
+                    "*.~lock.*",  # LibreOffice
+                    ".directory",  # KDE
+                    ".~*",  # Backup-Dateien
+                ]
+            )
 
         # macOS-spezifisch
         elif system == "Darwin":
-            excludes.extend([
-                # System
-                ".DS_Store",
-                ".AppleDouble/",
-                ".LSOverride",
-                ".Spotlight-V100/",
-                ".Trashes",
-
-                # Cache
-                "Library/Caches/",
-                ".cache/",
-
-                # Browser-Cache
-                "Library/Application Support/Google/Chrome/*/Cache/",
-                "Library/Application Support/Firefox/*/cache2/",
-                "Library/Safari/LocalStorage/",
-
-                # App-spezifische Caches
-                "Library/Application Support/*/cache/",
-                "Library/Application Support/*/Cache/",
-            ])
+            excludes.extend(
+                [
+                    # System
+                    ".DS_Store",
+                    ".AppleDouble/",
+                    ".LSOverride",
+                    ".Spotlight-V100/",
+                    ".Trashes",
+                    # Cache
+                    "Library/Caches/",
+                    ".cache/",
+                    # Browser-Cache
+                    "Library/Application Support/Google/Chrome/*/Cache/",
+                    "Library/Application Support/Firefox/*/cache2/",
+                    "Library/Safari/LocalStorage/",
+                    # App-spezifische Caches
+                    "Library/Application Support/*/cache/",
+                    "Library/Application Support/*/Cache/",
+                ]
+            )
 
         return excludes
 
@@ -636,7 +611,9 @@ class SourceSelectionPage(QWizardPage):
                 btn = QPushButton(label)
                 btn.setStyleSheet("font-size: 11px; padding: 4px 8px;")
                 btn.setCheckable(True)  # Toggle-Button
-                btn.clicked.connect(lambda checked, p=path, l=label: self._on_quick_folder_clicked(p, l, checked))
+                btn.clicked.connect(
+                    lambda checked, p=path, l=label: self._on_quick_folder_clicked(p, l, checked)
+                )
                 quick_layout.addWidget(btn)
                 self.quick_buttons[label] = btn
 
@@ -651,9 +628,7 @@ class SourceSelectionPage(QWizardPage):
             layout.addWidget(no_libs)
         else:
             # Info
-            info = QLabel(
-                "Oder wähle einzelne Ordner aus:"
-            )
+            info = QLabel("Oder wähle einzelne Ordner aus:")
             info.setWordWrap(True)
             info.setStyleSheet("color: #666; font-size: 12px; font-weight: normal;")
             layout.addWidget(info)
@@ -721,7 +696,8 @@ class SourceSelectionPage(QWizardPage):
         # Liste der benutzerdefinierten Ordner
         self.custom_list = QListWidget()
         self.custom_list.setMaximumHeight(150)
-        self.custom_list.setStyleSheet("""
+        self.custom_list.setStyleSheet(
+            """
             QListWidget {
                 border: 1px solid #ccc;
                 border-radius: 4px;
@@ -742,7 +718,8 @@ class SourceSelectionPage(QWizardPage):
                 outline: none;
                 border: none;
             }
-        """)
+        """
+        )
         self.custom_list.itemSelectionChanged.connect(self._on_selection_changed)
         layout.addWidget(self.custom_list)
 
@@ -764,9 +741,7 @@ class SourceSelectionPage(QWizardPage):
         layout = QVBoxLayout(group)
 
         # Info
-        info = QLabel(
-            "Die folgenden Dateitypen werden automatisch vom Backup ausgeschlossen:"
-        )
+        info = QLabel("Die folgenden Dateitypen werden automatisch vom Backup ausgeschlossen:")
         info.setWordWrap(True)
         info.setStyleSheet("color: #666; font-size: 12px; font-weight: normal;")
         layout.addWidget(info)
@@ -785,9 +760,7 @@ class SourceSelectionPage(QWizardPage):
         layout.addWidget(excludes_label)
 
         # Hinweis
-        hint = QLabel(
-            "💡 Tipp: Temporäre Dateien, Caches und System-Dateien werden übersprungen."
-        )
+        hint = QLabel("💡 Tipp: Temporäre Dateien, Caches und System-Dateien werden übersprungen.")
         hint.setWordWrap(True)
         hint.setStyleSheet("color: #666; font-size: 11px; font-weight: normal;")
         layout.addWidget(hint)
@@ -800,7 +773,7 @@ class SourceSelectionPage(QWizardPage):
             self,
             "Ordner zum Sichern auswählen",
             str(Path.home()),
-            QFileDialog.Option.ShowDirsOnly | QFileDialog.Option.DontUseNativeDialog
+            QFileDialog.Option.ShowDirsOnly | QFileDialog.Option.DontUseNativeDialog,
         )
 
         if folder:
@@ -817,20 +790,16 @@ class SourceSelectionPage(QWizardPage):
 
         if not folder_path.exists():
             from PySide6.QtWidgets import QMessageBox
+
             QMessageBox.warning(
-                self,
-                "Ordner nicht gefunden",
-                f"Der Ordner existiert nicht:\n{folder_path}"
+                self, "Ordner nicht gefunden", f"Der Ordner existiert nicht:\n{folder_path}"
             )
             return
 
         if not folder_path.is_dir():
             from PySide6.QtWidgets import QMessageBox
-            QMessageBox.warning(
-                self,
-                "Kein Ordner",
-                f"Der Pfad ist kein Ordner:\n{folder_path}"
-            )
+
+            QMessageBox.warning(self, "Kein Ordner", f"Der Pfad ist kein Ordner:\n{folder_path}")
             return
 
         self._add_folder_to_list(folder_path)
@@ -911,7 +880,8 @@ class SourceSelectionPage(QWizardPage):
         # Custom Widget für schöne Darstellung
         widget = ClickableFrame(self.custom_list, item)
         widget.setMinimumHeight(40)
-        widget.setStyleSheet("""
+        widget.setStyleSheet(
+            """
             QFrame {
                 background-color: transparent;
                 border-radius: 3px;
@@ -920,13 +890,16 @@ class SourceSelectionPage(QWizardPage):
             QFrame:hover {
                 background-color: #e8e8e8;
             }
-        """)
+        """
+        )
         widget_layout = QHBoxLayout(widget)
         widget_layout.setContentsMargins(10, 8, 10, 8)
 
         # Icon + Ordnername (fett, Akzentfarbe)
         label = QLabel(f"📁 {folder_name}")
-        label.setStyleSheet(f"font-size: 14px; font-weight: bold; color: {get_color('primary')}; background: transparent;")
+        label.setStyleSheet(
+            f"font-size: 14px; font-weight: bold; color: {get_color('primary')}; background: transparent;"
+        )
         widget_layout.addWidget(label)
 
         widget_layout.addStretch()
@@ -970,7 +943,8 @@ class SourceSelectionPage(QWizardPage):
         """Wird aufgerufen wenn Selection sich ändert"""
         # Setze alle Widgets auf normalen Hintergrund
         for item, widget in self.custom_widgets.values():
-            widget.setStyleSheet("""
+            widget.setStyleSheet(
+                """
                 QFrame {
                     background-color: transparent;
                     border-radius: 3px;
@@ -979,7 +953,8 @@ class SourceSelectionPage(QWizardPage):
                 QFrame:hover {
                     background-color: #e8e8e8;
                 }
-            """)
+            """
+            )
 
         # Setze selected Widget auf grauen Hintergrund
         selected_items = self.custom_list.selectedItems()
@@ -988,7 +963,8 @@ class SourceSelectionPage(QWizardPage):
             folder_path = selected_item.data(Qt.ItemDataRole.UserRole)
             if folder_path in self.custom_widgets:
                 item, widget = self.custom_widgets[folder_path]
-                widget.setStyleSheet("""
+                widget.setStyleSheet(
+                    """
                     QFrame {
                         background-color: #d0d0d0;
                         border-radius: 3px;
@@ -997,7 +973,8 @@ class SourceSelectionPage(QWizardPage):
                     QFrame:hover {
                         background-color: #c0c0c0;
                     }
-                """)
+                """
+                )
 
     def _on_library_changed(self):
         """Wird aufgerufen wenn Bibliotheken-Auswahl sich ändert"""
@@ -1088,11 +1065,12 @@ class SourceSelectionPage(QWizardPage):
 
         if not sources:
             from PySide6.QtWidgets import QMessageBox
+
             QMessageBox.warning(
                 self,
                 "Keine Quellen gewählt",
                 "Bitte wähle mindestens einen Ordner oder eine Bibliothek aus, "
-                "die gesichert werden soll."
+                "die gesichert werden soll.",
             )
             return False
 

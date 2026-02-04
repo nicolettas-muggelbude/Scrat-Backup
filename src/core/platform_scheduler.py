@@ -18,9 +18,7 @@ class PlatformScheduler(ABC):
     """Basis-Klasse für plattformspezifische Scheduler"""
 
     @abstractmethod
-    def register_task(
-        self, task_name: str, frequency: str, command: str, args: list[str]
-    ) -> bool:
+    def register_task(self, task_name: str, frequency: str, command: str, args: list[str]) -> bool:
         """Registriert einen geplanten Task"""
         pass
 
@@ -38,9 +36,7 @@ class PlatformScheduler(ABC):
 class WindowsTaskScheduler(PlatformScheduler):
     """Windows Task Scheduler Integration"""
 
-    def register_task(
-        self, task_name: str, frequency: str, command: str, args: list[str]
-    ) -> bool:
+    def register_task(self, task_name: str, frequency: str, command: str, args: list[str]) -> bool:
         """Registriert Windows Task mit schtasks"""
         try:
             # Trigger mapping
@@ -108,9 +104,7 @@ class LinuxCronScheduler(PlatformScheduler):
     def __init__(self):
         self.cron_comment = "# Scrat-Backup:"
 
-    def register_task(
-        self, task_name: str, frequency: str, command: str, args: list[str]
-    ) -> bool:
+    def register_task(self, task_name: str, frequency: str, command: str, args: list[str]) -> bool:
         """Registriert Cron-Job"""
         try:
             # Trigger mapping
@@ -172,9 +166,7 @@ class LinuxCronScheduler(PlatformScheduler):
         """Entfernt Cron-Job"""
         try:
             # Hole aktuelle crontab
-            result = subprocess.run(
-                ["crontab", "-l"], capture_output=True, text=True, check=False
-            )
+            result = subprocess.run(["crontab", "-l"], capture_output=True, text=True, check=False)
             if result.returncode != 0:
                 logger.warning("Keine crontab gefunden")
                 return True
@@ -208,9 +200,7 @@ class LinuxCronScheduler(PlatformScheduler):
             return False
 
         try:
-            subprocess.run(
-                ["which", "crontab"], check=True, capture_output=True, text=True
-            )
+            subprocess.run(["which", "crontab"], check=True, capture_output=True, text=True)
             return True
         except subprocess.CalledProcessError:
             return False
@@ -219,9 +209,7 @@ class LinuxCronScheduler(PlatformScheduler):
 class MacOSLaunchdScheduler(PlatformScheduler):
     """macOS launchd Integration (Placeholder)"""
 
-    def register_task(
-        self, task_name: str, frequency: str, command: str, args: list[str]
-    ) -> bool:
+    def register_task(self, task_name: str, frequency: str, command: str, args: list[str]) -> bool:
         logger.warning("macOS launchd-Integration noch nicht implementiert")
         return False
 

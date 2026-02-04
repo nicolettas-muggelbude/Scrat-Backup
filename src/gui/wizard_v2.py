@@ -4,8 +4,11 @@ Produktionsversion mit echten Templates
 """
 
 import logging
+
+# Template-System importieren
+import sys
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Any, Dict, Optional
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QIcon, QPixmap
@@ -13,12 +16,14 @@ from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
     QDialog,
+    QFrame,
     QGridLayout,
     QGroupBox,
     QHBoxLayout,
     QLabel,
     QLineEdit,
     QListWidget,
+    QMessageBox,
     QPushButton,
     QRadioButton,
     QScrollArea,
@@ -27,19 +32,15 @@ from PySide6.QtWidgets import (
     QWidget,
     QWizard,
     QWizardPage,
-    QFrame,
-    QMessageBox,
 )
 
-# Template-System importieren
-import sys
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.template_manager import TemplateManager, Template
-from templates.handlers.base import TemplateHandler
+from core.template_manager import Template, TemplateManager
 from gui.dynamic_template_form import DynamicTemplateForm
-from gui.wizard_pages import StartPage, SourceSelectionPage
 from gui.theme import get_color
+from gui.wizard_pages import SourceSelectionPage, StartPage
+from templates.handlers.base import TemplateHandler
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +67,7 @@ PAGE_FINISH = 5
 # MODE PAGE (wie im Prototyp)
 # ============================================================================
 
+
 class ModePage(QWizardPage):
     """Auswahl zwischen Normal- und Power-User-Modus"""
 
@@ -86,7 +88,8 @@ class ModePage(QWizardPage):
         if icon_path.exists():
             icon_label = QLabel()
             pixmap = QPixmap(str(icon_path)).scaled(
-                100, 100,
+                100,
+                100,
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation,
             )
@@ -112,7 +115,9 @@ class ModePage(QWizardPage):
 
         normal_desc = QLabel("    Geführte Einrichtung mit Vorlagen - ideal für die meisten Nutzer")
         normal_desc.setWordWrap(True)
-        normal_desc.setStyleSheet("color: #666; font-size: 13px; margin-left: 30px; margin-bottom: 20px;")
+        normal_desc.setStyleSheet(
+            "color: #666; font-size: 13px; margin-left: 30px; margin-bottom: 20px;"
+        )
         layout.addWidget(normal_desc)
 
         layout.addSpacing(15)
@@ -143,7 +148,9 @@ class ModePage(QWizardPage):
 
         self.registerField("mode_normal", self.normal_radio)
 
-    def _create_mode_card(self, title: str, description: str, subtitle: str, is_recommended: bool) -> QWidget:
+    def _create_mode_card(
+        self, title: str, description: str, subtitle: str, is_recommended: bool
+    ) -> QWidget:
         """Erstellt Modus-Karte"""
         card = QFrame()
         card.setFrameShape(QFrame.Shape.StyledPanel)
@@ -214,8 +221,10 @@ class ModePage(QWizardPage):
 # TEMPLATE CARD – Kachel mit separaten Icon/Name-Größen
 # ============================================================================
 
+
 class TemplateCard(QFrame):
     """Klickbare Kachel: Icon groß, Name klein, Hover/Checked-Styles"""
+
     clicked = Signal()
 
     def __init__(self, icon: str, name: str, is_available: bool, accent_color: str, parent=None):
@@ -295,8 +304,12 @@ class TemplateCard(QFrame):
             self.setStyleSheet(
                 f"TemplateCard {{ background-color: {self._accent_color}; border: 2px solid {self._accent_color}; border-radius: 6px; }}"
             )
-            self.icon_label.setStyleSheet("border: none; background: transparent; font-size: 24px; color: white;")
-            self.name_label.setStyleSheet("border: none; background: transparent; font-size: 13px; color: white;")
+            self.icon_label.setStyleSheet(
+                "border: none; background: transparent; font-size: 24px; color: white;"
+            )
+            self.name_label.setStyleSheet(
+                "border: none; background: transparent; font-size: 13px; color: white;"
+            )
         elif self._is_available:
             self.setStyleSheet(
                 "TemplateCard { background-color: white; border: 2px solid #cccccc; border-radius: 6px; }"
@@ -307,13 +320,18 @@ class TemplateCard(QFrame):
             self.setStyleSheet(
                 "TemplateCard { background-color: #f5f5f5; border: 2px solid #e0e0e0; border-radius: 6px; }"
             )
-            self.icon_label.setStyleSheet("border: none; background: transparent; font-size: 24px; color: #999;")
-            self.name_label.setStyleSheet("border: none; background: transparent; font-size: 13px; color: #999;")
+            self.icon_label.setStyleSheet(
+                "border: none; background: transparent; font-size: 24px; color: #999;"
+            )
+            self.name_label.setStyleSheet(
+                "border: none; background: transparent; font-size: 13px; color: #999;"
+            )
 
 
 # ============================================================================
 # TEMPLATE DESTINATION PAGE (NEU: Mit TemplateManager)
 # ============================================================================
+
 
 class TemplateDestinationPage(QWizardPage):
     """Template-basierte Ziel-Auswahl mit echtem TemplateManager"""
@@ -506,7 +524,7 @@ class TemplateDestinationPage(QWizardPage):
             QMessageBox.warning(
                 self,
                 "Handler-Fehler",
-                f"Handler für {template.display_name} konnte nicht geladen werden:\n{e}"
+                f"Handler für {template.display_name} konnte nicht geladen werden:\n{e}",
             )
 
     def _show_template_form(self):
@@ -550,9 +568,7 @@ class TemplateDestinationPage(QWizardPage):
 
             # Dynamisches Formular erstellen
             self.dynamic_form = DynamicTemplateForm(
-                template=self.selected_template,
-                handler=self.selected_handler,
-                parent=self
+                template=self.selected_template, handler=self.selected_handler, parent=self
             )
 
             # Signal verbinden: Config-Änderungen speichern
@@ -572,21 +588,17 @@ class TemplateDestinationPage(QWizardPage):
         """Validiert Formular vor Weiter"""
         if not self.selected_template:
             QMessageBox.warning(
-                self,
-                "Keine Vorlage gewählt",
-                "Bitte wähle eine Backup-Vorlage aus."
+                self, "Keine Vorlage gewählt", "Bitte wähle eine Backup-Vorlage aus."
             )
             return False
 
         # Validiere dynamisches Formular
-        if hasattr(self, 'dynamic_form') and self.dynamic_form:
+        if hasattr(self, "dynamic_form") and self.dynamic_form:
             is_valid, error = self.dynamic_form.validate()
 
             if not is_valid:
                 QMessageBox.warning(
-                    self,
-                    "Ungültige Eingabe",
-                    error or "Bitte überprüfe deine Eingaben."
+                    self, "Ungültige Eingabe", error or "Bitte überprüfe deine Eingaben."
                 )
                 return False
 
@@ -608,6 +620,7 @@ class TemplateDestinationPage(QWizardPage):
 # ============================================================================
 # FINISH PAGE (wie im Prototyp)
 # ============================================================================
+
 
 class NewFinishPage(QWizardPage):
     """Zusammenfassung + Tray-Start + Backup-Option"""
@@ -669,8 +682,7 @@ class NewFinishPage(QWizardPage):
         )
         success.setWordWrap(True)
         success.setStyleSheet(
-            "background-color: #e8f5e9; color: #2e7d32; "
-            "padding: 15px; border-radius: 5px;"
+            "background-color: #e8f5e9; color: #2e7d32; " "padding: 15px; border-radius: 5px;"
         )
         layout.addWidget(success)
 
@@ -711,7 +723,9 @@ class NewFinishPage(QWizardPage):
                 # Erste 5 Quellen anzeigen
                 for source in sources_list[:5]:
                     source_name = Path(source).name or source
-                    summary_text += f"<span style='color: #999; font-size: 11px;'>📁 {source_name}</span><br>"
+                    summary_text += (
+                        f"<span style='color: #999; font-size: 11px;'>📁 {source_name}</span><br>"
+                    )
 
                 if len(sources_list) > 5:
                     summary_text += f"<span style='color: #999; font-size: 11px;'>... und {len(sources_list) - 5} weitere</span>"
@@ -722,7 +736,9 @@ class NewFinishPage(QWizardPage):
             excludes = wizard.field("excludes")
             if excludes:
                 excludes_list = excludes.split(",")
-                summary_text += f"<tr><td style='padding: 8px; color: #666;'><b>Ausschlüsse:</b></td>"
+                summary_text += (
+                    f"<tr><td style='padding: 8px; color: #666;'><b>Ausschlüsse:</b></td>"
+                )
                 summary_text += f"<td style='padding: 8px;'>{len(excludes_list)} Muster "
                 summary_text += f"<span style='color: #999; font-size: 11px;'>(*.tmp, *.cache, ...)</span></td></tr>"
 
@@ -737,14 +753,16 @@ class NewFinishPage(QWizardPage):
             template_display = template_name
 
             # Wenn wir Zugriff auf TemplateManager haben
-            if hasattr(wizard, 'destination_page'):
+            if hasattr(wizard, "destination_page"):
                 dest_page = wizard.destination_page
-                if hasattr(dest_page, 'selected_template') and dest_page.selected_template:
+                if hasattr(dest_page, "selected_template") and dest_page.selected_template:
                     template_icon = dest_page.selected_template.icon
                     template_display = dest_page.selected_template.display_name
 
             summary_text += f"<tr><td style='padding: 8px; color: #666;'><b>Backup-Ziel:</b></td>"
-            summary_text += f"<td style='padding: 8px;'>{template_icon} {template_display}</td></tr>"
+            summary_text += (
+                f"<td style='padding: 8px;'>{template_icon} {template_display}</td></tr>"
+            )
 
         summary_text += "</table>"
 
@@ -752,7 +770,9 @@ class NewFinishPage(QWizardPage):
         if action == "restore":
             summary_text += "<br><p style='background-color: #fff3cd; color: #856404; padding: 15px; border-radius: 5px;'>"
             summary_text += "⚠️ <b>Hinweis:</b> Der Restore-Flow wird in einer zukünftigen Version implementiert.<br>"
-            summary_text += "Aktuell kannst du Backups manuell über das Hauptfenster wiederherstellen."
+            summary_text += (
+                "Aktuell kannst du Backups manuell über das Hauptfenster wiederherstellen."
+            )
             summary_text += "</p>"
 
         self.summary_label.setText(summary_text)
@@ -761,6 +781,7 @@ class NewFinishPage(QWizardPage):
 # ============================================================================
 # WIZARD V2
 # ============================================================================
+
 
 class SetupWizardV2(QWizard):
     """Setup-Wizard V2 mit TemplateManager-Integration und neuem Flow"""
@@ -836,7 +857,7 @@ class SetupWizardV2(QWizard):
             self,
             "Experten-Modus",
             "🛠️ Das Hauptfenster würde jetzt geöffnet werden.\n\n"
-            "Diese Funktion wird noch implementiert."
+            "Diese Funktion wird noch implementiert.",
         )
         # TODO: MainWindow öffnen und Wizard schließen
 
@@ -850,7 +871,7 @@ class SetupWizardV2(QWizard):
 
         # Template-Config von DestinationPage
         template_config = {}
-        if hasattr(self.destination_page, 'get_template_config'):
+        if hasattr(self.destination_page, "get_template_config"):
             template_config = self.destination_page.get_template_config()
 
         config = {
@@ -873,6 +894,7 @@ class SetupWizardV2(QWizard):
 
 if __name__ == "__main__":
     import sys
+
     from PySide6.QtWidgets import QApplication
 
     logging.basicConfig(level=logging.INFO)

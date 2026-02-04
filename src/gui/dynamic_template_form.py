@@ -43,10 +43,7 @@ class DynamicTemplateForm(QWidget):
     action_requested = Signal(str, dict)  # (action_name, current_values)
 
     def __init__(
-        self,
-        template: Template,
-        handler: Optional[Any] = None,
-        parent: Optional[QWidget] = None
+        self, template: Template, handler: Optional[Any] = None, parent: Optional[QWidget] = None
     ):
         super().__init__(parent)
 
@@ -349,13 +346,11 @@ class DynamicTemplateForm(QWidget):
                 QMessageBox.information(
                     self,
                     "Scan erfolgreich",
-                    f"Gefundene Freigaben: {len(shares)}\n\n" + "\n".join(shares)
+                    f"Gefundene Freigaben: {len(shares)}\n\n" + "\n".join(shares),
                 )
             else:
                 QMessageBox.warning(
-                    self,
-                    "Scan fehlgeschlagen",
-                    f"Fehler beim Scannen: {error or 'Unbekannt'}"
+                    self, "Scan fehlgeschlagen", f"Fehler beim Scannen: {error or 'Unbekannt'}"
                 )
 
         except Exception as e:
@@ -380,16 +375,10 @@ class DynamicTemplateForm(QWidget):
                 password = values.get("password", "")
 
                 if not all([host, share, user, password]):
-                    QMessageBox.warning(
-                        self,
-                        "Fehler",
-                        "Bitte fülle alle Felder aus"
-                    )
+                    QMessageBox.warning(self, "Fehler", "Bitte fülle alle Felder aus")
                     return
 
-                success, error = self.handler.test_connection(
-                    host, share, user, password
-                )
+                success, error = self.handler.test_connection(host, share, user, password)
 
             elif self.template.storage_type == "webdav":
                 # WebDAV: url, user, password
@@ -398,11 +387,7 @@ class DynamicTemplateForm(QWidget):
                 password = values.get("password", "")
 
                 if not all([url, user, password]):
-                    QMessageBox.warning(
-                        self,
-                        "Fehler",
-                        "Bitte fülle alle Felder aus"
-                    )
+                    QMessageBox.warning(self, "Fehler", "Bitte fülle alle Felder aus")
                     return
 
                 success, error = self.handler.test_connection(url, user, password)
@@ -414,24 +399,16 @@ class DynamicTemplateForm(QWidget):
             # Zeige Ergebnis
             if success:
                 QMessageBox.information(
-                    self,
-                    "✅ Verbindung erfolgreich",
-                    "Die Verbindung wurde erfolgreich getestet!"
+                    self, "✅ Verbindung erfolgreich", "Die Verbindung wurde erfolgreich getestet!"
                 )
             else:
                 QMessageBox.warning(
-                    self,
-                    "❌ Verbindung fehlgeschlagen",
-                    f"Fehler: {error or 'Unbekannt'}"
+                    self, "❌ Verbindung fehlgeschlagen", f"Fehler: {error or 'Unbekannt'}"
                 )
 
         except Exception as e:
             logger.error(f"Fehler beim Verbindungstest: {e}")
-            QMessageBox.critical(
-                self,
-                "Fehler",
-                f"Verbindungstest fehlgeschlagen:\n{e}"
-            )
+            QMessageBox.critical(self, "Fehler", f"Verbindungstest fehlgeschlagen:\n{e}")
 
     def _refresh_drives(self, combo: QComboBox):
         """Lädt USB-Laufwerke neu"""
@@ -480,34 +457,26 @@ class DynamicTemplateForm(QWidget):
                 self,
                 "OAuth-Anmeldung",
                 "Ein Browser-Fenster wird geöffnet.\n"
-                "Bitte melde dich an und erlaube den Zugriff."
+                "Bitte melde dich an und erlaube den Zugriff.",
             )
 
             success, error = self.handler._run_oauth_flow()
 
             if success:
                 QMessageBox.information(
-                    self,
-                    "✅ Anmeldung erfolgreich",
-                    "Du bist jetzt angemeldet!"
+                    self, "✅ Anmeldung erfolgreich", "Du bist jetzt angemeldet!"
                 )
 
                 # Update Status-Feld
                 self._update_all_status_fields()
             else:
                 QMessageBox.warning(
-                    self,
-                    "❌ Anmeldung fehlgeschlagen",
-                    f"Fehler: {error or 'Unbekannt'}"
+                    self, "❌ Anmeldung fehlgeschlagen", f"Fehler: {error or 'Unbekannt'}"
                 )
 
         except Exception as e:
             logger.error(f"Fehler beim OAuth-Login: {e}")
-            QMessageBox.critical(
-                self,
-                "Fehler",
-                f"Anmeldung fehlgeschlagen:\n{e}"
-            )
+            QMessageBox.critical(self, "Fehler", f"Anmeldung fehlgeschlagen:\n{e}")
 
     # ========================================================================
     # Status-Updates

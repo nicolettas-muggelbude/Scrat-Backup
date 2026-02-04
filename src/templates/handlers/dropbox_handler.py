@@ -28,8 +28,7 @@ class DropboxHandler(TemplateHandler):
         if not self._is_rclone_installed():
             return (
                 False,
-                "rclone ist nicht installiert. "
-                "Dropbox-Backups benötigen rclone.",
+                "rclone ist nicht installiert. " "Dropbox-Backups benötigen rclone.",
             )
 
         return (True, None)

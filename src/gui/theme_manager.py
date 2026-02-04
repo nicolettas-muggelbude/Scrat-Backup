@@ -8,7 +8,7 @@ from enum import Enum
 from typing import Optional
 
 from PySide6.QtCore import QObject, QSettings, Signal
-from PySide6.QtGui import QGuiApplication, QPalette, QColor
+from PySide6.QtGui import QColor, QGuiApplication, QPalette
 from PySide6.QtWidgets import QApplication
 
 logger = logging.getLogger(__name__)
@@ -16,9 +16,10 @@ logger = logging.getLogger(__name__)
 
 class Theme(Enum):
     """Theme-Modi"""
-    AUTO = "auto"      # Folgt System-Einstellung
-    LIGHT = "light"    # Heller Modus
-    DARK = "dark"      # Dunkler Modus
+
+    AUTO = "auto"  # Folgt System-Einstellung
+    LIGHT = "light"  # Heller Modus
+    DARK = "dark"  # Dunkler Modus
 
 
 class ThemeManager(QObject):
@@ -105,9 +106,10 @@ class ThemeManager(QObject):
         # Qt 6.5+ hat colorScheme()
         try:
             from PySide6.QtCore import Qt
+
             hints = QGuiApplication.styleHints()
 
-            if hasattr(hints, 'colorScheme'):
+            if hasattr(hints, "colorScheme"):
                 scheme = hints.colorScheme()
                 return scheme == Qt.ColorScheme.Dark
         except:
@@ -161,11 +163,19 @@ class ThemeManager(QObject):
         dark_palette.setColor(QPalette.ColorRole.HighlightedText, QColor(255, 255, 255))
 
         # Disabled-Farben
-        dark_palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, disabled_color)
+        dark_palette.setColor(
+            QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, disabled_color
+        )
         dark_palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, disabled_color)
-        dark_palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, disabled_color)
-        dark_palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Highlight, QColor(80, 80, 80))
-        dark_palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.HighlightedText, disabled_color)
+        dark_palette.setColor(
+            QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, disabled_color
+        )
+        dark_palette.setColor(
+            QPalette.ColorGroup.Disabled, QPalette.ColorRole.Highlight, QColor(80, 80, 80)
+        )
+        dark_palette.setColor(
+            QPalette.ColorGroup.Disabled, QPalette.ColorRole.HighlightedText, disabled_color
+        )
 
         self.app.setPalette(dark_palette)
 
@@ -561,6 +571,7 @@ QSpinBox:focus, QDoubleSpinBox:focus {
         # Nutze Windows 11 Theme aus theme.py
         try:
             from gui.theme import get_stylesheet
+
             stylesheet = get_stylesheet()
             self.app.setStyleSheet(stylesheet)
             logger.info("Windows 11 Light Theme angewendet")

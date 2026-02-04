@@ -8,13 +8,19 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import QTranslator, QLibraryInfo
+# Projekt-Root zum Python-Path hinzufügen (damit 'from src.…' funktioniert
+# unabhängig davon, ob das Skript direkt oder als Modul gestartet wird)
+_project_root = str(Path(__file__).resolve().parent.parent)
+if _project_root not in sys.path:
+    sys.path.insert(0, _project_root)
+
+from PySide6.QtCore import QLibraryInfo, QTranslator
 from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QApplication
 
 from src.core.config_manager import ConfigManager
 from src.gui.main_window import MainWindow
-from src.gui.theme_manager import ThemeManager, Theme
+from src.gui.theme_manager import Theme, ThemeManager
 from src.gui.wizard_v2 import SetupWizardV2
 
 # Logging konfigurieren
@@ -215,10 +221,12 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
     """
     import threading
     import time
+
     from PySide6.QtWidgets import QApplication, QMessageBox
-    from src.gui.password_dialog import get_password
-    from src.core.backup_engine import BackupEngine, BackupConfig
+
+    from src.core.backup_engine import BackupConfig, BackupEngine
     from src.core.metadata_manager import MetadataManager
+    from src.gui.password_dialog import get_password
 
     # Passwort vom User holen
     password, ok = get_password(
@@ -239,9 +247,7 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
     # Quellen aus gespeicherter Config lesen
     config_manager = ConfigManager()
     sources = [
-        Path(s["path"])
-        for s in config_manager.config.get("sources", [])
-        if s.get("enabled", True)
+        Path(s["path"]) for s in config_manager.config.get("sources", []) if s.get("enabled", True)
     ]
 
     if not sources:
@@ -282,11 +288,10 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
         compression_level=5,
     )
 
-    logger.info(
-        f"Backup starten: {len(sources)} Quellen → {dest_path} (Typ: {dest_type})"
-    )
+    logger.info(f"Backup starten: {len(sources)} Quellen → {dest_path} (Typ: {dest_type})")
 
     from PySide6.QtWidgets import QProgressDialog
+
     from src.core.backup_engine import BackupProgress
 
     # Gemeinsamer Zustand zwischen Thread und Hauptthread
@@ -315,9 +320,8 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
 
     # Fortschritts-Dialog (nicht schließbar, bleibt oben bis Backup fertig)
     from PySide6.QtCore import Qt as QtCore
-    progress_dialog = QProgressDialog(
-        "Backup wird erstellt...", None, 0, 100
-    )
+
+    progress_dialog = QProgressDialog("Backup wird erstellt...", None, 0, 100)
     progress_dialog.setWindowTitle("Scrat-Backup – Erstes Backup")
     progress_dialog.setMinimumWidth(420)
     progress_dialog.setWindowFlags(
@@ -337,9 +341,7 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
         p = shared.get("progress")
         if p:
             if p.phase == "scanning":
-                progress_dialog.setLabelText(
-                    f"Scanne Dateien...\n{p.current_file or ''}"
-                )
+                progress_dialog.setLabelText(f"Scanne Dateien...\n{p.current_file or ''}")
                 progress_dialog.setValue(5)
             elif p.phase == "compressing":
                 if p.files_total > 0:
@@ -429,7 +431,7 @@ def run_gui() -> int:
         if wizard.exec():
             # Wizard abgeschlossen
             config = wizard.get_config()
-            sources = config.get('sources', [])
+            sources = config.get("sources", [])
             logger.info(f"Setup abgeschlossen: {len(sources)} Quellen konfiguriert")
 
             # Speichere Konfiguration

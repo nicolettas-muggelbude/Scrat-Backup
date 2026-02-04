@@ -37,8 +37,7 @@ class QnapHandler(TemplateHandler):
             if not shutil.which("smbclient"):
                 return (
                     False,
-                    "smbclient ist nicht installiert. "
-                    "Installiere smbclient für SMB-Zugriff.",
+                    "smbclient ist nicht installiert. " "Installiere smbclient für SMB-Zugriff.",
                 )
             return (True, None)
 

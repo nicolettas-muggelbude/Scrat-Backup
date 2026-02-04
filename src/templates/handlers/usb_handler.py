@@ -179,12 +179,14 @@ class UsbHandler(TemplateHandler):
                 label = self._get_windows_volume_label(drive_path)
                 size = self._get_drive_size(drive_path)
 
-                drives.append({
-                    "path": drive_path,
-                    "label": label or f"Laufwerk {letter}:",
-                    "size": size,
-                    "is_usb": drive_type == 2,
-                })
+                drives.append(
+                    {
+                        "path": drive_path,
+                        "label": label or f"Laufwerk {letter}:",
+                        "size": size,
+                        "is_usb": drive_type == 2,
+                    }
+                )
 
                 logger.debug(f"Laufwerk gefunden: {letter}: Typ={drive_type} ({label})")
 
@@ -211,12 +213,14 @@ class UsbHandler(TemplateHandler):
                 for drive in media_path.iterdir():
                     if drive.is_dir() and self._is_removable_linux(drive):
                         size = self._get_drive_size(str(drive))
-                        drives.append({
-                            "path": str(drive),
-                            "label": drive.name,
-                            "size": size,
-                            "is_usb": True,
-                        })
+                        drives.append(
+                            {
+                                "path": str(drive),
+                                "label": drive.name,
+                                "size": size,
+                                "is_usb": True,
+                            }
+                        )
                         logger.debug(f"USB-Laufwerk gefunden: {drive}")
 
         except Exception as e:
@@ -233,12 +237,14 @@ class UsbHandler(TemplateHandler):
                         # Duplikat-Check
                         if not any(d["path"] == str(drive) for d in drives):
                             size = self._get_drive_size(str(drive))
-                            drives.append({
-                                "path": str(drive),
-                                "label": drive.name,
-                                "size": size,
-                                "is_usb": True,
-                            })
+                            drives.append(
+                                {
+                                    "path": str(drive),
+                                    "label": drive.name,
+                                    "size": size,
+                                    "is_usb": True,
+                                }
+                            )
                             logger.debug(f"USB-Laufwerk gefunden: {drive}")
 
         except Exception as e:
@@ -256,12 +262,14 @@ class UsbHandler(TemplateHandler):
                             # Duplikat-Check
                             if not any(d["path"] == str(drive) for d in drives):
                                 size = self._get_drive_size(str(drive))
-                                drives.append({
-                                    "path": str(drive),
-                                    "label": drive.name,
-                                    "size": size,
-                                    "is_usb": False,  # Kann nicht sicher sein
-                                })
+                                drives.append(
+                                    {
+                                        "path": str(drive),
+                                        "label": drive.name,
+                                        "size": size,
+                                        "is_usb": False,  # Kann nicht sicher sein
+                                    }
+                                )
                                 logger.debug(f"Laufwerk gefunden: {drive}")
 
         except Exception as e:
@@ -280,12 +288,14 @@ class UsbHandler(TemplateHandler):
                 for drive in volumes_path.iterdir():
                     if drive.is_dir() and drive.name != "Macintosh HD":
                         size = self._get_drive_size(str(drive))
-                        drives.append({
-                            "path": str(drive),
-                            "label": drive.name,
-                            "size": size,
-                            "is_usb": True,  # Meistens externe Laufwerke
-                        })
+                        drives.append(
+                            {
+                                "path": str(drive),
+                                "label": drive.name,
+                                "size": size,
+                                "is_usb": True,  # Meistens externe Laufwerke
+                            }
+                        )
                         logger.debug(f"Laufwerk gefunden: {drive}")
 
         except Exception as e:

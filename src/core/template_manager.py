@@ -119,9 +119,7 @@ class TemplateManager:
                 if is_available:
                     available.append(template)
                 else:
-                    logger.debug(
-                        f"Template '{template.id}' nicht verfügbar: {error}"
-                    )
+                    logger.debug(f"Template '{template.id}' nicht verfügbar: {error}")
             else:
                 # Kein Handler = Template anzeigen aber mit Warnung
                 available.append(template)
@@ -324,10 +322,7 @@ class TemplateManager:
         if not self._loaded:
             self._load_templates()
 
-        return [
-            t for t in self._templates.values()
-            if t.category.lower() == category.lower()
-        ]
+        return [t for t in self._templates.values() if t.category.lower() == category.lower()]
 
     def get_categories(self) -> List[str]:
         """

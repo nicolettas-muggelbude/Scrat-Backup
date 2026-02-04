@@ -28,8 +28,7 @@ class GoogleDriveHandler(TemplateHandler):
         if not self._is_rclone_installed():
             return (
                 False,
-                "rclone ist nicht installiert. "
-                "Google Drive-Backups benötigen rclone.",
+                "rclone ist nicht installiert. " "Google Drive-Backups benötigen rclone.",
             )
 
         return (True, None)

@@ -83,7 +83,7 @@ src/
 - [ ] Template-Manager-Tab im MainWindow
 
 ### Templates & Handler
-- [ ] Weitere Templates: iCloud, AWS S3, FTP, ownCloud, pCloud
+- [ ] Weitere Templates: iCloud, AWS S3, FTP, ownCloud, pCloud, **SFTP** (Community-Wunsch)
 - [ ] Icons für Templates (aktuell: Emojis)
 - [ ] Tests für alle Handler
 

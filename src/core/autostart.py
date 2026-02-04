@@ -253,9 +253,7 @@ X-GNOME-Autostart-enabled=true
 
     def _check_macos_autostart(self) -> bool:
         """macOS: Prüft ob LaunchAgent existiert"""
-        plist_file = (
-            Path.home() / "Library" / "LaunchAgents" / f"com.{self.app_name.lower()}.plist"
-        )
+        plist_file = Path.home() / "Library" / "LaunchAgents" / f"com.{self.app_name.lower()}.plist"
         return plist_file.exists()
 
     # ======================================================================
