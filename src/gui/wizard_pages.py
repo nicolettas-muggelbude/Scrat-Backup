@@ -696,8 +696,7 @@ class SourceSelectionPage(QWizardPage):
         # Liste der benutzerdefinierten Ordner
         self.custom_list = QListWidget()
         self.custom_list.setMaximumHeight(150)
-        self.custom_list.setStyleSheet(
-            """
+        self.custom_list.setStyleSheet("""
             QListWidget {
                 border: 1px solid #ccc;
                 border-radius: 4px;
@@ -718,8 +717,7 @@ class SourceSelectionPage(QWizardPage):
                 outline: none;
                 border: none;
             }
-        """
-        )
+        """)
         self.custom_list.itemSelectionChanged.connect(self._on_selection_changed)
         layout.addWidget(self.custom_list)
 
@@ -880,8 +878,7 @@ class SourceSelectionPage(QWizardPage):
         # Custom Widget für schöne Darstellung
         widget = ClickableFrame(self.custom_list, item)
         widget.setMinimumHeight(40)
-        widget.setStyleSheet(
-            """
+        widget.setStyleSheet("""
             QFrame {
                 background-color: transparent;
                 border-radius: 3px;
@@ -890,8 +887,7 @@ class SourceSelectionPage(QWizardPage):
             QFrame:hover {
                 background-color: #e8e8e8;
             }
-        """
-        )
+        """)
         widget_layout = QHBoxLayout(widget)
         widget_layout.setContentsMargins(10, 8, 10, 8)
 
@@ -943,8 +939,7 @@ class SourceSelectionPage(QWizardPage):
         """Wird aufgerufen wenn Selection sich ändert"""
         # Setze alle Widgets auf normalen Hintergrund
         for item, widget in self.custom_widgets.values():
-            widget.setStyleSheet(
-                """
+            widget.setStyleSheet("""
                 QFrame {
                     background-color: transparent;
                     border-radius: 3px;
@@ -953,8 +948,7 @@ class SourceSelectionPage(QWizardPage):
                 QFrame:hover {
                     background-color: #e8e8e8;
                 }
-            """
-            )
+            """)
 
         # Setze selected Widget auf grauen Hintergrund
         selected_items = self.custom_list.selectedItems()
@@ -963,8 +957,7 @@ class SourceSelectionPage(QWizardPage):
             folder_path = selected_item.data(Qt.ItemDataRole.UserRole)
             if folder_path in self.custom_widgets:
                 item, widget = self.custom_widgets[folder_path]
-                widget.setStyleSheet(
-                    """
+                widget.setStyleSheet("""
                     QFrame {
                         background-color: #d0d0d0;
                         border-radius: 3px;
@@ -973,8 +966,7 @@ class SourceSelectionPage(QWizardPage):
                     QFrame:hover {
                         background-color: #c0c0c0;
                     }
-                """
-                )
+                """)
 
     def _on_library_changed(self):
         """Wird aufgerufen wenn Bibliotheken-Auswahl sich ändert"""

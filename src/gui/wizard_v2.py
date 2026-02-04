@@ -154,8 +154,7 @@ class ModePage(QWizardPage):
         """Erstellt Modus-Karte"""
         card = QFrame()
         card.setFrameShape(QFrame.Shape.StyledPanel)
-        card.setStyleSheet(
-            f"""
+        card.setStyleSheet(f"""
             QFrame {{
                 background-color: white;
                 border: 2px solid #cccccc;
@@ -166,8 +165,7 @@ class ModePage(QWizardPage):
                 border-color: {ACCENT_COLOR};
                 background-color: #f5f5f5;
             }}
-        """
-        )
+        """)
         card.setMinimumSize(280, 260)
         card.setMaximumSize(350, 300)
 

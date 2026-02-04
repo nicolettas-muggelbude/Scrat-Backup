@@ -37,13 +37,11 @@ class TestMetadataManager:
         cursor = manager.connection.cursor()
 
         # Prüfe ob alle Tabellen existieren
-        cursor.execute(
-            """
+        cursor.execute("""
             SELECT name FROM sqlite_master
             WHERE type='table'
             ORDER BY name
-        """
-        )
+        """)
 
         tables = [row[0] for row in cursor.fetchall()]
 

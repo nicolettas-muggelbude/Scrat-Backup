@@ -68,7 +68,7 @@ setup(
     install_requires=requirements,
     extras_require={
         "dev": [
-            "black>=23.12.0",
+            "black==26.1.0",
             "flake8>=7.0.0",
             "mypy>=1.8.0",
             "isort>=5.13.0",

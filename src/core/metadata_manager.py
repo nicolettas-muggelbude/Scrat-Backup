@@ -68,8 +68,7 @@ class MetadataManager:
         cursor = self.connection.cursor()
 
         # Backups-Tabelle
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS backups (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp DATETIME NOT NULL,
@@ -88,12 +87,10 @@ class MetadataManager:
                 error_message TEXT,
                 FOREIGN KEY (base_backup_id) REFERENCES backups(id) ON DELETE SET NULL
             )
-        """
-        )
+        """)
 
         # Backup-Dateien-Tabelle
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS backup_files (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 backup_id INTEGER NOT NULL,
@@ -107,12 +104,10 @@ class MetadataManager:
                 checksum TEXT,
                 FOREIGN KEY (backup_id) REFERENCES backups(id) ON DELETE CASCADE
             )
-        """
-        )
+        """)
 
         # Quellen-Tabelle
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS sources (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
@@ -121,12 +116,10 @@ class MetadataManager:
                 exclude_patterns TEXT,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
-        """
-        )
+        """)
 
         # Ziele-Tabelle
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS destinations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
@@ -136,12 +129,10 @@ class MetadataManager:
                 last_connected DATETIME,
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
-        """
-        )
+        """)
 
         # Zeitpläne-Tabelle
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS schedules (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
@@ -157,12 +148,10 @@ class MetadataManager:
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (destination_id) REFERENCES destinations(id) ON DELETE CASCADE
             )
-        """
-        )
+        """)
 
         # Logs-Tabelle
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -173,54 +162,41 @@ class MetadataManager:
                 details TEXT,
                 FOREIGN KEY (backup_id) REFERENCES backups(id) ON DELETE SET NULL
             )
-        """
-        )
+        """)
 
         # Indizes für Performance
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_backup_files_backup_id
             ON backup_files(backup_id)
-        """
-        )
+        """)
 
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_backup_files_source_path
             ON backup_files(source_path)
-        """
-        )
+        """)
 
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_backups_timestamp
             ON backups(timestamp DESC)
-        """
-        )
+        """)
 
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_backups_status
             ON backups(status)
-        """
-        )
+        """)
 
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_logs_timestamp
             ON logs(timestamp DESC)
-        """
-        )
+        """)
 
         # Schema-Version speichern
-        cursor.execute(
-            """
+        cursor.execute("""
             CREATE TABLE IF NOT EXISTS schema_info (
                 version INTEGER PRIMARY KEY,
                 applied_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
-        """
-        )
+        """)
 
         # Füge nur Basis-Version ein falls neu (Migrations-Logik updated später)
         cursor.execute("INSERT OR IGNORE INTO schema_info (version) VALUES (?)", (1,))
