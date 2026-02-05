@@ -321,10 +321,13 @@ class StartPage(QWizardPage):
             # TODO: Eigener Restore-Flow
             return PAGE_FINISH
 
-        elif self.selected_action in ["edit", "add_destination"]:
-            # TODO: "edit" sollte auch PAGE_SOURCE durchlaufen, damit Quellen
-            # geändert werden können. Aktuell wird nur das Ziel angezeigt.
-            # Direkt zu Destination
+        elif self.selected_action == "edit":
+            # Bei "edit": Quellen anzeigen (vorbefüllt aus Config)
+            PAGE_SOURCE = 1
+            return PAGE_SOURCE
+
+        elif self.selected_action == "add_destination":
+            # Nur neues Ziel hinzufügen – Quellen überspringen
             return PAGE_DESTINATION
 
         elif self.selected_action == "expert":
@@ -371,6 +374,9 @@ class SourceSelectionPage(QWizardPage):
         # UI erstellen
         self._init_ui()
 
+        # Flag: vorhandene Quellen nur beim ersten Aufruf laden
+        self._prefilled = False
+
         # Versteckte QLineEdits als Feld-Träger
         # (PySide6 kann @property nicht über Qt-Property lesen)
         self._sources_edit = QLineEdit(self)
@@ -382,6 +388,68 @@ class SourceSelectionPage(QWizardPage):
         # Registriere Felder auf den versteckten QLineEdits
         self.registerField("sources*", self._sources_edit)
         self.registerField("excludes", self._excludes_edit)
+
+    def initializePage(self):
+        """Wird aufgerufen wenn Seite angezeigt wird – bei "edit" aus Config vorbefüllen"""
+        if self._prefilled:
+            return
+
+        wizard = self.wizard()
+        if not wizard:
+            return
+
+        action = wizard.field("start_action")
+        if action != "edit":
+            return
+
+        self._prefilled = True
+
+        # Vorhandene Quellen aus gespeicherter Config laden
+        try:
+            config_file = Path.home() / ".scrat-backup" / "config.json"
+            if not config_file.exists():
+                return
+
+            config_manager = ConfigManager(config_file)
+            existing_sources = [
+                s["path"]
+                for s in config_manager.config.get("sources", [])
+                if s.get("enabled", True)
+            ]
+
+            if not existing_sources:
+                return
+
+            # Zuordnung: Pfad → Bibliothek-Name (für Checkbox-Matching)
+            std_lib_paths = {str(path): name for name, path in self.standard_libraries.items()}
+
+            # Alle Checkboxen erst zurücksetzen
+            for cb in self.library_checkboxes.values():
+                cb.setChecked(False)
+
+            # Eigene Ordner-Liste leeren
+            self.custom_sources.clear()
+            self.custom_list.clear()
+            self.custom_widgets.clear()
+
+            # Quellen zuordnen: Standard-Bibliothek → Checkbox, sonst → Eigene Ordner
+            for source in existing_sources:
+                if source in std_lib_paths:
+                    name = std_lib_paths[source]
+                    if name in self.library_checkboxes:
+                        self.library_checkboxes[name].setChecked(True)
+                else:
+                    path = Path(source)
+                    if path.exists():
+                        self._add_folder_to_list(path)
+
+            self._on_sources_changed()
+            logger.info(
+                f"SourceSelectionPage vorbefüllt: {len(existing_sources)} Quellen aus Config"
+            )
+
+        except Exception as e:
+            logger.warning(f"Fehler beim Laden vorhandener Quellen: {e}")
 
     def _init_ui(self):
         """Initialisiert UI"""

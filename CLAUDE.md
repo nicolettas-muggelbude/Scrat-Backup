@@ -76,7 +76,7 @@ src/
 ## Offene TODOs
 
 ### Wizard / GUI
-- [ ] **"Backup ändern" überspringt SourceSelectionPage** – aktuell nur Ziel änderbar, Quellen werden übersprungen (TODO in `wizard_pages.py`, StartPage `nextId()`)
+- [x] **"Backup ändern" überspringt SourceSelectionPage** ✅ – "edit" routet jetzt über PAGE_SOURCE; SourceSelectionPage.initializePage() vorbefüllt aus Config
 - [ ] Tray-Icon mit Theme-Toggle
 - [ ] Restore-Flow (eigener Wizard)
 - [x] Schedule-Page (Zeitplan im Wizard) ✅
