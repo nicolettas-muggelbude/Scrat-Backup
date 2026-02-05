@@ -67,9 +67,36 @@ src/
 - **Lokalisierung:** QTranslator für deutsche Qt-Dialoge
 - **USB-Template:** vollständig funktionsfähig inkl. drive_selector + Refresh
 - **SchedulePage:** Zeitplan-Seite im Wizard – Auto-Checkbox, Frequenz (täglich/wöchentlich/monatlich/beim Start), Uhrzeit, Wochentage, Tag des Monats; dynamische Gruppen-Sichtbarkeit; gibt `schedule`-Config aus
-- **Backup nach Wizard:** `start_backup_after_wizard()` in `main.py` – Fortschrittsanzeige (QProgressDialog, nicht schließbar bis fertig), Thread-sichere Fortschritts-Updates
+- **Backup nach Wizard:** `start_backup_after_wizard()` in `main.py` – Fortschrittsanzeige (QProgressDialog ohne Abbrechen-Button), Thread-sichere Fortschritts-Updates, Multi-Threading aktiviert
 - **App-Logo:** Eichel-Icon auf allen Fenstern (QApplication-Level `setWindowIcon` in `main.py` + `run_wizard.py`)
 - **TemplateCard-Kacheln:** QFrame-basierte Kacheln mit 24px-Icons, Hover/Check-Styles, rahmenlos (ersetzt QPushButton)
+- **USB-Erkennung Linux:** Robuste Username-Ermittlung (Fallbacks: $USER, getpass, pwd), `/media/USER/` ohne strenge removable-Prüfung (erkennt externe Festplatten)
+- **MainWindow closeEvent:** Beendet Programm korrekt wenn kein Tray läuft, minimiert zu Tray nur wenn Tray sichtbar
+- **SourceSelectionPage Edit-Modus:** Bei "Einstellungen ändern" werden vorhandene Quellen aus Config vorbefüllt (Standard-Bibliotheken + eigene Ordner)
+
+---
+
+## Aktuelle Fixes (2026-02-05/06)
+
+### Windows
+- ✅ **SchedulePage auf Windows sichtbar:** `nextId()` explizit gesetzt, `setFinalPage(True)` auf FinishPage
+- ✅ **Nach Wizard kein MainWindow mehr:** Prüft jetzt `start_tray` Config – nur Tray oder MainWindow, nicht beides
+
+### Linux/Ubuntu
+- ✅ **Qt6 XCB-Dependencies:** libxcb-cursor0 + weitere XCB-Pakete in Docs (README.md, CLAUDE.md)
+- ✅ **USB-Erkennung funktioniert:**
+  - Username-Ermittlung mit Fallbacks (os.getlogin → $USER → getpass → pwd)
+  - `/media/USER/*` ohne strenge removable-Prüfung (externe Festplatten haben removable=0)
+  - Debug-Skript: `debug_usb.sh`
+- ✅ **Wizard-Routing "edit":** Zeigt jetzt SourceSelectionPage mit vorbefüllten Quellen
+
+### Performance
+- ✅ **Multi-Threading Komprimierung:** py7zr nutzt jetzt `multithread=True` → alle CPU-Cores
+
+### Bugfixes
+- ✅ **MainWindow closeEvent:** Beendet sich korrekt ohne Tray (prüft `system_tray.is_visible()`)
+- ✅ **QProgressDialog leerer Button:** `cancelButtonText=None` + `setCancelButton(None)`
+- ✅ **isort & flake8 sauber:** Imports alphabetisch (Qt, QTime, Signal)
 
 ---
 
