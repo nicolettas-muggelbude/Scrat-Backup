@@ -1011,14 +1011,16 @@ class SetupWizardV2(QWizard):
 
     def _open_expert_mode(self):
         """Öffnet MainWindow für Power-User"""
-        logger.info("Power-User-Modus gewählt")
-        QMessageBox.information(
-            self,
-            "Experten-Modus",
-            "🛠️ Das Hauptfenster würde jetzt geöffnet werden.\n\n"
-            "Diese Funktion wird noch implementiert.",
-        )
-        # TODO: MainWindow öffnen und Wizard schließen
+        logger.info("Experten-Modus gewählt - öffne MainWindow")
+
+        # MainWindow importieren und öffnen
+        from gui.main_window import MainWindow
+
+        self.main_window = MainWindow()
+        self.main_window.show()
+
+        # Wizard schließen (mit Rejected, damit main.py nicht Config speichert)
+        self.reject()
 
     def get_config(self) -> dict:
         """Gibt Wizard-Config zurück"""

@@ -384,12 +384,12 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
         )
 
 
-def run_gui(force_wizard: bool = False) -> int:
+def run_gui() -> int:
     """
     Startet GUI-Anwendung
 
-    Args:
-        force_wizard: Erzwingt Wizard-Start (ignoriert bestehende Config)
+    Der Wizard ist IMMER der Einstiegspunkt.
+    Im Wizard kann dann zwischen Normal-Modus und Experten-Modus gewählt werden.
 
     Returns:
         int: Exit-Code (0 = Erfolg)
@@ -423,65 +423,55 @@ def run_gui(force_wizard: bool = False) -> int:
     theme_manager = ThemeManager(app)
     logger.info(f"Theme Manager initialisiert: {theme_manager.get_theme_display_name()}")
 
-    # Prüfe ob erster Start (oder Wizard erzwungen)
-    logger.info("Prüfe ob erster Start...")
-    is_first_run = check_first_run()
-    logger.info(f"check_first_run() = {is_first_run}, force_wizard = {force_wizard}")
+    # WIZARD IST IMMER DER EINSTIEGSPUNKT
+    # (Im Wizard wird dann zwischen Normal-Modus und Experten-Modus gewählt)
+    logger.info(">>> WIZARD V2 WIRD GESTARTET <<<")
 
-    if is_first_run or force_wizard:
-        logger.info(">>> WIZARD V2 WIRD GESTARTET <<<")
+    # Setup-Wizard V2 anzeigen (mit neuen Pages)
+    wizard = SetupWizardV2()
+    if wizard.exec():
+        # Wizard abgeschlossen
+        config = wizard.get_config()
+        sources = config.get("sources", [])
+        logger.info(f"Setup abgeschlossen: {len(sources)} Quellen konfiguriert")
 
-        # Setup-Wizard V2 anzeigen (mit neuen Pages)
-        wizard = SetupWizardV2()
-        if wizard.exec():
-            # Wizard abgeschlossen
-            config = wizard.get_config()
-            sources = config.get("sources", [])
-            logger.info(f"Setup abgeschlossen: {len(sources)} Quellen konfiguriert")
+        # Speichere Konfiguration
+        try:
+            save_wizard_config(config)
+            logger.info("Konfiguration erfolgreich gespeichert")
+        except Exception as e:
+            logger.error(f"Fehler beim Speichern der Konfiguration: {e}", exc_info=True)
+            from PySide6.QtWidgets import QMessageBox
 
-            # Speichere Konfiguration
-            try:
-                save_wizard_config(config)
-                logger.info("Konfiguration erfolgreich gespeichert")
-            except Exception as e:
-                logger.error(f"Fehler beim Speichern der Konfiguration: {e}", exc_info=True)
-                from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(
+                None,
+                "Warnung",
+                f"Die Konfiguration konnte nicht vollständig gespeichert werden:\n{e}\n\n"
+                f"Das Hauptfenster wird trotzdem geöffnet.",
+            )
 
-                QMessageBox.warning(
-                    None,
-                    "Warnung",
-                    f"Die Konfiguration konnte nicht vollständig gespeichert werden:\n{e}\n\n"
-                    f"Das Hauptfenster wird trotzdem geöffnet.",
-                )
+        # Backup starten wenn gewünscht
+        if config.get("start_backup_now"):
+            logger.info("Backup wird nach Wizard gestartet...")
+            start_backup_after_wizard(config)
 
-            # Backup starten wenn gewünscht
-            if config.get("start_backup_now"):
-                logger.info("Backup wird nach Wizard gestartet...")
-                start_backup_after_wizard(config)
-
-            # Tray oder MainWindow starten (abhängig von Wizard-Config)
-            if config.get("start_tray", True):
-                logger.info("Starte Tray im Hintergrund...")
-                # TODO: Tray-Start implementieren
-                # from gui.system_tray import SystemTray
-                # tray = SystemTray()
-                # tray.show()
-                logger.warning("Tray-Start noch nicht implementiert - beende")
-                return 0
-            else:
-                logger.info("Öffne Hauptfenster (kein Tray gewünscht)...")
-                window = MainWindow()
-                window.show()
+        # Tray oder MainWindow starten (abhängig von Wizard-Config)
+        if config.get("start_tray", True):
+            logger.info("Starte Tray im Hintergrund...")
+            # TODO: Tray-Start implementieren
+            # from gui.system_tray import SystemTray
+            # tray = SystemTray()
+            # tray.show()
+            logger.warning("Tray-Start noch nicht implementiert - beende")
+            return 0
         else:
-            # Wizard abgebrochen
-            logger.info("Setup abgebrochen")
-            return 1
+            logger.info("Öffne Hauptfenster (kein Tray gewünscht)...")
+            window = MainWindow()
+            window.show()
     else:
-        logger.info(">>> KEIN WIZARD - Hauptfenster direkt starten <<<")
-        # Hauptfenster erstellen und anzeigen
-        logger.info("Erstelle Hauptfenster...")
-        window = MainWindow()
-        window.show()
+        # Wizard abgebrochen
+        logger.info("Setup abgebrochen")
+        return 1
 
     logger.info("GUI gestartet - Event-Loop läuft")
 
@@ -496,23 +486,13 @@ def main() -> int:
     Returns:
         int: Exit-Code (0 = Erfolg)
     """
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Scrat-Backup - Persönliches Backup-Tool")
-    parser.add_argument(
-        "--wizard",
-        action="store_true",
-        help="Startet den Setup-Wizard (auch wenn bereits konfiguriert)",
-    )
-    args = parser.parse_args()
-
     logger.info("=" * 60)
     logger.info("Scrat-Backup v0.2.0 - Windows Backup-Tool")
     logger.info("=" * 60)
 
-    # GUI starten
+    # GUI starten (Wizard ist IMMER der Einstiegspunkt)
     try:
-        return run_gui(force_wizard=args.wizard)
+        return run_gui()
     except Exception as e:
         logger.error(f"Kritischer Fehler: {e}", exc_info=True)
         return 1

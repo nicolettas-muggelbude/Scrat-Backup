@@ -199,15 +199,6 @@ class StartPage(QWizardPage):
         )
         layout.addWidget(restore_frame)
 
-        # Spacing (wie ModePage)
-        layout.addSpacing(15)
-
-        # Option 4: Experten-Modus
-        expert_frame = self._create_option_radio(
-            "expert", "🔧 Experten-Modus", "Vollständige Kontrolle über alle Einstellungen"
-        )
-        layout.addWidget(expert_frame)
-
         # Standard-Auswahl (über gespeicherten Radio-Button)
         if "edit" in self.radio_buttons:
             self.radio_buttons["edit"].setChecked(True)
@@ -292,12 +283,6 @@ class StartPage(QWizardPage):
         if not self.selected_action:
             return False
 
-        # Bei Experten-Modus: MainWindow öffnen
-        if self.selected_action == "expert":
-            logger.info("Experten-Modus gewählt - MainWindow wird geöffnet")
-            # TODO: MainWindow öffnen
-            return False  # Wizard nicht weitergehen
-
         return True
 
     def nextId(self) -> int:
@@ -329,10 +314,6 @@ class StartPage(QWizardPage):
         elif self.selected_action == "add_destination":
             # Nur neues Ziel hinzufügen – Quellen überspringen
             return PAGE_DESTINATION
-
-        elif self.selected_action == "expert":
-            # Experten-Modus → Wizard beendet sich in validatePage()
-            return -1
 
         # Fallback
         return super().nextId()
