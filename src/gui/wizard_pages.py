@@ -5,6 +5,7 @@ Barrierefreundlich mit Radio-Buttons
 
 import logging
 import platform
+import subprocess
 from pathlib import Path
 from typing import List
 
@@ -439,15 +440,32 @@ class SourceSelectionPage(QWizardPage):
         elif system == "Linux":
             user_home = Path.home()
 
-            # XDG User Directories
-            potential_libs = {
-                "Dokumente": user_home / "Documents",
-                "Bilder": user_home / "Pictures",
-                "Videos": user_home / "Videos",
-                "Musik": user_home / "Music",
-                "Desktop": user_home / "Desktop",
-                "Downloads": user_home / "Downloads",
+            # XDG User Directories via xdg-user-dir (respektiert Locale)
+            # Fallback auf englische Pfade wenn xdg-user-dir nicht verfügbar
+            xdg_map = {
+                "Dokumente": ("DOCUMENTS", "Documents"),
+                "Bilder": ("PICTURES", "Pictures"),
+                "Videos": ("VIDEOS", "Videos"),
+                "Musik": ("MUSIC", "Music"),
+                "Desktop": ("DESKTOP", "Desktop"),
+                "Downloads": ("DOWNLOAD", "Downloads"),
             }
+
+            potential_libs = {}
+            for name, (xdg_key, fallback) in xdg_map.items():
+                try:
+                    result = subprocess.run(
+                        ["xdg-user-dir", xdg_key],
+                        capture_output=True,
+                        text=True,
+                        timeout=2,
+                    )
+                    if result.returncode == 0 and result.stdout.strip():
+                        potential_libs[name] = Path(result.stdout.strip())
+                    else:
+                        potential_libs[name] = user_home / fallback
+                except (subprocess.SubprocessError, FileNotFoundError):
+                    potential_libs[name] = user_home / fallback
 
         elif system == "Darwin":  # macOS
             user_home = Path.home()
@@ -598,12 +616,12 @@ class SourceSelectionPage(QWizardPage):
         quick_label.setStyleSheet("color: #666; font-size: 11px; font-weight: normal;")
         quick_layout.addWidget(quick_label)
 
-        # Buttons für häufige Ordner
-        quick_folders = {
-            "🏠 Home": str(Path.home()),
-            "🖥️ Desktop": str(Path.home() / "Desktop"),
-            "📄 Dokumente": str(Path.home() / "Documents"),
-        }
+        # Buttons für häufige Ordner (Pfade aus bereits erkannten Bibliotheken)
+        quick_folders = {"🏠 Home": str(Path.home())}
+        if "Desktop" in self.standard_libraries:
+            quick_folders["🖥️ Desktop"] = str(self.standard_libraries["Desktop"])
+        if "Dokumente" in self.standard_libraries:
+            quick_folders["📄 Dokumente"] = str(self.standard_libraries["Dokumente"])
 
         self.quick_buttons = {}  # Speichere Buttons für später
         for label, path in quick_folders.items():
