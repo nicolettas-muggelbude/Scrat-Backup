@@ -203,9 +203,12 @@ class UsbHandler(TemplateHandler):
         """
         drives = []
 
+        # Username ermitteln (mehrere Fallbacks)
+        username = self._get_username()
+        logger.info(f"USB-Erkennung Linux: Username = '{username}'")
+
         # 1. /media/USER/* (Ubuntu, Debian)
         try:
-            username = os.getlogin()
             media_path = Path("/media") / username
 
             if media_path.exists():
@@ -227,7 +230,6 @@ class UsbHandler(TemplateHandler):
 
         # 2. /run/media/USER/* (Fedora, RHEL)
         try:
-            username = os.getlogin()
             run_media = Path("/run/media") / username
 
             if run_media.exists():
@@ -305,6 +307,42 @@ class UsbHandler(TemplateHandler):
     # ========================================================================
     # Hilfsfunktionen
     # ========================================================================
+
+    def _get_username(self) -> str:
+        """
+        Ermittelt den aktuellen Benutzernamen mit mehreren Fallbacks
+
+        Returns:
+            Username als String
+        """
+        # Methode 1: os.getlogin() (funktioniert nicht immer)
+        try:
+            return os.getlogin()
+        except OSError:
+            pass
+
+        # Methode 2: Umgebungsvariablen
+        username = os.environ.get('USER') or os.environ.get('LOGNAME')
+        if username:
+            return username
+
+        # Methode 3: getpass
+        try:
+            import getpass
+            return getpass.getuser()
+        except Exception:
+            pass
+
+        # Methode 4: pwd (Unix-only)
+        try:
+            import pwd
+            return pwd.getpwuid(os.getuid()).pw_name
+        except Exception:
+            pass
+
+        # Fallback: "user"
+        logger.warning("Konnte Benutzernamen nicht ermitteln, verwende 'user'")
+        return "user"
 
     def _is_removable_linux(self, path: Path) -> bool:
         """
