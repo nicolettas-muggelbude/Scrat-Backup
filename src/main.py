@@ -454,19 +454,32 @@ def run_gui() -> int:
             if config.get("start_backup_now"):
                 logger.info("Backup wird nach Wizard gestartet...")
                 start_backup_after_wizard(config)
+
+            # Tray oder MainWindow starten (abhängig von Wizard-Config)
+            if config.get("start_tray", True):
+                logger.info("Starte Tray im Hintergrund...")
+                # TODO: Tray-Start implementieren
+                # from gui.system_tray import SystemTray
+                # tray = SystemTray()
+                # tray.show()
+                logger.warning("Tray-Start noch nicht implementiert - beende")
+                return 0
+            else:
+                logger.info("Öffne Hauptfenster (kein Tray gewünscht)...")
+                window = MainWindow()
+                window.show()
         else:
             # Wizard abgebrochen
             logger.info("Setup abgebrochen")
             return 1
     else:
         logger.info(">>> KEIN WIZARD - Hauptfenster direkt starten <<<")
+        # Hauptfenster erstellen und anzeigen
+        logger.info("Erstelle Hauptfenster...")
+        window = MainWindow()
+        window.show()
 
-    # Hauptfenster erstellen und anzeigen
-    logger.info("Erstelle Hauptfenster...")
-    window = MainWindow()
-    window.show()
-
-    logger.info("Hauptfenster angezeigt - GUI gestartet")
+    logger.info("GUI gestartet - Event-Loop läuft")
 
     # Event-Loop starten
     return app.exec()
