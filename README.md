@@ -168,10 +168,17 @@
 #### Linux (alle Distributionen)
 
 ```bash
-# Python 3.12+ und pip installieren (falls nicht vorhanden)
-sudo apt install python3.12 python3-pip  # Debian/Ubuntu
-sudo dnf install python3.12 python3-pip  # Fedora
-sudo pacman -S python python-pip         # Arch
+# System-Dependencies installieren
+# Debian/Ubuntu:
+sudo apt install python3.12 python3-pip python3-keyring libsecret-1-0 smbclient cron \
+                 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+                 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0
+
+# Fedora:
+sudo dnf install python3.12 python3-pip python3-keyring libsecret samba-client cronie
+
+# Arch:
+sudo pacman -S python python-pip python-keyring libsecret smbclient cronie
 
 # Scrat-Backup klonen und installieren
 git clone https://github.com/nicolettas-muggelbude/Scrat-Backup.git

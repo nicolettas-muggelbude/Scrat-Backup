@@ -143,6 +143,11 @@ src/
 
 ```bash
 # Ubuntu/Debian
+# Qt6 XCB-Abhängigkeiten (für GUI)
+sudo apt install libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+                 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0
+
+# Scrat-spezifische System-Pakete
 sudo apt install python3-keyring libsecret-1-0 smbclient cron
 
 # Python (Linux-spezifisch)
