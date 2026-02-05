@@ -750,8 +750,8 @@ class MainWindow(QMainWindow):
                 self.scheduler_worker.stop()
 
             event.accept()
-        else:
-            # Minimiere zu Tray
+        elif hasattr(self, "system_tray") and self.system_tray.isVisible():
+            # Minimiere zu Tray (nur wenn Tray läuft)
             logger.debug("Hauptfenster minimiert zu Tray")
             self.hide()
             event.ignore()
@@ -764,3 +764,13 @@ class MainWindow(QMainWindow):
                     "Doppelklick auf das Tray-Icon zum Öffnen.",
                 )
                 self.tray_notification_shown = True
+        else:
+            # Kein Tray läuft → normal beenden
+            logger.info("Hauptfenster geschlossen, kein Tray → Anwendung beendet")
+
+            # Stoppe Scheduler-Worker
+            if hasattr(self, "scheduler_worker"):
+                logger.info("Stoppe Scheduler-Worker...")
+                self.scheduler_worker.stop()
+
+            event.accept()
