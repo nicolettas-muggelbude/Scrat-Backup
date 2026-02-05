@@ -384,9 +384,12 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
         )
 
 
-def run_gui() -> int:
+def run_gui(force_wizard: bool = False) -> int:
     """
     Startet GUI-Anwendung
+
+    Args:
+        force_wizard: Erzwingt Wizard-Start (ignoriert bestehende Config)
 
     Returns:
         int: Exit-Code (0 = Erfolg)
@@ -420,12 +423,12 @@ def run_gui() -> int:
     theme_manager = ThemeManager(app)
     logger.info(f"Theme Manager initialisiert: {theme_manager.get_theme_display_name()}")
 
-    # Prüfe ob erster Start
+    # Prüfe ob erster Start (oder Wizard erzwungen)
     logger.info("Prüfe ob erster Start...")
     is_first_run = check_first_run()
-    logger.info(f"check_first_run() = {is_first_run}")
+    logger.info(f"check_first_run() = {is_first_run}, force_wizard = {force_wizard}")
 
-    if is_first_run:
+    if is_first_run or force_wizard:
         logger.info(">>> WIZARD V2 WIRD GESTARTET <<<")
 
         # Setup-Wizard V2 anzeigen (mit neuen Pages)
@@ -493,13 +496,23 @@ def main() -> int:
     Returns:
         int: Exit-Code (0 = Erfolg)
     """
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Scrat-Backup - Persönliches Backup-Tool")
+    parser.add_argument(
+        "--wizard",
+        action="store_true",
+        help="Startet den Setup-Wizard (auch wenn bereits konfiguriert)",
+    )
+    args = parser.parse_args()
+
     logger.info("=" * 60)
     logger.info("Scrat-Backup v0.2.0 - Windows Backup-Tool")
     logger.info("=" * 60)
 
     # GUI starten
     try:
-        return run_gui()
+        return run_gui(force_wizard=args.wizard)
     except Exception as e:
         logger.error(f"Kritischer Fehler: {e}", exc_info=True)
         return 1
