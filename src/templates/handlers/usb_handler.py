@@ -208,12 +208,14 @@ class UsbHandler(TemplateHandler):
         logger.info(f"USB-Erkennung Linux: Username = '{username}'")
 
         # 1. /media/USER/* (Ubuntu, Debian)
+        # Hier werden externe Laufwerke automatisch gemountet → annehmen dass USB
         try:
             media_path = Path("/media") / username
 
             if media_path.exists():
                 for drive in media_path.iterdir():
-                    if drive.is_dir() and self._is_removable_linux(drive):
+                    if drive.is_dir():
+                        # /media/USER/* ist fast immer extern → keine strenge removable-Prüfung
                         size = self._get_drive_size(str(drive))
                         drives.append(
                             {
@@ -229,12 +231,13 @@ class UsbHandler(TemplateHandler):
             logger.debug(f"Konnte /media nicht scannen: {e}")
 
         # 2. /run/media/USER/* (Fedora, RHEL)
+        # Auch hier: automatisch gemountete externe Laufwerke
         try:
             run_media = Path("/run/media") / username
 
             if run_media.exists():
                 for drive in run_media.iterdir():
-                    if drive.is_dir() and self._is_removable_linux(drive):
+                    if drive.is_dir():
                         # Duplikat-Check
                         if not any(d["path"] == str(drive) for d in drives):
                             size = self._get_drive_size(str(drive))
