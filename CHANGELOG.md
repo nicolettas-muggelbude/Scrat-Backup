@@ -7,12 +7,28 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Added
+- **SchedulePage im Wizard:** Zeitplan-Konfiguration (täglich/wöchentlich/monatlich/beim Start)
+- **Edit-Modus vorbefüllt:** SourceSelectionPage lädt vorhandene Quellen aus Config
+- **Debug-Tool:** `debug_usb.sh` für USB-Laufwerks-Diagnose unter Linux
+
+### Fixed
+- **Windows:** SchedulePage wird jetzt korrekt angezeigt (nextId + setFinalPage Fix)
+- **Windows:** Nach Wizard-Abschluss öffnet sich nicht mehr automatisch das MainWindow
+- **Linux:** USB-Laufwerks-Erkennung mit robusten Username-Fallbacks ($USER, getpass, pwd)
+- **Linux:** Externe USB-Festplatten in /media werden jetzt erkannt (removable=0 akzeptiert)
+- **Linux:** Qt6 XCB-Dependencies in Dokumentation (libxcb-cursor0, etc.)
+- **MainWindow:** closeEvent beendet Programm korrekt wenn kein Tray läuft
+- **QProgressDialog:** Leerer Abbrechen-Button entfernt
+- **SystemTray:** is_visible() statt isVisible() (AttributeError behoben)
+
+### Performance
+- **Multi-Threading:** py7zr Komprimierung nutzt jetzt alle CPU-Cores (`multithread=True`)
+
 ### Geplant
 - Hilfefunktion / Guided Tour
 - Internationalisierung (Englisch, weitere Sprachen)
-- Dark Mode
 - Update-Funktion
-- Barrierefreiheit (A11y)
 
 ## [0.2.0-beta] - 2025-12-15
 
