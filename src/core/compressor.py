@@ -119,9 +119,12 @@ class Compressor:
         # Stelle sicher, dass Output-Verzeichnis existiert
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Erstelle 7z-Archiv
+        # Erstelle 7z-Archiv (mit Multi-Threading)
         with py7zr.SevenZipFile(
-            output_path, "w", filters=[{"id": py7zr.FILTER_LZMA2, "preset": self.compression_level}]
+            output_path,
+            "w",
+            filters=[{"id": py7zr.FILTER_LZMA2, "preset": self.compression_level}],
+            multithread=True,
         ) as archive:
 
             for idx, file_path in enumerate(files):
