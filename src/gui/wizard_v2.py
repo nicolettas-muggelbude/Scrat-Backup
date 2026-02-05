@@ -588,6 +588,9 @@ class TemplateDestinationPage(QWizardPage):
         self.template_config = values
         logger.debug(f"Template-Config geändert: {values}")
 
+    def nextId(self) -> int:
+        return PAGE_SCHEDULE
+
     def validatePage(self) -> bool:
         """Validiert Formular vor Weiter"""
         if not self.selected_template:
@@ -766,6 +769,7 @@ class NewFinishPage(QWizardPage):
 
     def __init__(self):
         super().__init__()
+        self.setFinalPage(True)
         self.setTitle("Einrichtung abgeschlossen! 🎉")
         self.setSubTitle("Scrat-Backup ist jetzt konfiguriert und bereit.")
 
