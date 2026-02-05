@@ -10,18 +10,23 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QTime, Qt, Signal
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
+    QComboBox,
+    QFormLayout,
     QFrame,
     QGridLayout,
     QGroupBox,
+    QHBoxLayout,
     QLabel,
     QLineEdit,
     QMessageBox,
     QRadioButton,
     QScrollArea,
+    QSpinBox,
+    QTimeEdit,
     QVBoxLayout,
     QWidget,
     QWizard,
@@ -617,6 +622,141 @@ class TemplateDestinationPage(QWizardPage):
 
 
 # ============================================================================
+# SCHEDULE PAGE – Zeitplan / Automatisierung
+# ============================================================================
+
+
+class SchedulePage(QWizardPage):
+    """Zeitplan-Einrichtung: wann läuft das Backup automatisch?"""
+
+    def __init__(self):
+        super().__init__()
+        self.setTitle("Automatisierung")
+        self.setSubTitle("Wann soll das Backup automatisch laufen?")
+
+        layout = QVBoxLayout()
+
+        # ── Automatisches Backup aktivieren ────────────────────────────────
+        self.auto_checkbox = QCheckBox("Automatisches Backup aktivieren")
+        self.auto_checkbox.setChecked(True)
+        self.auto_checkbox.setStyleSheet("font-size: 14px; font-weight: bold;")
+        self.auto_checkbox.toggled.connect(self._on_auto_toggled)
+        layout.addWidget(self.auto_checkbox)
+
+        layout.addSpacing(8)
+
+        # ── Zeitplan-Gruppe ────────────────────────────────────────────────
+        self.schedule_group = QGroupBox("⏰ Zeitplan-Optionen")
+        sched_layout = QVBoxLayout()
+
+        # Frequenz
+        freq_form = QFormLayout()
+        self.frequency_combo = QComboBox()
+        self.frequency_combo.addItem("📅 Täglich", "daily")
+        self.frequency_combo.addItem("📆 Wöchentlich", "weekly")
+        self.frequency_combo.addItem("🗓️  Monatlich", "monthly")
+        self.frequency_combo.addItem("🚀 Bei System-Start", "startup")
+        self.frequency_combo.currentIndexChanged.connect(self._on_frequency_changed)
+        freq_form.addRow("Häufigkeit:", self.frequency_combo)
+        sched_layout.addLayout(freq_form)
+
+        # Uhrzeit (Täglich / Wöchentlich / Monatlich)
+        self.time_group = QGroupBox("🕐 Uhrzeit")
+        time_form = QFormLayout()
+        self.time_edit = QTimeEdit()
+        self.time_edit.setDisplayFormat("HH:mm")
+        self.time_edit.setTime(QTime(10, 0))
+        time_form.addRow("Zeit:", self.time_edit)
+        self.time_group.setLayout(time_form)
+        sched_layout.addWidget(self.time_group)
+
+        # Wochentage (nur bei Wöchentlich)
+        self.weekdays_group = QGroupBox("📆 Wochentage")
+        weekdays_layout = QHBoxLayout()
+        self.weekday_checkboxes: dict[int, QCheckBox] = {}
+        for day_num, label in [
+            (1, "Mo"),
+            (2, "Di"),
+            (3, "Mi"),
+            (4, "Do"),
+            (5, "Fr"),
+            (6, "Sa"),
+            (7, "So"),
+        ]:
+            cb = QCheckBox(label)
+            cb.setChecked(day_num <= 5)  # Mo–Fr default
+            self.weekday_checkboxes[day_num] = cb
+            weekdays_layout.addWidget(cb)
+        self.weekdays_group.setLayout(weekdays_layout)
+        sched_layout.addWidget(self.weekdays_group)
+
+        # Tag im Monat (nur bei Monatlich)
+        self.monthly_group = QGroupBox("🗓️  Tag im Monat")
+        monthly_form = QFormLayout()
+        self.day_spin = QSpinBox()
+        self.day_spin.setRange(1, 28)
+        self.day_spin.setValue(1)
+        self.day_spin.setSuffix(". Tag")
+        monthly_form.addRow("Tag:", self.day_spin)
+        self.monthly_group.setLayout(monthly_form)
+        sched_layout.addWidget(self.monthly_group)
+
+        self.schedule_group.setLayout(sched_layout)
+        layout.addWidget(self.schedule_group)
+
+        # ── Hinweis ────────────────────────────────────────────────────────
+        hint = QLabel("💡 Der Zeitplan kann später in den Einstellungen beliebig geändert werden.")
+        hint.setWordWrap(True)
+        hint.setStyleSheet("color: #666; font-size: 11px; margin-top: 8px;")
+        layout.addWidget(hint)
+
+        self.setLayout(layout)
+
+        # Anfangs nur Uhrzeit sichtbar (daily)
+        self._on_frequency_changed(0)
+
+    # ── Signalhandler ──────────────────────────────────────────────────────
+    def _on_auto_toggled(self, checked: bool):
+        self.schedule_group.setVisible(checked)
+        self.schedule_group.setEnabled(checked)
+
+    def _on_frequency_changed(self, _index: int):
+        freq = self.frequency_combo.currentData()
+        self.time_group.setVisible(freq in ("daily", "weekly", "monthly"))
+        self.weekdays_group.setVisible(freq == "weekly")
+        self.monthly_group.setVisible(freq == "monthly")
+
+    # ── Navigation ─────────────────────────────────────────────────────────
+    def nextId(self) -> int:
+        return PAGE_FINISH
+
+    # ── Konfiguration ──────────────────────────────────────────────────────
+    def get_schedule_config(self) -> Optional[Dict[str, Any]]:
+        """Gibt Zeitplan-Config zurück, oder None wenn deaktiviert."""
+        if not self.auto_checkbox.isChecked():
+            return None
+
+        freq = self.frequency_combo.currentData()
+        config: Dict[str, Any] = {
+            "enabled": True,
+            "frequency": freq,
+        }
+
+        if freq in ("daily", "weekly", "monthly"):
+            config["time"] = self.time_edit.time().toString("HH:mm")
+
+        if freq == "weekly":
+            config["weekdays"] = [
+                day for day, cb in self.weekday_checkboxes.items() if cb.isChecked()
+            ]
+
+        if freq == "monthly":
+            config["day_of_month"] = self.day_spin.value()
+
+        return config
+
+
+# ============================================================================
 # FINISH PAGE (wie im Prototyp)
 # ============================================================================
 
@@ -843,8 +983,8 @@ class SetupWizardV2(QWizard):
         self.setPage(PAGE_DESTINATION, self.destination_page)
 
         # Page 4: Schedule - Wann? (TODO)
-        # self.schedule_page = SchedulePage()
-        # self.setPage(PAGE_SCHEDULE, self.schedule_page)
+        self.schedule_page = SchedulePage()
+        self.setPage(PAGE_SCHEDULE, self.schedule_page)
 
         # Page 5: Finish
         self.finish_page = NewFinishPage()
@@ -889,12 +1029,18 @@ class SetupWizardV2(QWizard):
         if hasattr(self.destination_page, "get_template_config"):
             template_config = self.destination_page.get_template_config()
 
+        # Zeitplan von SchedulePage
+        schedule_config = None
+        if hasattr(self, "schedule_page"):
+            schedule_config = self.schedule_page.get_schedule_config()
+
         config = {
             "action": action,
             "sources": sources.split(",") if sources else [],
             "excludes": excludes.split(",") if excludes else [],
             "template_id": template_id,
             "template_config": template_config,
+            "schedule": schedule_config,
             "start_backup_now": self.field("start_backup_now") or False,
             "start_tray": self.field("start_tray") or True,
         }
