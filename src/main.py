@@ -322,9 +322,10 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
     # Fortschritts-Dialog (nicht schließbar, bleibt oben bis Backup fertig)
     from PySide6.QtCore import Qt as QtCore
 
-    progress_dialog = QProgressDialog("Backup wird erstellt...", "", 0, 100)
+    progress_dialog = QProgressDialog("Backup wird erstellt...", None, 0, 100)
     progress_dialog.setWindowTitle("Scrat-Backup – Erstes Backup")
     progress_dialog.setMinimumWidth(420)
+    progress_dialog.setCancelButton(None)  # Kein Abbrechen-Button
     progress_dialog.setWindowFlags(
         QtCore.WindowType.Dialog
         | QtCore.WindowType.WindowStaysOnTopHint
