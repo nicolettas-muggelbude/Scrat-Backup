@@ -750,7 +750,7 @@ class MainWindow(QMainWindow):
                 self.scheduler_worker.stop()
 
             event.accept()
-        elif hasattr(self, "system_tray") and self.system_tray.isVisible():
+        elif hasattr(self, "system_tray") and self.system_tray.is_visible():
             # Minimiere zu Tray (nur wenn Tray läuft)
             logger.debug("Hauptfenster minimiert zu Tray")
             self.hide()
