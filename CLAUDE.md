@@ -12,7 +12,7 @@ Verschlüsseltes, komprimiertes Backup-Tool mit Wizard-zentrierter Architektur u
 Desktop-Starter (scrat-backup --wizard | --tray)
         ↓
 SetupWizardV2  (src/gui/wizard_v2.py)
-  StartPage → SourceSelectionPage → TemplateDestinationPage → FinishPage
+  StartPage → SourceSelectionPage → TemplateDestinationPage → SchedulePage → FinishPage
         ↓
 System Tray  (Wizard öffnen | Backup starten | Hauptfenster)
 ```
@@ -66,6 +66,7 @@ src/
 - **Barrierefreiheit:** Radio-Buttons, Tastatur-Navigation, Textfeld für Pfad-Eingabe, Schnellauswahl-Buttons
 - **Lokalisierung:** QTranslator für deutsche Qt-Dialoge
 - **USB-Template:** vollständig funktionsfähig inkl. drive_selector + Refresh
+- **SchedulePage:** Zeitplan-Seite im Wizard – Auto-Checkbox, Frequenz (täglich/wöchentlich/monatlich/beim Start), Uhrzeit, Wochentage, Tag des Monats; dynamische Gruppen-Sichtbarkeit; gibt `schedule`-Config aus
 - **Backup nach Wizard:** `start_backup_after_wizard()` in `main.py` – Fortschrittsanzeige (QProgressDialog, nicht schließbar bis fertig), Thread-sichere Fortschritts-Updates
 - **App-Logo:** Eichel-Icon auf allen Fenstern (QApplication-Level `setWindowIcon` in `main.py` + `run_wizard.py`)
 - **TemplateCard-Kacheln:** QFrame-basierte Kacheln mit 24px-Icons, Hover/Check-Styles, rahmenlos (ersetzt QPushButton)
@@ -78,7 +79,7 @@ src/
 - [ ] **"Backup ändern" überspringt SourceSelectionPage** – aktuell nur Ziel änderbar, Quellen werden übersprungen (TODO in `wizard_pages.py`, StartPage `nextId()`)
 - [ ] Tray-Icon mit Theme-Toggle
 - [ ] Restore-Flow (eigener Wizard)
-- [ ] Schedule-Page (Zeitplan im Wizard)
+- [x] Schedule-Page (Zeitplan im Wizard) ✅
 - [ ] Encryption-Page (Verschlüsselung im Wizard)
 - [ ] Template-Manager-Tab im MainWindow
 
@@ -120,8 +121,9 @@ src/
 | Fortschritts-Dialog | QProgressDialog ohne Schließ-Button (`CustomizeWindowHint \| WindowTitleHint`), Fortschritt via shared dict zwischen Backup-Thread und Qt-Event-Loop |
 
 ### Wizard-Seitenfolge & Routing
-- Page-IDs: `PAGE_START`, `PAGE_SOURCE`, `PAGE_DESTINATION`, `PAGE_FINISH`
+- Page-IDs: `PAGE_START=0`, `PAGE_SOURCE=1`, `PAGE_MODE=2`, `PAGE_DESTINATION=3`, `PAGE_SCHEDULE=4`, `PAGE_FINISH=5`
 - `nextId()` routet dynamisch basierend auf StartPage-Auswahl
+- SchedulePage gibt `None` zurück wenn Auto-Zeitplan deaktiviert; sonst `{"enabled": True, "frequency", "time", "weekdays", "day_of_month"}`
 - `sourcesChanged` Signal auf SourceSelectionPage aktiviert den Weiter-Button
 
 ### DynamicTemplateForm
