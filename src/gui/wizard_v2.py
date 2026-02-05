@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from PySide6.QtCore import QTime, Qt, Signal
+from PySide6.QtCore import Qt, QTime, Signal
 from PySide6.QtGui import QIcon, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
