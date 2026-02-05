@@ -25,7 +25,7 @@ class Compressor:
 
     # Konstanten
     DEFAULT_COMPRESSION_LEVEL = 5  # Balance zwischen Speed und Compression
-    DEFAULT_SPLIT_SIZE = 500 * 1024 * 1024  # 500 MB
+    DEFAULT_SPLIT_SIZE = 128 * 1024 * 1024  # 128 MB (reduziert für RAM-Effizienz)
 
     def __init__(
         self,
