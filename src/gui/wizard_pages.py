@@ -408,7 +408,10 @@ class SourceSelectionPage(QWizardPage):
             ]
 
             if not existing_sources:
+                logger.info("Keine Quellen in Config gefunden")
                 return
+
+            logger.info(f"Gefunden: {len(existing_sources)} Quelle(n) in Config")
 
             # Zuordnung: Pfad → Bibliothek-Name (für Checkbox-Matching)
             # WICHTIG: Normalisiere Pfade für korrekten Vergleich
@@ -416,35 +419,39 @@ class SourceSelectionPage(QWizardPage):
                 str(Path(path).resolve()): name for name, path in self.standard_libraries.items()
             }
 
-            logger.debug(f"Standard-Bibliotheken-Pfade: {list(std_lib_paths.keys())}")
-            logger.debug(f"Config-Quellen: {existing_sources}")
+            logger.info(f"Standard-Bibliotheken-Pfade ({len(std_lib_paths)}):")
+            for path, name in std_lib_paths.items():
+                logger.info(f"  - {name}: {path}")
 
-            # Alle Checkboxen erst zurücksetzen
-            for cb in self.library_checkboxes.values():
-                cb.setChecked(False)
+            logger.info(f"Config-Quellen:")
+            for src in existing_sources:
+                logger.info(f"  - {src}")
 
-            # Eigene Ordner-Liste leeren
-            self.custom_sources.clear()
-            self.custom_list.clear()
-            self.custom_widgets.clear()
+            # Checkboxen wurden bereits am Anfang zurückgesetzt
+            # Eigene Ordner-Liste wurde bereits geleert
 
             # Quellen zuordnen: Standard-Bibliothek → Checkbox, sonst → Eigene Ordner
             for source in existing_sources:
                 # Normalisiere auch Config-Pfad für Vergleich
                 normalized_source = str(Path(source).resolve())
+                logger.info(f"Verarbeite Quelle: {source} → normalisiert: {normalized_source}")
 
                 if normalized_source in std_lib_paths:
                     name = std_lib_paths[normalized_source]
+                    logger.info(f"  → Gefunden als Standard-Bibliothek: '{name}'")
                     if name in self.library_checkboxes:
                         self.library_checkboxes[name].setChecked(True)
-                        logger.debug(f"Checkbox '{name}' aktiviert für {source}")
+                        logger.info(f"  → Checkbox '{name}' AKTIVIERT")
+                    else:
+                        logger.warning(f"  → Checkbox '{name}' NICHT GEFUNDEN in library_checkboxes!")
                 else:
+                    logger.info(f"  → Keine Standard-Bibliothek, füge als eigenen Ordner hinzu")
                     path = Path(source)
                     if path.exists():
                         self._add_folder_to_list(path)
-                        logger.debug(f"Eigener Ordner hinzugefügt: {source}")
+                        logger.info(f"  → Eigener Ordner hinzugefügt")
                     else:
-                        logger.warning(f"Quelle existiert nicht: {source}")
+                        logger.warning(f"  → Quelle existiert nicht: {source}")
 
             self._on_sources_changed()
             logger.info(
