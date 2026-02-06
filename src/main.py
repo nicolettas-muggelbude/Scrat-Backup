@@ -510,7 +510,7 @@ def _upload_to_remote(backup_result, dest_type: str, dest_config: dict, local_de
                 remote_path = f"{backup_result.backup_id}/{rel_path}"
 
                 logger.info(f"Uploade: {file_path.name} → {remote_path}")
-                if storage.upload_file(str(file_path), remote_path):
+                if storage.upload_file(file_path, remote_path):
                     uploaded_files += 1
                 else:
                     logger.error(f"Upload fehlgeschlagen: {file_path.name}")
