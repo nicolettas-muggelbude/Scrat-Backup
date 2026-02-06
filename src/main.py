@@ -404,7 +404,10 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
             else:
                 remote_display = dest_config.get("path", "Remote-Server")
 
-            upload_success = _upload_to_remote(result, dest_type, dest_config)
+            # Backup-Pfad konstruieren (BackupResult hat kein backup_path Attribut)
+            local_backup_path = dest_path / result.backup_id if result else None
+
+            upload_success = _upload_to_remote(result, dest_type, dest_config, dest_path)
 
             if upload_success:
                 QMessageBox.information(
@@ -421,7 +424,7 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
                     "Backup lokal, Upload fehlgeschlagen",
                     f"Das Backup wurde lokal erstellt, aber der Upload zu {dest_type.upper()} ist fehlgeschlagen.\n\n"
                     f"Remote-Ziel: {remote_display}\n"
-                    f"Lokaler Pfad: {result.backup_path if result else 'Unbekannt'}\n"
+                    f"Lokaler Pfad: {local_backup_path}\n"
                     f"Bitte Upload manuell durchführen oder Einstellungen prüfen.",
                 )
         else:
@@ -434,24 +437,26 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
             )
 
 
-def _upload_to_remote(backup_result, dest_type: str, dest_config: dict) -> bool:
+def _upload_to_remote(backup_result, dest_type: str, dest_config: dict, local_dest_path: Path) -> bool:
     """
     Lädt Backup-Dateien zu Remote-Ziel hoch (WebDAV, SFTP, etc.)
 
     Args:
-        backup_result: BackupResult mit backup_path
+        backup_result: BackupResult mit backup_id
         dest_type: Typ des Ziels (webdav, sftp, etc.)
         dest_config: Destination-Config mit URL, Credentials, etc.
+        local_dest_path: Lokaler Pfad wo Backup liegt (z.B. ~/scrat-backup/Backup)
 
     Returns:
         True bei Erfolg, False bei Fehler
     """
     try:
-        if not backup_result or not hasattr(backup_result, "backup_path"):
-            logger.error("Kein BackupResult oder backup_path verfügbar")
+        if not backup_result or not hasattr(backup_result, "backup_id"):
+            logger.error("Kein BackupResult oder backup_id verfügbar")
             return False
 
-        local_backup_dir = Path(backup_result.backup_path)
+        # Backup-Pfad konstruieren: dest_path / backup_id
+        local_backup_dir = local_dest_path / backup_result.backup_id
         if not local_backup_dir.exists():
             logger.error(f"Lokales Backup-Verzeichnis nicht gefunden: {local_backup_dir}")
             return False
