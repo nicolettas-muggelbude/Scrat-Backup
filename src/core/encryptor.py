@@ -167,22 +167,40 @@ class Encryptor:
         file_size = input_path.stat().st_size
         logger.info(f"Verschlüssle Datei: {input_path.name} ({file_size:,} Bytes)")
 
-        # Verschlüsseln
+        # Verschlüsseln in Chunks (64MB) um RAM zu schonen
+        CHUNK_SIZE = 64 * 1024 * 1024  # 64 MB pro Chunk
+
         with open(input_path, "rb") as f_in, open(output_path, "wb") as f_out:
-            # Für Streaming müssen wir die gesamte Datei auf einmal verschlüsseln
-            # (GCM-Mode funktioniert nicht gut mit Chunking wegen Authentication Tag)
-            plaintext = f_in.read()
-            ciphertext, used_nonce = self.encrypt_bytes(plaintext, nonce=nonce)
+            # Schreibe Magic-Header für Chunked-Format
+            f_out.write(b"SCRAT001")  # Version Marker
+            f_out.write(CHUNK_SIZE.to_bytes(4, "big"))  # Chunk-Größe
 
-            # Schreibe Nonce am Anfang der Datei (Standard-Praxis für AES-GCM)
-            f_out.write(used_nonce)
-            f_out.write(ciphertext)
+            chunk_count = 0
+            while True:
+                plaintext = f_in.read(CHUNK_SIZE)
+                if not plaintext:
+                    break
 
+                # Verschlüssele Chunk mit eigenem Nonce
+                ciphertext, used_nonce = self.encrypt_bytes(plaintext, nonce=None)
+
+                # Schreibe: [Chunk-Länge: 4 bytes][Nonce: 12 bytes][Ciphertext]
+                f_out.write(len(ciphertext).to_bytes(4, "big"))
+                f_out.write(used_nonce)
+                f_out.write(ciphertext)
+
+                chunk_count += 1
+                logger.debug(f"Chunk {chunk_count} verschlüsselt ({len(plaintext):,} Bytes)")
+
+            # Ende-Marker
+            f_out.write(b"\x00\x00\x00\x00")
+
+        output_size = output_path.stat().st_size
         logger.info(
             f"Datei verschlüsselt: {output_path.name} "
-            f"({len(used_nonce) + len(ciphertext):,} Bytes, inkl. {len(used_nonce)} Byte Nonce)"
+            f"({output_size:,} Bytes, {chunk_count} Chunks)"
         )
-        return used_nonce
+        return nonce  # Gib ersten Nonce zurück (für Kompatibilität)
 
     def decrypt_file(self, input_path: Path, output_path: Path) -> None:
         """
@@ -214,22 +232,61 @@ class Encryptor:
                 f"erwartet mindestens {min_size} Bytes)"
             )
 
-        # Entschlüsseln
+        # Entschlüsseln (unterstützt beide Formate: Legacy und Chunked)
         with open(input_path, "rb") as f_in, open(output_path, "wb") as f_out:
-            # Lese Nonce vom Anfang der Datei (Standard-Praxis für AES-GCM)
-            nonce = f_in.read(self.NONCE_SIZE)
-            if len(nonce) != self.NONCE_SIZE:
-                raise ValueError(
-                    f"Konnte Nonce nicht lesen (erwartet {self.NONCE_SIZE} Bytes, "
-                    f"bekommen {len(nonce)} Bytes)"
-                )
+            # Prüfe Format-Header
+            header = f_in.read(8)
 
-            # Lese Rest als Ciphertext
-            ciphertext = f_in.read()
-            plaintext = self.decrypt_bytes(ciphertext, nonce)
-            f_out.write(plaintext)
+            if header == b"SCRAT001":
+                # Neues Chunked-Format
+                chunk_size_bytes = f_in.read(4)
+                chunk_size = int.from_bytes(chunk_size_bytes, "big")
+                logger.debug(f"Chunked-Format erkannt (Chunk-Größe: {chunk_size:,} Bytes)")
 
-        logger.info(f"Datei entschlüsselt: {output_path.name} ({len(plaintext):,} Bytes)")
+                chunk_count = 0
+                while True:
+                    # Lese Chunk-Länge
+                    length_bytes = f_in.read(4)
+                    if length_bytes == b"\x00\x00\x00\x00":
+                        # Ende-Marker
+                        break
+
+                    chunk_length = int.from_bytes(length_bytes, "big")
+
+                    # Lese Nonce für diesen Chunk
+                    nonce = f_in.read(self.NONCE_SIZE)
+
+                    # Lese Ciphertext
+                    ciphertext = f_in.read(chunk_length)
+
+                    # Entschlüssele Chunk
+                    plaintext = self.decrypt_bytes(ciphertext, nonce)
+                    f_out.write(plaintext)
+
+                    chunk_count += 1
+                    logger.debug(f"Chunk {chunk_count} entschlüsselt ({len(plaintext):,} Bytes)")
+
+                logger.info(f"{chunk_count} Chunks entschlüsselt")
+
+            else:
+                # Legacy-Format: Header sind die ersten Nonce-Bytes
+                f_in.seek(0)
+                nonce = f_in.read(self.NONCE_SIZE)
+                if len(nonce) != self.NONCE_SIZE:
+                    raise ValueError(
+                        f"Konnte Nonce nicht lesen (erwartet {self.NONCE_SIZE} Bytes, "
+                        f"bekommen {len(nonce)} Bytes)"
+                    )
+
+                # Lese Rest als Ciphertext
+                ciphertext = f_in.read()
+                plaintext = self.decrypt_bytes(ciphertext, nonce)
+                f_out.write(plaintext)
+                logger.info(f"Datei entschlüsselt (Legacy-Format): {output_path.name} ({len(plaintext):,} Bytes)")
+
+        # Finale Log-Zeile für beide Formate
+        output_size = output_path.stat().st_size
+        logger.info(f"Entschlüsselung abgeschlossen: {output_path.name} ({output_size:,} Bytes)")
 
     def encrypt_stream(
         self, input_stream: BinaryIO, output_stream: BinaryIO, nonce: Optional[bytes] = None
