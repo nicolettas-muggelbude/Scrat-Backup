@@ -262,3 +262,47 @@ pip install secretstorage python-notify2 pyxdg
 - [ ] Tray-Start implementieren (aktuell TODO)
 - [ ] Restore-Flow (eigener Wizard)
 
+
+---
+
+## Repository-Pfade
+
+### Linux (Test-System):
+```bash
+/home/pcw-support/scrat
+```
+
+### Linux (Entwicklung):
+```bash
+/home/nicole/projekte/scrat-backup
+```
+
+### Windows:
+```powershell
+C:\Users\Nicole\projekte\scrat
+```
+
+**Synchronisation:** Via rsync über WSL `/mnt/c/`
+
+## Updates zwischen Linux und Windows
+
+**Von Linux → Windows kopieren:**
+```bash
+rsync -av --exclude 'venv/' --exclude '__pycache__/' --exclude '*.pyc' \
+  /home/nicole/projekte/scrat-backup/ /mnt/c/Users/Nicole/projekte/scrat/
+```
+
+**Git Pull auf Windows:**
+```powershell
+cd C:\Users\Nicole\projekte\scrat
+git pull
+```
+
+**Windows Virtual Environment neu erstellen:**
+```powershell
+cd C:\Users\Nicole\projekte\scrat
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install -e .
+```
+
