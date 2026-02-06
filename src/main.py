@@ -271,14 +271,27 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
     dest_config = destination.get("config", {})
     dest_type = destination.get("type", "local")
 
-    # Zielpfad zusammenbauen
-    # USB-Templates speichern "drive" (Laufwerk) + "path" (Unterordner) separat
-    drive = dest_config.get("drive", "")
-    if drive:
-        sub_path = dest_config.get("path", "")
-        dest_path = Path(drive) / sub_path if sub_path else Path(drive)
+    # Zielpfad zusammenbauen (unterschiedlich für local/remote)
+    if dest_type in ("local", "usb"):
+        # Lokale Backups: Dateisystem-Pfad
+        drive = dest_config.get("drive", "")
+        if drive:
+            sub_path = dest_config.get("path", "")
+            dest_path = Path(drive) / sub_path if sub_path else Path(drive)
+        else:
+            dest_path = Path(dest_config.get("path", str(Path.home() / "scrat-backups")))
+    elif dest_type == "webdav":
+        # WebDAV (Nextcloud): URL + Pfad (wird von WebDAV Storage Backend verwendet)
+        # Workaround: Speichere URL als String, BackupEngine interpretiert es richtig
+        base_url = dest_config.get("url", "")
+        sub_path = dest_config.get("path", "Backups")
+        # Kombiniere nicht zu lokalem Pfad, sondern als String für WebDAV
+        dest_path = f"{base_url}/{sub_path}" if base_url else str(Path.home() / "scrat-backups")
+        logger.info(f"WebDAV Ziel: {dest_path}")
     else:
-        dest_path = Path(dest_config.get("path", str(Path.home() / "scrat-backups")))
+        # Andere Remote-Typen (SFTP, Rclone, SMB): Nutzen eigene Konfiguration
+        dest_path = dest_config.get("path", str(Path.home() / "scrat-backups"))
+        logger.warning(f"Unbekannter Destination-Typ '{dest_type}', verwende Pfad: {dest_path}")
 
     # Ausschluss-Muster
     excludes = set(wizard_config.get("excludes", []))
@@ -373,7 +386,7 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
 
     progress_dialog.close()
 
-    # Ergebnis anzeigen
+    # Ergebnis anzeigen & Remote-Upload bei Bedarf
     if shared.get("error"):
         QMessageBox.critical(
             None,
@@ -381,13 +394,119 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
             f"Das Backup konnte nicht erstellt werden:\n\n{shared['error']}",
         )
     else:
-        QMessageBox.information(
-            None,
-            "Backup abgeschlossen",
-            f"Das erste Backup wurde erfolgreich erstellt!\n\n"
-            f"Quellen: {len(sources)}\n"
-            f"Ziel: {dest_path}",
-        )
+        result = shared.get("result")
+
+        # Bei Remote-Backups (WebDAV, SFTP, etc.): Upload durchführen
+        if dest_type not in ("local", "usb"):
+            logger.info(f"Remote-Backup ({dest_type}): Starte Upload...")
+            upload_success = _upload_to_remote(result, dest_type, dest_config, dest_path)
+
+            if upload_success:
+                QMessageBox.information(
+                    None,
+                    "Backup abgeschlossen",
+                    f"Das Backup wurde erfolgreich erstellt und hochgeladen!\n\n"
+                    f"Quellen: {len(sources)}\n"
+                    f"Ziel: {dest_type.upper()} - {dest_path}",
+                )
+            else:
+                QMessageBox.warning(
+                    None,
+                    "Backup lokal, Upload fehlgeschlagen",
+                    f"Das Backup wurde lokal erstellt, aber der Upload zu {dest_type.upper()} ist fehlgeschlagen.\n\n"
+                    f"Lokaler Pfad: {result.backup_path if result else 'Unbekannt'}\n"
+                    f"Bitte Upload manuell durchführen oder Einstellungen prüfen.",
+                )
+        else:
+            QMessageBox.information(
+                None,
+                "Backup abgeschlossen",
+                f"Das erste Backup wurde erfolgreich erstellt!\n\n"
+                f"Quellen: {len(sources)}\n"
+                f"Ziel: {dest_path}",
+            )
+
+
+def _upload_to_remote(backup_result, dest_type: str, dest_config: dict, dest_path: str) -> bool:
+    """
+    Lädt Backup-Dateien zu Remote-Ziel hoch (WebDAV, SFTP, etc.)
+
+    Args:
+        backup_result: BackupResult mit backup_path
+        dest_type: Typ des Ziels (webdav, sftp, etc.)
+        dest_config: Destination-Config mit URL, Credentials, etc.
+        dest_path: Ziel-Pfad/URL
+
+    Returns:
+        True bei Erfolg, False bei Fehler
+    """
+    try:
+        if not backup_result or not hasattr(backup_result, "backup_path"):
+            logger.error("Kein BackupResult oder backup_path verfügbar")
+            return False
+
+        local_backup_dir = Path(backup_result.backup_path)
+        if not local_backup_dir.exists():
+            logger.error(f"Lokales Backup-Verzeichnis nicht gefunden: {local_backup_dir}")
+            return False
+
+        logger.info(f"Starte Upload von {local_backup_dir} nach {dest_type}://{dest_path}")
+
+        # Storage Backend initialisieren basierend auf Typ
+        if dest_type == "webdav":
+            from storage.webdav_storage import WebDAVStorage
+
+            storage = WebDAVStorage(
+                url=dest_config.get("url", ""),
+                username=dest_config.get("user", ""),
+                password=dest_config.get("password", ""),
+                base_path=dest_config.get("path", "Backups"),
+            )
+        elif dest_type == "sftp":
+            from storage.sftp_storage import SFTPStorage
+
+            storage = SFTPStorage(
+                host=dest_config.get("host", ""),
+                port=dest_config.get("port", 22),
+                username=dest_config.get("user", ""),
+                password=dest_config.get("password", ""),
+                base_path=dest_config.get("path", ""),
+            )
+        else:
+            logger.warning(f"Upload für Typ '{dest_type}' noch nicht implementiert")
+            return False
+
+        # Verbindung testen
+        if not storage.connect():
+            logger.error(f"Verbindung zu {dest_type} fehlgeschlagen")
+            return False
+
+        # Alle Dateien im Backup-Verzeichnis hochladen
+        uploaded_files = 0
+        for file_path in local_backup_dir.rglob("*"):
+            if file_path.is_file():
+                # Relativer Pfad im Backup-Verzeichnis
+                rel_path = file_path.relative_to(local_backup_dir)
+                remote_path = f"{backup_result.backup_id}/{rel_path}"
+
+                logger.info(f"Uploade: {file_path.name} → {remote_path}")
+                if storage.upload_file(str(file_path), remote_path):
+                    uploaded_files += 1
+                else:
+                    logger.error(f"Upload fehlgeschlagen: {file_path.name}")
+
+        storage.disconnect()
+
+        if uploaded_files > 0:
+            logger.info(f"Upload abgeschlossen: {uploaded_files} Datei(en)")
+            return True
+        else:
+            logger.error("Keine Dateien hochgeladen")
+            return False
+
+    except Exception as e:
+        logger.error(f"Fehler beim Remote-Upload: {e}", exc_info=True)
+        return False
 
 
 def run_gui() -> int:
