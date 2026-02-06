@@ -374,8 +374,15 @@ class SourceSelectionPage(QWizardPage):
             logger.warning("initializePage: Kein Wizard-Objekt")
             return
 
-        action = wizard.field("start_action")
-        logger.info(f"initializePage aufgerufen: action='{action}'")
+        # Hole Aktion DIREKT von StartPage statt über wizard.field()
+        # (wizard.field() gibt manchmal 'None' als String zurück)
+        action = None
+        if hasattr(wizard, 'start_page'):
+            action = wizard.start_page.selected_action
+            logger.info(f"initializePage: Aktion direkt von StartPage: '{action}'")
+        else:
+            action = wizard.field("start_action")
+            logger.info(f"initializePage: Aktion über field(): '{action}'")
 
         # IMMER zurücksetzen (auch bei backup)
         logger.debug("Setze alle Checkboxen zurück")
