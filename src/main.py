@@ -97,17 +97,23 @@ def save_wizard_config(wizard_config: dict) -> None:
     try:
         action = wizard_config.get("action", "backup")
 
-        # Bei Ersteinrichtung oder Änderung: vorherige Quellen/Ziele ersetzen
+        # Bei Ersteinrichtung oder Änderung: vorherige Quellen/Ziele VOLLSTÄNDIG LÖSCHEN
         # Bei "add_destination": nur neue Destination hinzufügen
         if action in ("backup", "edit"):
+            logger.info(f"Aktion '{action}': Lösche alte Quellen und Ziele")
             config_manager.config["sources"] = []
             config_manager.config["destinations"] = []
+
+            # WICHTIG: Explizit speichern damit es persistent ist
+            config_manager.save()
+            logger.info("Alte Einträge gelöscht und gespeichert")
 
         # 1. Quellen in Config speichern
         sources = wizard_config.get("sources", [])
         excludes = wizard_config.get("excludes", [])
 
-        if not config_manager.config.get("sources"):
+        # Stelle sicher dass sources-Array existiert
+        if "sources" not in config_manager.config:
             config_manager.config["sources"] = []
 
         # Erstelle Source-Einträge
