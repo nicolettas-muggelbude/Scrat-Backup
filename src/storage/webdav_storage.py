@@ -427,15 +427,24 @@ class WebDAVStorage(StorageBackend):
         if self.client.check(path):
             return
 
-        # Erstelle Parent-Verzeichnis zuerst (rekursiv)
-        parent = str(Path(path).parent)
-        if parent != "/" and parent != path:
-            self._ensure_directory_exists(parent)
+        # Erstelle alle Parent-Verzeichnisse von oben nach unten
+        # Beispiel: /Backups/20260206/full → ["/Backups", "/Backups/20260206", "/Backups/20260206/full"]
+        parts = [p for p in path.split("/") if p]
+        current_path = ""
 
-        # Erstelle Verzeichnis
-        try:
-            self.client.mkdir(path)
-        except Exception as e:
-            # Möglicherweise race condition, prüfe nochmal
-            if not self.client.check(path):
-                raise
+        for part in parts:
+            current_path += "/" + part
+
+            # Überspringe wenn schon existiert
+            if self.client.check(current_path):
+                continue
+
+            # Erstelle Verzeichnis
+            try:
+                logger.debug(f"Erstelle WebDAV-Verzeichnis: {current_path}")
+                self.client.mkdir(current_path)
+            except Exception as e:
+                # Wenn Fehler, prüfe ob es inzwischen existiert (race condition)
+                if not self.client.check(current_path):
+                    logger.error(f"Fehler beim Erstellen von {current_path}: {e}")
+                    raise
