@@ -402,7 +402,13 @@ class SourceSelectionPage(QWizardPage):
                 return
 
             # Zuordnung: Pfad → Bibliothek-Name (für Checkbox-Matching)
-            std_lib_paths = {str(path): name for name, path in self.standard_libraries.items()}
+            # WICHTIG: Normalisiere Pfade für korrekten Vergleich
+            std_lib_paths = {
+                str(Path(path).resolve()): name for name, path in self.standard_libraries.items()
+            }
+
+            logger.debug(f"Standard-Bibliotheken-Pfade: {list(std_lib_paths.keys())}")
+            logger.debug(f"Config-Quellen: {existing_sources}")
 
             # Alle Checkboxen erst zurücksetzen
             for cb in self.library_checkboxes.values():
@@ -415,14 +421,21 @@ class SourceSelectionPage(QWizardPage):
 
             # Quellen zuordnen: Standard-Bibliothek → Checkbox, sonst → Eigene Ordner
             for source in existing_sources:
-                if source in std_lib_paths:
-                    name = std_lib_paths[source]
+                # Normalisiere auch Config-Pfad für Vergleich
+                normalized_source = str(Path(source).resolve())
+
+                if normalized_source in std_lib_paths:
+                    name = std_lib_paths[normalized_source]
                     if name in self.library_checkboxes:
                         self.library_checkboxes[name].setChecked(True)
+                        logger.debug(f"Checkbox '{name}' aktiviert für {source}")
                 else:
                     path = Path(source)
                     if path.exists():
                         self._add_folder_to_list(path)
+                        logger.debug(f"Eigener Ordner hinzugefügt: {source}")
+                    else:
+                        logger.warning(f"Quelle existiert nicht: {source}")
 
             self._on_sources_changed()
             logger.info(
