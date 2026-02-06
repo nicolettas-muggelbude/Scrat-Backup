@@ -701,12 +701,8 @@ class SourceSelectionPage(QWizardPage):
         quick_label.setStyleSheet("color: #666; font-size: 11px; font-weight: normal;")
         quick_layout.addWidget(quick_label)
 
-        # Buttons für häufige Ordner (Pfade aus bereits erkannten Bibliotheken)
+        # Nur Home als Schnellauswahl (Desktop & Dokumente sind bereits Checkboxen)
         quick_folders = {"🏠 Home": str(Path.home())}
-        if "Desktop" in self.standard_libraries:
-            quick_folders["🖥️ Desktop"] = str(self.standard_libraries["Desktop"])
-        if "Dokumente" in self.standard_libraries:
-            quick_folders["📄 Dokumente"] = str(self.standard_libraries["Dokumente"])
 
         self.quick_buttons = {}  # Speichere Buttons für später
         for label, path in quick_folders.items():
