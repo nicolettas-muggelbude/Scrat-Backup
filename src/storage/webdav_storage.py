@@ -437,14 +437,25 @@ class WebDAVStorage(StorageBackend):
 
             # Überspringe wenn schon existiert
             if self.client.check(current_path):
+                logger.debug(f"WebDAV-Verzeichnis existiert bereits: {current_path}")
                 continue
 
             # Erstelle Verzeichnis
             try:
-                logger.debug(f"Erstelle WebDAV-Verzeichnis: {current_path}")
+                logger.info(f"Erstelle WebDAV-Verzeichnis: {current_path}")
                 self.client.mkdir(current_path)
+
+                # Prüfe ob erfolgreich erstellt
+                if self.client.check(current_path):
+                    logger.info(f"✓ WebDAV-Verzeichnis erstellt: {current_path}")
+                else:
+                    logger.error(f"✗ WebDAV-Verzeichnis NICHT erstellt: {current_path}")
+                    raise Exception(f"Verzeichnis {current_path} konnte nicht erstellt werden (check fehlgeschlagen)")
+
             except Exception as e:
                 # Wenn Fehler, prüfe ob es inzwischen existiert (race condition)
                 if not self.client.check(current_path):
                     logger.error(f"Fehler beim Erstellen von {current_path}: {e}")
                     raise
+                else:
+                    logger.warning(f"Race condition: {current_path} existiert jetzt (von anderem Prozess erstellt)")
