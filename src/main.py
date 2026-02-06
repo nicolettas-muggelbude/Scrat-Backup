@@ -397,7 +397,7 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
             logger.info(f"Remote-Backup ({dest_type}): Starte Upload...")
 
             # Echtes Ziel für User-Anzeige (nicht Temp-Pfad)
-            if dest_type == "webdav":
+            if dest_type in ("webdav", "nextcloud"):
                 remote_display = f"{dest_config.get('url', '')}/{dest_config.get('path', 'Backups')}"
             elif dest_type == "sftp":
                 remote_display = f"{dest_config.get('host', '')}:{dest_config.get('path', '')}"
@@ -462,7 +462,7 @@ def _upload_to_remote(backup_result, dest_type: str, dest_config: dict, local_de
             return False
 
         # Remote-Ziel für Logging
-        if dest_type == "webdav":
+        if dest_type in ("webdav", "nextcloud"):
             remote_target = f"{dest_config.get('url', '')}/{dest_config.get('path', 'Backups')}"
         elif dest_type == "sftp":
             remote_target = f"{dest_config.get('host', '')}:{dest_config.get('path', '')}"
@@ -472,7 +472,8 @@ def _upload_to_remote(backup_result, dest_type: str, dest_config: dict, local_de
         logger.info(f"Starte Upload von {local_backup_dir} nach {dest_type}://{remote_target}")
 
         # Storage Backend initialisieren basierend auf Typ
-        if dest_type == "webdav":
+        # Nextcloud verwendet WebDAV-Backend
+        if dest_type in ("webdav", "nextcloud"):
             from storage.webdav_storage import WebDAVStorage
 
             storage = WebDAVStorage(
