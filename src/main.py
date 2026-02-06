@@ -380,21 +380,26 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
         QApplication.processEvents()
         time.sleep(0.1)
 
-    progress_dialog.close()
-
-    # Ergebnis anzeigen & Remote-Upload bei Bedarf
+    # Ergebnis prüfen
     if shared.get("error"):
+        progress_dialog.close()
         QMessageBox.critical(
             None,
             "Backup fehlgeschlagen",
             f"Das Backup konnte nicht erstellt werden:\n\n{shared['error']}",
         )
-    else:
-        result = shared.get("result")
+        return
 
-        # Bei Remote-Backups (WebDAV, SFTP, etc.): Upload durchführen
-        if dest_type not in ("local", "usb"):
-            logger.info(f"Remote-Backup ({dest_type}): Starte Upload...")
+    result = shared.get("result")
+
+    # Bei Remote-Backups (WebDAV, SFTP, etc.): Upload durchführen
+    if dest_type not in ("local", "usb"):
+        logger.info(f"Remote-Backup ({dest_type}): Starte Upload...")
+
+        # Fortschrittsfenster für Upload aktualisieren
+        progress_dialog.setLabelText(f"📤 Lade Backup zu {dest_type.upper()} hoch...")
+        progress_dialog.setValue(90)
+        QApplication.processEvents()
 
             # Echtes Ziel für User-Anzeige (nicht Temp-Pfad)
             if dest_type in ("webdav", "nextcloud"):
@@ -408,6 +413,9 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
             local_backup_path = dest_path / result.backup_id if result else None
 
             upload_success = _upload_to_remote(result, dest_type, dest_config, dest_path)
+
+            # Fortschrittsfenster schließen nach Upload
+            progress_dialog.close()
 
             if upload_success:
                 QMessageBox.information(
@@ -427,14 +435,17 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
                     f"Lokaler Pfad: {local_backup_path}\n"
                     f"Bitte Upload manuell durchführen oder Einstellungen prüfen.",
                 )
-        else:
-            QMessageBox.information(
-                None,
-                "Backup abgeschlossen",
-                f"Das erste Backup wurde erfolgreich erstellt!\n\n"
-                f"Quellen: {len(sources)}\n"
-                f"Ziel: {dest_path}",
-            )
+    else:
+        # Lokales Backup: Fortschrittsfenster schließen
+        progress_dialog.close()
+
+        QMessageBox.information(
+            None,
+            "Backup abgeschlossen",
+            f"Das erste Backup wurde erfolgreich erstellt!\n\n"
+            f"Quellen: {len(sources)}\n"
+            f"Ziel: {dest_path}",
+        )
 
 
 def _upload_to_remote(backup_result, dest_type: str, dest_config: dict, local_dest_path: Path) -> bool:
