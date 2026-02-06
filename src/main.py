@@ -401,40 +401,40 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
         progress_dialog.setValue(90)
         QApplication.processEvents()
 
-            # Echtes Ziel für User-Anzeige (nicht Temp-Pfad)
-            if dest_type in ("webdav", "nextcloud"):
-                remote_display = f"{dest_config.get('url', '')}/{dest_config.get('path', 'Backups')}"
-            elif dest_type == "sftp":
-                remote_display = f"{dest_config.get('host', '')}:{dest_config.get('path', '')}"
-            else:
-                remote_display = dest_config.get("path", "Remote-Server")
+        # Echtes Ziel für User-Anzeige (nicht Temp-Pfad)
+        if dest_type in ("webdav", "nextcloud"):
+            remote_display = f"{dest_config.get('url', '')}/{dest_config.get('path', 'Backups')}"
+        elif dest_type == "sftp":
+            remote_display = f"{dest_config.get('host', '')}:{dest_config.get('path', '')}"
+        else:
+            remote_display = dest_config.get("path", "Remote-Server")
 
-            # Backup-Pfad konstruieren (BackupResult hat kein backup_path Attribut)
-            local_backup_path = dest_path / result.backup_id if result else None
+        # Backup-Pfad konstruieren (BackupResult hat kein backup_path Attribut)
+        local_backup_path = dest_path / result.backup_id if result else None
 
-            upload_success = _upload_to_remote(result, dest_type, dest_config, dest_path)
+        upload_success = _upload_to_remote(result, dest_type, dest_config, dest_path)
 
-            # Fortschrittsfenster schließen nach Upload
-            progress_dialog.close()
+        # Fortschrittsfenster schließen nach Upload
+        progress_dialog.close()
 
-            if upload_success:
-                QMessageBox.information(
-                    None,
-                    "Backup abgeschlossen",
-                    f"Das Backup wurde erfolgreich erstellt und hochgeladen!\n\n"
-                    f"Quellen: {len(sources)}\n"
-                    f"Ziel: {dest_type.upper()}\n"
-                    f"Pfad: {remote_display}",
-                )
-            else:
-                QMessageBox.warning(
-                    None,
-                    "Backup lokal, Upload fehlgeschlagen",
-                    f"Das Backup wurde lokal erstellt, aber der Upload zu {dest_type.upper()} ist fehlgeschlagen.\n\n"
-                    f"Remote-Ziel: {remote_display}\n"
-                    f"Lokaler Pfad: {local_backup_path}\n"
-                    f"Bitte Upload manuell durchführen oder Einstellungen prüfen.",
-                )
+        if upload_success:
+            QMessageBox.information(
+                None,
+                "Backup abgeschlossen",
+                f"Das Backup wurde erfolgreich erstellt und hochgeladen!\n\n"
+                f"Quellen: {len(sources)}\n"
+                f"Ziel: {dest_type.upper()}\n"
+                f"Pfad: {remote_display}",
+            )
+        else:
+            QMessageBox.warning(
+                None,
+                "Backup lokal, Upload fehlgeschlagen",
+                f"Das Backup wurde lokal erstellt, aber der Upload zu {dest_type.upper()} ist fehlgeschlagen.\n\n"
+                f"Remote-Ziel: {remote_display}\n"
+                f"Lokaler Pfad: {local_backup_path}\n"
+                f"Bitte Upload manuell durchführen oder Einstellungen prüfen.",
+            )
     else:
         # Lokales Backup: Fortschrittsfenster schließen
         progress_dialog.close()
