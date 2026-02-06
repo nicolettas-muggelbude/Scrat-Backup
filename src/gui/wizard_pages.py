@@ -371,14 +371,27 @@ class SourceSelectionPage(QWizardPage):
         """Wird aufgerufen wenn Seite angezeigt wird – bei "edit" aus Config vorbefüllen"""
         wizard = self.wizard()
         if not wizard:
+            logger.warning("initializePage: Kein Wizard-Objekt")
             return
 
         action = wizard.field("start_action")
+        logger.info(f"initializePage aufgerufen: action='{action}'")
+
+        # IMMER zurücksetzen (auch bei backup)
+        logger.debug("Setze alle Checkboxen zurück")
+        for cb in self.library_checkboxes.values():
+            cb.setChecked(False)
+        self.custom_sources.clear()
+        self.custom_list.clear()
+        self.custom_widgets.clear()
+
         if action != "edit":
-            # Bei "backup" (Neuanlage): Nicht vorbefüllen
+            # Bei "backup" (Neuanlage): Nach Reset fertig
+            logger.info("Backup-Modus: Keine Vorbefüllung")
+            self._on_sources_changed()
             return
 
-        # Bei "edit": IMMER Config neu laden (auch bei wiederholtem Durchlauf)
+        # Bei "edit": Config laden und Quellen markieren
         logger.info("Edit-Modus erkannt - lade Quellen aus Config")
 
         # Vorhandene Quellen aus gespeicherter Config laden
