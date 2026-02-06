@@ -271,27 +271,23 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
     dest_config = destination.get("config", {})
     dest_type = destination.get("type", "local")
 
-    # Zielpfad zusammenbauen (unterschiedlich für local/remote)
+    # Zielpfad zusammenbauen
+    # Für Remote-Backups (WebDAV, SFTP): Lokalen Temp-Pfad nutzen, Upload später
+    # Für lokale Backups (local, usb): Finalen Pfad direkt nutzen
+
     if dest_type in ("local", "usb"):
-        # Lokale Backups: Dateisystem-Pfad
+        # Lokale Backups: Finaler Dateisystem-Pfad
         drive = dest_config.get("drive", "")
         if drive:
             sub_path = dest_config.get("path", "")
             dest_path = Path(drive) / sub_path if sub_path else Path(drive)
         else:
             dest_path = Path(dest_config.get("path", str(Path.home() / "scrat-backups")))
-    elif dest_type == "webdav":
-        # WebDAV (Nextcloud): URL + Pfad (wird von WebDAV Storage Backend verwendet)
-        # Workaround: Speichere URL als String, BackupEngine interpretiert es richtig
-        base_url = dest_config.get("url", "")
-        sub_path = dest_config.get("path", "Backups")
-        # Kombiniere nicht zu lokalem Pfad, sondern als String für WebDAV
-        dest_path = f"{base_url}/{sub_path}" if base_url else str(Path.home() / "scrat-backups")
-        logger.info(f"WebDAV Ziel: {dest_path}")
     else:
-        # Andere Remote-Typen (SFTP, Rclone, SMB): Nutzen eigene Konfiguration
-        dest_path = dest_config.get("path", str(Path.home() / "scrat-backups"))
-        logger.warning(f"Unbekannter Destination-Typ '{dest_type}', verwende Pfad: {dest_path}")
+        # Remote-Backups: Lokaler Temp-Pfad für BackupEngine
+        # (BackupEngine arbeitet nur lokal, Upload erfolgt danach)
+        dest_path = Path.home() / "scrat-backup" / "Backup"
+        logger.info(f"Remote-Backup ({dest_type}): Nutze lokalen Temp-Pfad {dest_path}")
 
     # Ausschluss-Muster
     excludes = set(wizard_config.get("excludes", []))
@@ -399,7 +395,16 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
         # Bei Remote-Backups (WebDAV, SFTP, etc.): Upload durchführen
         if dest_type not in ("local", "usb"):
             logger.info(f"Remote-Backup ({dest_type}): Starte Upload...")
-            upload_success = _upload_to_remote(result, dest_type, dest_config, dest_path)
+
+            # Echtes Ziel für User-Anzeige (nicht Temp-Pfad)
+            if dest_type == "webdav":
+                remote_display = f"{dest_config.get('url', '')}/{dest_config.get('path', 'Backups')}"
+            elif dest_type == "sftp":
+                remote_display = f"{dest_config.get('host', '')}:{dest_config.get('path', '')}"
+            else:
+                remote_display = dest_config.get("path", "Remote-Server")
+
+            upload_success = _upload_to_remote(result, dest_type, dest_config)
 
             if upload_success:
                 QMessageBox.information(
@@ -407,13 +412,15 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
                     "Backup abgeschlossen",
                     f"Das Backup wurde erfolgreich erstellt und hochgeladen!\n\n"
                     f"Quellen: {len(sources)}\n"
-                    f"Ziel: {dest_type.upper()} - {dest_path}",
+                    f"Ziel: {dest_type.upper()}\n"
+                    f"Pfad: {remote_display}",
                 )
             else:
                 QMessageBox.warning(
                     None,
                     "Backup lokal, Upload fehlgeschlagen",
                     f"Das Backup wurde lokal erstellt, aber der Upload zu {dest_type.upper()} ist fehlgeschlagen.\n\n"
+                    f"Remote-Ziel: {remote_display}\n"
                     f"Lokaler Pfad: {result.backup_path if result else 'Unbekannt'}\n"
                     f"Bitte Upload manuell durchführen oder Einstellungen prüfen.",
                 )
@@ -427,7 +434,7 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
             )
 
 
-def _upload_to_remote(backup_result, dest_type: str, dest_config: dict, dest_path: str) -> bool:
+def _upload_to_remote(backup_result, dest_type: str, dest_config: dict) -> bool:
     """
     Lädt Backup-Dateien zu Remote-Ziel hoch (WebDAV, SFTP, etc.)
 
@@ -435,7 +442,6 @@ def _upload_to_remote(backup_result, dest_type: str, dest_config: dict, dest_pat
         backup_result: BackupResult mit backup_path
         dest_type: Typ des Ziels (webdav, sftp, etc.)
         dest_config: Destination-Config mit URL, Credentials, etc.
-        dest_path: Ziel-Pfad/URL
 
     Returns:
         True bei Erfolg, False bei Fehler
@@ -450,7 +456,15 @@ def _upload_to_remote(backup_result, dest_type: str, dest_config: dict, dest_pat
             logger.error(f"Lokales Backup-Verzeichnis nicht gefunden: {local_backup_dir}")
             return False
 
-        logger.info(f"Starte Upload von {local_backup_dir} nach {dest_type}://{dest_path}")
+        # Remote-Ziel für Logging
+        if dest_type == "webdav":
+            remote_target = f"{dest_config.get('url', '')}/{dest_config.get('path', 'Backups')}"
+        elif dest_type == "sftp":
+            remote_target = f"{dest_config.get('host', '')}:{dest_config.get('path', '')}"
+        else:
+            remote_target = dest_type
+
+        logger.info(f"Starte Upload von {local_backup_dir} nach {dest_type}://{remote_target}")
 
         # Storage Backend initialisieren basierend auf Typ
         if dest_type == "webdav":
