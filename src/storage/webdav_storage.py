@@ -418,24 +418,24 @@ class WebDAVStorage(StorageBackend):
         if not self.client:
             return
 
-        # Normalisiere Pfad
-        path = path.strip("/")
-        if not path:
+        # Normalisiere Pfad (WebDAV benötigt führenden Slash)
+        path = "/" + path.strip("/")
+        if path == "/":
             return
 
         # Prüfe ob existiert
         if self.client.check(path):
             return
 
-        # Erstelle Parent-Verzeichnis zuerst
+        # Erstelle Parent-Verzeichnis zuerst (rekursiv)
         parent = str(Path(path).parent)
-        if parent != "." and parent != path:
+        if parent != "/" and parent != path:
             self._ensure_directory_exists(parent)
 
         # Erstelle Verzeichnis
         try:
             self.client.mkdir(path)
-        except Exception:
+        except Exception as e:
             # Möglicherweise race condition, prüfe nochmal
             if not self.client.check(path):
                 raise
