@@ -180,3 +180,85 @@ sudo apt install python3-keyring libsecret-1-0 smbclient cron
 # Python (Linux-spezifisch)
 pip install secretstorage python-notify2 pyxdg
 ```
+
+---
+
+## Session 2026-02-06: Performance & Edit-Modus Fixes
+
+### Hauptprobleme gelöst:
+
+#### 1. **OOM-Kills bei großen Dateien** ✅
+- **Problem:** 6GB ISO-Datei verursachte "getötet" (Out of Memory)
+- **Root Cause:** 
+  - `encryptor.py:174` lädt gesamte Datei in RAM: `plaintext = f_in.read()`
+  - Auch mit 128MB Split-Size: Eine große Datei = Ein großes Archiv
+- **Lösung:**
+  - **Chunked Encryption** implementiert (64MB Chunks)
+  - Neues Format: `[SCRAT001][ChunkSize][Chunk1...][Chunk2...][End]`
+  - Backward-kompatibel mit altem Format
+  - RAM-Verbrauch: konstant ~64MB (statt 6GB+)
+
+#### 2. **Extrem langsame Kompression** ✅
+- **Problem:** KB pro 30 Sekunden (sollte MB/s sein)
+- **Zwischenlösungen:**
+  - Level 5 → Level 1 (5x schneller, aber immer noch langsam)
+  - `multithread=True` hinzugefügt (Kompatibilitätsproblem mit alten py7zr)
+- **Finale Lösung:**
+  - **Kompression komplett deaktiviert** (FILTER_COPY)
+  - Nur archivieren + verschlüsseln, keine Kompression
+  - Datenrate: 128-200 MB/s ✅
+  - Trade-off: Keine Platzeinsparung, aber funktionsfähig
+
+#### 3. **Wizard-Architektur geändert** ✅
+- **Vorher:** 
+  - Erster Start → Wizard
+  - Spätere Starts → MainWindow direkt
+- **Jetzt:**
+  - **IMMER** Wizard-Start
+  - Im Wizard: Normal-Modus vs. Experten-Modus wählen
+  - Nur bei Experten-Modus → MainWindow öffnet
+- **Vorteil:** Settings-Änderungen sind immer zugänglich
+
+#### 4. **Edit-Modus lädt keine Quellen** ✅
+- **Probleme gefunden:**
+  - `_prefilled` Flag verhinderte wiederholtes Laden
+  - `wizard.field("start_action")` gab String `'None'` zurück statt `"edit"`
+  - Checkboxen wurden nicht zurückgesetzt bei "backup"
+  - Pfade matchten nicht (fehlende Normalisierung)
+- **Lösungen:**
+  - `_prefilled` Flag entfernt
+  - Direkter Zugriff auf `wizard.start_page.selected_action`
+  - IMMER Checkboxen zurücksetzen in `initializePage()`
+  - `Path.resolve()` für beide Seiten des Vergleichs
+  - Extensives Debug-Logging hinzugefügt
+
+#### 5. **Config-Duplikate** ✅
+- **Problem:** 7x Downloads, 7x USB-Laufwerk in Config
+- **Root Cause:** Arrays wurden geleert aber nicht gespeichert
+- **Lösung:** Explizites `save()` nach Löschen der Arrays
+
+#### 6. **UI-Verbesserungen** ✅
+- Schnellauswahl: Nur noch "Home" (Desktop/Dokumente waren Duplikate)
+
+### Commits heute:
+1. `cd61994` - fix: DEFAULT_SPLIT_SIZE auf 128MB reduziert (OOM-Fix)
+2. `d0bca79` - feat: --wizard Parameter (später wieder entfernt)
+3. `879bff0` - refactor: Wizard ist IMMER Einstiegspunkt
+4. `a1bfabc` - fix: multithread-Parameter entfernt (Kompatibilität)
+5. `2535381` - fix: Multi-Threading mit Fallback
+6. `9f9e1a9` - perf: Kompression auf Level 1
+7. `6208735` - perf: Kompression komplett deaktiviert (FILTER_COPY)
+8. `7e1704a` - fix: Chunked Encryption (64MB)
+9. `c81d71e` - fix: Quellen-Auswahl Pfad-Normalisierung
+10. `f3ae50c` - fix: Config-Duplikate
+11. `8b47df1` - fix: _prefilled Flag entfernt
+12. `36487c9` - fix: Checkboxen IMMER zurücksetzen
+13. `d990232` - debug: Massives Logging
+14. `6e2e606` - fix: action direkt von StartPage
+15. `5950051` - fix: Schnellauswahl vereinfacht
+
+### Offene Punkte:
+- [ ] Kompression wieder aktivieren (mit schnellerer Methode: zstd, gzip, oder System-7z)
+- [ ] Tray-Start implementieren (aktuell TODO)
+- [ ] Restore-Flow (eigener Wizard)
+

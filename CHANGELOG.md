@@ -7,12 +7,33 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Changed
+- **Wizard ist IMMER Einstiegspunkt:** Wizard startet bei jedem Programmstart (nicht nur beim ersten Mal)
+  - Im Wizard wird zwischen Normal-Modus und Experten-Modus gewählt
+  - MainWindow öffnet sich nur bei Experten-Modus
+  - Vereinfacht User-Flow und macht Settings-Änderungen zugänglicher
+
 ### Added
 - **SchedulePage im Wizard:** Zeitplan-Konfiguration (täglich/wöchentlich/monatlich/beim Start)
 - **Edit-Modus vorbefüllt:** SourceSelectionPage lädt vorhandene Quellen aus Config
 - **Debug-Tool:** `debug_usb.sh` für USB-Laufwerks-Diagnose unter Linux
+- **Chunked Encryption:** Dateien werden in 64MB-Chunks verschlüsselt (kein OOM mehr bei großen Dateien)
+- **Extensives Debug-Logging:** Für Quellen-Matching und Edit-Modus Troubleshooting
 
 ### Fixed
+- **KRITISCH - OOM-Kill bei großen Dateien:** Mehrere Fixes implementiert
+  - Split-Size von 500MB → 128MB reduziert (weniger RAM pro Archiv)
+  - Chunked Encryption implementiert (64MB Chunks statt gesamte Datei in RAM)
+  - encryptor.py: `plaintext = f_in.read()` durch Chunk-basiertes Lesen ersetzt
+- **Config-Duplikate:** Bei "Edit" wurden Quellen/Ziele angehängt statt ersetzt
+  - Explizites `save()` nach Löschen der Arrays verhindert Duplikate
+- **Edit-Modus lädt keine Quellen:** Mehrere Fixes
+  - `_prefilled` Flag entfernt (verhinderte wiederholtes Laden)
+  - `wizard.field("start_action")` gab String `'None'` zurück → Direkter Zugriff auf `start_page.selected_action`
+  - Checkboxen werden IMMER zurückgesetzt bei `initializePage()`
+  - Pfad-Normalisierung mit `Path.resolve()` für korrektes Matching
+- **Schnellauswahl-Duplikate:** Desktop und Dokumente entfernt (sind bereits Checkboxen)
+- **py7zr Kompatibilität:** `multithread`-Parameter mit Try-Except für ältere Versionen
 - **Windows:** SchedulePage wird jetzt korrekt angezeigt (nextId + setFinalPage Fix)
 - **Windows:** Nach Wizard-Abschluss öffnet sich nicht mehr automatisch das MainWindow
 - **Linux:** USB-Laufwerks-Erkennung mit robusten Username-Fallbacks ($USER, getpass, pwd)
@@ -23,7 +44,12 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - **SystemTray:** is_visible() statt isVisible() (AttributeError behoben)
 
 ### Performance
-- **Multi-Threading:** py7zr Komprimierung nutzt jetzt alle CPU-Cores (`multithread=True`)
+- **Kompression deaktiviert:** FILTER_COPY statt LZMA2 (100x schneller)
+  - py7zr war extrem langsam (KB/30s statt MB/s)
+  - Kompression-Level auf 1 reduziert (war zwischenzeitlich, dann ganz deaktiviert)
+  - Dateien werden nur archiviert + verschlüsselt, nicht komprimiert
+  - Datenrate: 128-200 MB/s (vorher: KB pro 30 Sekunden)
+- **Multi-Threading:** py7zr mit `multithread=True` (Fallback für alte Versionen)
 
 ### Geplant
 - Hilfefunktion / Guided Tour
