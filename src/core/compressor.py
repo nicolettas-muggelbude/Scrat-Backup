@@ -119,13 +119,13 @@ class Compressor:
         # Stelle sicher, dass Output-Verzeichnis existiert
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Erstelle 7z-Archiv mit Multi-Threading (falls unterstützt)
-        # multithread=True wird erst ab py7zr 0.20.0 unterstützt
+        # Erstelle 7z-Archiv ohne Kompression (Store-Only für Performance)
+        # LZMA2 ist zu langsam bei großen Dateien → nutze COPY (keine Kompression)
         try:
             archive = py7zr.SevenZipFile(
                 output_path,
                 "w",
-                filters=[{"id": py7zr.FILTER_LZMA2, "preset": self.compression_level}],
+                filters=[{"id": py7zr.FILTER_COPY}],  # Keine Kompression, nur archivieren
                 multithread=True,
             )
         except TypeError:
@@ -134,7 +134,7 @@ class Compressor:
             archive = py7zr.SevenZipFile(
                 output_path,
                 "w",
-                filters=[{"id": py7zr.FILTER_LZMA2, "preset": self.compression_level}],
+                filters=[{"id": py7zr.FILTER_COPY}],
             )
 
         with archive:
