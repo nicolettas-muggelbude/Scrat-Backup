@@ -355,9 +355,6 @@ class SourceSelectionPage(QWizardPage):
         # UI erstellen
         self._init_ui()
 
-        # Flag: vorhandene Quellen nur beim ersten Aufruf laden
-        self._prefilled = False
-
         # Versteckte QLineEdits als Feld-Träger
         # (PySide6 kann @property nicht über Qt-Property lesen)
         self._sources_edit = QLineEdit(self)
@@ -372,18 +369,17 @@ class SourceSelectionPage(QWizardPage):
 
     def initializePage(self):
         """Wird aufgerufen wenn Seite angezeigt wird – bei "edit" aus Config vorbefüllen"""
-        if self._prefilled:
-            return
-
         wizard = self.wizard()
         if not wizard:
             return
 
         action = wizard.field("start_action")
         if action != "edit":
+            # Bei "backup" (Neuanlage): Nicht vorbefüllen
             return
 
-        self._prefilled = True
+        # Bei "edit": IMMER Config neu laden (auch bei wiederholtem Durchlauf)
+        logger.info("Edit-Modus erkannt - lade Quellen aus Config")
 
         # Vorhandene Quellen aus gespeicherter Config laden
         try:
