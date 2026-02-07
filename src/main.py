@@ -643,7 +643,7 @@ def main() -> int:
         int: Exit-Code (0 = Erfolg)
     """
     logger.info("=" * 60)
-    logger.info("Scrat-Backup v0.2.0 - Windows Backup-Tool")
+    logger.info("Scrat-Backup v0.2.1 - Plattformübergreifendes Backup-Tool")
     logger.info("=" * 60)
 
     # GUI starten (Wizard ist IMMER der Einstiegspunkt)

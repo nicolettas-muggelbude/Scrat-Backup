@@ -25,7 +25,7 @@ Dieses Projekt folgt den Grundsätzen von Respekt, Inklusivität und konstruktiv
 - Fokus auf das Projekt und seine Ziele
 - Keine Diskriminierung jeglicher Art
 
-Bei Verstößen bitte an [projektleitung@example.com] melden.
+Bei Verstößen bitte als Issue melden.
 
 ---
 
@@ -33,7 +33,7 @@ Bei Verstößen bitte an [projektleitung@example.com] melden.
 
 ### 🐛 Bugs melden
 
-Bugs bitte als [GitHub Issue](https://github.com/your-username/scrat-backup/issues) melden mit:
+Bugs bitte als [GitHub Issue](https://github.com/nicolettas-muggelbude/scrat-backup/issues) melden mit:
 
 **Vorlage:**
 ```markdown
@@ -62,7 +62,7 @@ Falls vorhanden
 
 ### 💡 Features vorschlagen
 
-Feature-Requests als [GitHub Issue](https://github.com/your-username/scrat-backup/issues) mit:
+Feature-Requests als [GitHub Issue](https://github.com/nicolettas-muggelbude/scrat-backup/issues) mit:
 
 - Beschreibung des Features
 - Use-Case: Warum ist es nützlich?
@@ -72,7 +72,7 @@ Feature-Requests als [GitHub Issue](https://github.com/your-username/scrat-backu
 ### 🔧 Code beitragen
 
 1. **Issue finden oder erstellen**
-   - Schaue in den [Issues](https://github.com/your-username/scrat-backup/issues)
+   - Schaue in den [Issues](https://github.com/nicolettas-muggelbude/scrat-backup/issues)
    - Labels: `good first issue`, `help wanted`
 
 2. **Änderungen implementieren**
@@ -95,8 +95,20 @@ Feature-Requests als [GitHub Issue](https://github.com/your-username/scrat-backu
 ### Ersteinrichtung
 
 ```bash
+# System-Dependencies installieren
+# Debian/Ubuntu:
+sudo apt install python3.12 python3-pip python3-keyring libsecret-1-0 smbclient cron \
+                 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+                 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0
+
+# Fedora:
+sudo dnf install python3.12 python3-pip python3-keyring libsecret samba-client cronie
+
+# Arch:
+sudo pacman -S python python-pip python-keyring libsecret smbclient cronie
+
 # 1. Repository forken und klonen
-git clone https://github.com/YOUR-USERNAME/scrat-backup.git
+git clone https://github.com/nicolettas-muggelbude/scrat-backup.git
 cd scrat-backup
 
 # 2. Virtual Environment erstellen
@@ -116,6 +128,9 @@ pip install -r requirements.txt
 
 # 6. Testen ob alles funktioniert
 ./dev.sh check
+
+# Starten
+python3 src/main.py
 ```
 
 ### Nützliche Befehle
@@ -575,10 +590,9 @@ docs/
 
 ## Hilfe bekommen
 
-- **Dokumentation:** [claude.md](claude.md), [docs/](docs/)
-- **Issues:** [GitHub Issues](https://github.com/your-username/scrat-backup/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/your-username/scrat-backup/discussions)
-- **E-Mail:** [projektleitung@example.com]
+- **Dokumentation:** [CLAUDE.md](CLAUDE.md), [docs/](docs/)
+- **Issues:** [GitHub Issues](https://github.com/nicolettas-muggelbude/scrat-backup/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/nicolettas-muggelbude/scrat-backup/discussions)
 
 ---
 

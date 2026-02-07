@@ -7,6 +7,29 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-02-07
+
+### 🔥 Kritische Fixes & Remote-Upload Support
+
+### Added
+- **Remote-Upload für WebDAV/Nextcloud:** Backup wird lokal erstellt, dann zu Remote-Ziel hochgeladen (2-Step-Process)
+- **Extensives Debug-Logging:** Für WebDAV-Verzeichnis-Erstellung und Upload-Prozess
+
+### Fixed
+- **KRITISCH - Remote-Backup-Upload (WebDAV/Nextcloud):**
+  - Fortschrittsfenster blieb nicht während Upload offen
+  - WebDAV mkdir benötigt führenden Slash für Remote-Pfade
+  - WebDAV-Verzeichnis-Erstellung von rekursiv auf iterativ umgestellt
+  - `upload_file()` erwartet Path-Objekt, nicht String
+  - Nextcloud-Upload: `dest_type 'nextcloud'` wird jetzt erkannt
+  - `BackupResult` hat kein `backup_path` Attribut - Pfad wird jetzt konstruiert
+  - Path-Fehler bei Remote-Backup (str vs Path) behoben
+- **Einrückungsfehler in main.py:** Syntax-Fehler behoben
+
+## [0.2.0] - 2026-02-06
+
+### 🎉 Produktionsreife mit Performance-Fixes!
+
 ### Changed
 - **Wizard ist IMMER Einstiegspunkt:** Wizard startet bei jedem Programmstart (nicht nur beim ersten Mal)
   - Im Wizard wird zwischen Normal-Modus und Experten-Modus gewählt
@@ -50,11 +73,6 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
   - Dateien werden nur archiviert + verschlüsselt, nicht komprimiert
   - Datenrate: 128-200 MB/s (vorher: KB pro 30 Sekunden)
 - **Multi-Threading:** py7zr mit `multithread=True` (Fallback für alte Versionen)
-
-### Geplant
-- Hilfefunktion / Guided Tour
-- Internationalisierung (Englisch, weitere Sprachen)
-- Update-Funktion
 
 ## [0.2.0-beta] - 2025-12-15
 

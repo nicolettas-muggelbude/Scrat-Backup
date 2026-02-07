@@ -173,7 +173,7 @@ class MainWindow(QMainWindow):
         title.setStyleSheet("font-size: 32px; font-weight: bold;")
         title_layout.addWidget(title)
 
-        version = QLabel("Version 0.2.0 (Beta)")
+        version = QLabel("Version 0.2.1 (Beta)")
         version.setStyleSheet("font-size: 14px; color: #666;")
         title_layout.addWidget(version)
 

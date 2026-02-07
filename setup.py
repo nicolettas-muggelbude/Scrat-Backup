@@ -23,17 +23,17 @@ if requirements_file.exists():
 
 setup(
     name="scrat-backup",
-    version="0.1.0",
+    version="0.2.1",
     author="Scrat-Backup Contributors",
-    author_email="",
-    description="Benutzerfreundliches Backup-Tool für Windows mit Verschlüsselung",
+    author_email="nicoletta@muggelbude.it",
+    description="Plattformübergreifendes Backup-Tool mit Verschlüsselung (Windows, Linux, macOS)",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/your-username/scrat-backup",
+    url="https://github.com/nicolettas-muggelbude/scrat-backup",
     project_urls={
-        "Bug Tracker": "https://github.com/your-username/scrat-backup/issues",
-        "Documentation": "https://github.com/your-username/scrat-backup/blob/main/claude.md",
-        "Source Code": "https://github.com/your-username/scrat-backup",
+        "Bug Tracker": "https://github.com/nicolettas-muggelbude/scrat-backup/issues",
+        "Documentation": "https://github.com/nicolettas-muggelbude/scrat-backup/blob/main/claude.md",
+        "Source Code": "https://github.com/nicolettas-muggelbude/scrat-backup",
     },
     packages=find_packages(),
     classifiers=[

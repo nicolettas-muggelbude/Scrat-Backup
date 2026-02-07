@@ -11,7 +11,7 @@
 ; 3. Installer wird in Output/ erstellt
 
 #define MyAppName "Scrat-Backup"
-#define MyAppVersion "0.2.0-beta"
+#define MyAppVersion "0.2.1-beta"
 #define MyAppPublisher "Scrat-Backup Project"
 #define MyAppURL "https://github.com/nicolettas-muggelbude/Scrat-Backup"
 #define MyAppExeName "ScratBackup.exe"
