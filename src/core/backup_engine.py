@@ -38,7 +38,7 @@ class BackupConfig:
     destination_path: Path
     destination_type: str
     password: str
-    compression_level: int = 5
+    compression_level: int = 3  # zstd Level 3 (schnell + gute Ratio)
     split_size: int = 500 * 1024 * 1024  # 500 MB
     exclude_patterns: Optional[set] = None
     max_versions: int = 3

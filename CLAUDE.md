@@ -204,10 +204,10 @@ pip install secretstorage python-notify2 pyxdg
   - Level 5 → Level 1 (5x schneller, aber immer noch langsam)
   - `multithread=True` hinzugefügt (Kompatibilitätsproblem mit alten py7zr)
 - **Finale Lösung:**
-  - **Kompression komplett deaktiviert** (FILTER_COPY)
-  - Nur archivieren + verschlüsseln, keine Kompression
-  - Datenrate: 128-200 MB/s ✅
-  - Trade-off: Keine Platzeinsparung, aber funktionsfähig
+  - **zstd-Kompression** (FILTER_ZSTD, Level 3) aktiviert (py7zr >= 0.20 / 1.0.0 ✅)
+  - Fallback auf FILTER_COPY wenn FILTER_ZSTD nicht verfügbar
+  - Datenrate: schnell (zstd ist ~5–10x schneller als LZMA) ✅
+  - Split-Size: wieder auf 500MB zurückgesetzt
 
 #### 3. **Wizard-Architektur geändert** ✅
 - **Vorher:** 
@@ -258,7 +258,7 @@ pip install secretstorage python-notify2 pyxdg
 15. `5950051` - fix: Schnellauswahl vereinfacht
 
 ### Offene Punkte:
-- [ ] Kompression wieder aktivieren (mit schnellerer Methode: zstd, gzip, oder System-7z)
+- [x] Kompression wieder aktivieren ✅ – zstd Level 3 via FILTER_ZSTD (py7zr 1.0.0)
 - [ ] Tray-Start implementieren (aktuell TODO)
 - [ ] Restore-Flow (eigener Wizard)
 

@@ -11,21 +11,24 @@ import py7zr
 
 logger = logging.getLogger(__name__)
 
+# Prüfe ob FILTER_ZSTD verfügbar ist (py7zr >= 0.20)
+_ZSTD_AVAILABLE = hasattr(py7zr, "FILTER_ZSTD")
+
 
 class Compressor:
     """
     Komprimiert Dateien zu 7z-Archiven
 
     Verantwortlichkeiten:
-    - 7z-Archive erstellen
+    - 7z-Archive erstellen (zstd-Kompression, Fallback auf COPY)
     - Split-Archive bei konfigurierbarer Größe
     - Progress-Callbacks für GUI
     - Entpacken von Archiven
     """
 
     # Konstanten
-    DEFAULT_COMPRESSION_LEVEL = 1  # Schnelle Kompression (war: 5)
-    DEFAULT_SPLIT_SIZE = 128 * 1024 * 1024  # 128 MB (reduziert für RAM-Effizienz)
+    DEFAULT_COMPRESSION_LEVEL = 3  # zstd Level 3 (schnell + gute Ratio)
+    DEFAULT_SPLIT_SIZE = 500 * 1024 * 1024  # 500 MB
 
     def __init__(
         self,
@@ -48,10 +51,20 @@ class Compressor:
         self.compression_level = compression_level
         self.split_size = split_size
 
-        logger.info(
-            f"Compressor initialisiert: Level={compression_level}, "
-            f"Split-Size={split_size / 1024 / 1024:.0f}MB"
-        )
+        if _ZSTD_AVAILABLE:
+            logger.info(
+                f"Compressor initialisiert: zstd Level={compression_level}, "
+                f"Split-Size={split_size / 1024 / 1024:.0f}MB"
+            )
+        else:
+            logger.warning(
+                "FILTER_ZSTD nicht verfügbar (py7zr < 0.20) – "
+                "nutze FILTER_COPY (keine Kompression)"
+            )
+            logger.info(
+                f"Compressor initialisiert: COPY (kein zstd), "
+                f"Split-Size={split_size / 1024 / 1024:.0f}MB"
+            )
 
     def compress_files(
         self,
@@ -119,23 +132,20 @@ class Compressor:
         # Stelle sicher, dass Output-Verzeichnis existiert
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Erstelle 7z-Archiv ohne Kompression (Store-Only für Performance)
-        # LZMA2 ist zu langsam bei großen Dateien → nutze COPY (keine Kompression)
+        # Filter-Konfiguration: zstd wenn verfügbar, sonst COPY
+        if _ZSTD_AVAILABLE:
+            filters = [{"id": py7zr.FILTER_ZSTD, "level": self.compression_level}]
+            logger.debug(f"Nutze zstd-Kompression (Level {self.compression_level})")
+        else:
+            filters = [{"id": py7zr.FILTER_COPY}]
+            logger.debug("Nutze COPY (kein zstd verfügbar)")
+
         try:
-            archive = py7zr.SevenZipFile(
-                output_path,
-                "w",
-                filters=[{"id": py7zr.FILTER_COPY}],  # Keine Kompression, nur archivieren
-                multithread=True,
-            )
+            archive = py7zr.SevenZipFile(output_path, "w", filters=filters, multithread=True)
         except TypeError:
-            # Fallback für ältere py7zr-Versionen
+            # Fallback für ältere py7zr-Versionen ohne multithread-Argument
             logger.warning("py7zr unterstützt kein multithread-Argument - nutze Single-Thread")
-            archive = py7zr.SevenZipFile(
-                output_path,
-                "w",
-                filters=[{"id": py7zr.FILTER_COPY}],
-            )
+            archive = py7zr.SevenZipFile(output_path, "w", filters=filters)
 
         with archive:
 
