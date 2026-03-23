@@ -842,9 +842,10 @@ class SourceSelectionPage(QWizardPage):
 
         excludes_label = QLabel(excludes_text)
         excludes_label.setWordWrap(True)
+        excl_bg = "#252525" if _is_dark_mode() else "#f5f5f5"
         excludes_label.setStyleSheet(
-            "color: #999; font-size: 11px; font-weight: normal; "
-            "background-color: #f5f5f5; padding: 8px; border-radius: 4px;"
+            f"color: #999; font-size: 11px; font-weight: normal; "
+            f"background-color: {excl_bg}; padding: 8px; border-radius: 4px;"
         )
         layout.addWidget(excludes_label)
 

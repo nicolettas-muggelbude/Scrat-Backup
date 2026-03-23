@@ -4,6 +4,7 @@ Dialog zur Passwort-Eingabe mit Option zum Speichern
 """
 
 import logging
+import platform
 from typing import Optional, Tuple
 
 from PySide6.QtWidgets import (
@@ -90,15 +91,31 @@ class PasswordDialog(QDialog):
 
         # "Passwort merken"-Checkbox
         if self.show_save_option and self.credential_manager.available:
-            self.save_checkbox = QCheckBox("Passwort sicher speichern (Windows Credential Manager)")
+            sys_name = platform.system()
+            if sys_name == "Windows":
+                store_name = "Windows Credential Manager"
+                store_info = (
+                    "Das Passwort wird verschlüsselt im Windows Credential Manager gespeichert.\n"
+                    "Nur dein Windows-Benutzer hat Zugriff darauf."
+                )
+            elif sys_name == "Darwin":
+                store_name = "macOS Schlüsselbund"
+                store_info = (
+                    "Das Passwort wird verschlüsselt im macOS Schlüsselbund gespeichert.\n"
+                    "Nur dein macOS-Benutzer hat Zugriff darauf."
+                )
+            else:
+                store_name = "System-Schlüsselbund (GNOME Keyring / KWallet)"
+                store_info = (
+                    "Das Passwort wird verschlüsselt im System-Schlüsselbund gespeichert.\n"
+                    "Nur dein Benutzer hat Zugriff darauf."
+                )
+
+            self.save_checkbox = QCheckBox(f"Passwort sicher speichern ({store_name})")
             self.save_checkbox.setStyleSheet("margin-top: 10px;")
             layout.addWidget(self.save_checkbox)
 
-            # Info-Text
-            info = QLabel(
-                "Das Passwort wird verschlüsselt im Windows Credential Manager gespeichert.\n"
-                "Nur dein Windows-Benutzer hat Zugriff darauf."
-            )
+            info = QLabel(store_info)
             info.setWordWrap(True)
             info.setStyleSheet("color: #999; font-size: 10px; margin-top: 5px;")
             layout.addWidget(info)
