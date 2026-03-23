@@ -663,19 +663,28 @@ class BackupEngine:
         Prüft ob im Temp-Verzeichnis genug Speicher für ein lokales Zwischen-Archiv ist.
 
         Args:
-            required_bytes: Benötigte Bytes (konservativ: unkomprimierte Größe)
+            required_bytes: Benötigte Bytes (unkomprimierte Quelldatei-Größe)
 
         Returns:
             (genug_speicher, meldung)
         """
         tmp_path = tempfile.gettempdir()
         try:
-            available = shutil.disk_usage(tmp_path).free
+            usage = shutil.disk_usage(tmp_path)
+            available = usage.free
+            total = usage.total
         except OSError as e:
             return False, f"Temp-Verzeichnis nicht lesbar: {e}"
 
-        # 10% Sicherheitspuffer
-        needed = int(required_bytes * 1.1)
+        # Konservativer Puffer: zstd kann bereits komprimierte Daten leicht
+        # expandieren; 7z-Container-Overhead kommt hinzu → 1.5× als sicherer Wert
+        needed = int(required_bytes * 1.5)
+
+        logger.info(
+            f"Temp-Speicherprüfung: Partition {tmp_path} "
+            f"({total / 1024**3:.1f}GB gesamt, {available / 1024**2:.0f}MB frei), "
+            f"Quelldaten {required_bytes / 1024**2:.0f}MB → ~{needed / 1024**2:.0f}MB benötigt"
+        )
 
         if available >= needed:
             return True, (
@@ -685,7 +694,8 @@ class BackupEngine:
         else:
             return False, (
                 f"Temp ({tmp_path}): nur {available / 1024**2:.0f}MB verfügbar, "
-                f"~{needed / 1024**2:.0f}MB benötigt"
+                f"~{needed / 1024**2:.0f}MB benötigt "
+                f"(Quelldaten {required_bytes / 1024**2:.0f}MB × 1.5 Puffer)"
             )
 
     def _compress_and_encrypt(
