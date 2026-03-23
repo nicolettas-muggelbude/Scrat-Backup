@@ -27,8 +27,24 @@ class Compressor:
     """
 
     # Konstanten
-    DEFAULT_COMPRESSION_LEVEL = 3  # zstd Level 3 (schnell + gute Ratio)
+    DEFAULT_COMPRESSION_LEVEL = 1  # zstd Level 1 (maximale Geschwindigkeit)
     DEFAULT_SPLIT_SIZE = 500 * 1024 * 1024  # 500 MB
+
+    # Dateitypen die bereits komprimiert sind – werden nur gespeichert (FILTER_COPY)
+    PRECOMPRESSED_EXTENSIONS = frozenset({
+        # Bilder
+        ".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic", ".heif", ".avif",
+        # Video
+        ".mp4", ".mkv", ".avi", ".mov", ".wmv", ".flv", ".webm", ".m4v", ".ts",
+        # Audio
+        ".mp3", ".aac", ".ogg", ".flac", ".m4a", ".opus", ".wma",
+        # Archive
+        ".zip", ".7z", ".gz", ".bz2", ".xz", ".rar", ".zst", ".lz4",
+        # Office (OOXML/ODF sind ZIP-basiert)
+        ".docx", ".xlsx", ".pptx", ".odt", ".ods", ".odp",
+        # Sonstiges
+        ".pdf", ".epub",
+    })
 
     def __init__(
         self,
@@ -88,26 +104,48 @@ class Compressor:
         if not files:
             raise ValueError("Keine Dateien zum Komprimieren angegeben")
 
-        logger.info(f"Starte Komprimierung von {len(files)} Dateien")
+        # Dateien aufteilen: komprimierbar vs. bereits komprimiert
+        compressible = [f for f in files if f.suffix.lower() not in self.PRECOMPRESSED_EXTENSIONS]
+        precompressed = [f for f in files if f.suffix.lower() in self.PRECOMPRESSED_EXTENSIONS]
 
-        # Archive-Liste
+        logger.info(
+            f"Starte Archivierung von {len(files)} Dateien "
+            f"({len(compressible)} zstd, {len(precompressed)} gespeichert)"
+        )
+
+        copy_filters = [{"id": py7zr.FILTER_COPY}]
         archives: List[Path] = []
 
-        # Prüfe, ob Split nötig ist
-        total_size = sum(f.stat().st_size for f in files if f.exists())
-        needs_split = total_size > self.split_size
+        # Gruppe 1: komprimierbare Dateien (zstd)
+        if compressible:
+            size = sum(f.stat().st_size for f in compressible if f.exists())
+            if size > self.split_size:
+                archives.extend(
+                    self._compress_split(compressible, output_path, base_dir, progress_callback)
+                )
+            else:
+                archives.append(
+                    self._compress_single(compressible, output_path, base_dir, progress_callback)
+                )
 
-        if needs_split:
-            logger.info(
-                f"Gesamt-Größe {total_size / 1024 / 1024:.1f}MB "
-                f"überschreitet Split-Size, erstelle Multi-Volume-Archiv"
-            )
-            archives = self._compress_split(files, output_path, base_dir, progress_callback)
-        else:
-            logger.info("Erstelle Single-Volume-Archiv")
-            archives = [self._compress_single(files, output_path, base_dir, progress_callback)]
+        # Gruppe 2: bereits komprimierte Dateien (nur speichern, kein zstd)
+        if precompressed:
+            stored_base = output_path.parent / f"{output_path.stem}_s{output_path.suffix}"
+            size = sum(f.stat().st_size for f in precompressed if f.exists())
+            if size > self.split_size:
+                archives.extend(
+                    self._compress_split(
+                        precompressed, stored_base, base_dir, progress_callback, filters=copy_filters
+                    )
+                )
+            else:
+                archives.append(
+                    self._compress_single(
+                        precompressed, stored_base, base_dir, progress_callback, filters=copy_filters
+                    )
+                )
 
-        logger.info(f"Komprimierung abgeschlossen: {len(archives)} Archive erstellt")
+        logger.info(f"Archivierung abgeschlossen: {len(archives)} Archive erstellt")
         return archives
 
     def _compress_single(
@@ -116,6 +154,7 @@ class Compressor:
         output_path: Path,
         base_dir: Optional[Path] = None,
         progress_callback: Optional[Callable[[int, int, str], None]] = None,
+        filters: Optional[list] = None,
     ) -> Path:
         """
         Komprimiert Dateien zu einem einzelnen 7z-Archiv
@@ -125,6 +164,7 @@ class Compressor:
             output_path: Output-Archiv-Pfad
             base_dir: Basis-Verzeichnis für relative Pfade
             progress_callback: Optional Callback
+            filters: py7zr-Filter (None = zstd Standard)
 
         Returns:
             Pfad zum erstellten Archiv
@@ -132,13 +172,16 @@ class Compressor:
         # Stelle sicher, dass Output-Verzeichnis existiert
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Filter-Konfiguration: zstd wenn verfügbar, sonst COPY
-        if _ZSTD_AVAILABLE:
-            filters = [{"id": py7zr.FILTER_ZSTD, "level": self.compression_level}]
-            logger.debug(f"Nutze zstd-Kompression (Level {self.compression_level})")
+        # Filter-Konfiguration: explizit, zstd oder COPY als Fallback
+        if filters is None:
+            if _ZSTD_AVAILABLE:
+                filters = [{"id": py7zr.FILTER_ZSTD, "level": self.compression_level}]
+                logger.debug(f"Nutze zstd-Kompression (Level {self.compression_level})")
+            else:
+                filters = [{"id": py7zr.FILTER_COPY}]
+                logger.debug("Nutze COPY (kein zstd verfügbar)")
         else:
-            filters = [{"id": py7zr.FILTER_COPY}]
-            logger.debug("Nutze COPY (kein zstd verfügbar)")
+            logger.debug(f"Nutze explizite Filter: {filters}")
 
         try:
             archive = py7zr.SevenZipFile(output_path, "w", filters=filters, multithread=True)
@@ -185,6 +228,7 @@ class Compressor:
         output_path: Path,
         base_dir: Optional[Path] = None,
         progress_callback: Optional[Callable[[int, int, str], None]] = None,
+        filters: Optional[list] = None,
     ) -> List[Path]:
         """
         Komprimiert Dateien zu mehreren 7z-Archiven (Split)
@@ -223,7 +267,7 @@ class Compressor:
                     archive_path = self._get_split_path(output_path, chunk_index)
                     archives.append(
                         self._compress_single(
-                            current_chunk, archive_path, base_dir, progress_callback
+                            current_chunk, archive_path, base_dir, progress_callback, filters
                         )
                     )
                     chunk_index += 1
@@ -238,7 +282,7 @@ class Compressor:
                 )
                 archive_path = self._get_split_path(output_path, chunk_index)
                 archives.append(
-                    self._compress_single([file_path], archive_path, base_dir, progress_callback)
+                    self._compress_single([file_path], archive_path, base_dir, progress_callback, filters)
                 )
                 chunk_index += 1
                 continue
@@ -248,7 +292,7 @@ class Compressor:
                 # Speichere aktuellen Chunk
                 archive_path = self._get_split_path(output_path, chunk_index)
                 archives.append(
-                    self._compress_single(current_chunk, archive_path, base_dir, progress_callback)
+                    self._compress_single(current_chunk, archive_path, base_dir, progress_callback, filters)
                 )
                 chunk_index += 1
                 current_chunk = []
@@ -262,7 +306,7 @@ class Compressor:
         if current_chunk:
             archive_path = self._get_split_path(output_path, chunk_index)
             archives.append(
-                self._compress_single(current_chunk, archive_path, base_dir, progress_callback)
+                self._compress_single(current_chunk, archive_path, base_dir, progress_callback, filters)
             )
 
         return archives
