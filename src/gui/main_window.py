@@ -603,7 +603,8 @@ class MainWindow(QMainWindow):
             destination_path=dest_path,
             destination_type=destination["type"],
             password=password,
-            compression_level=5,
+            compression_level=1,
+            auto_rotate=True,
         )
 
         # Starte Backup in Thread

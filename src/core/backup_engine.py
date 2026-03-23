@@ -45,6 +45,7 @@ class BackupConfig:
     split_size: int = 500 * 1024 * 1024  # 500 MB
     exclude_patterns: Optional[set] = None
     max_versions: int = 3
+    auto_rotate: bool = False  # True = automatisches Backup (Rotation aktiv)
 
 
 @dataclass
@@ -632,6 +633,10 @@ class BackupEngine:
 
         all_backups = self.metadata_manager.get_all_backups()
         completed_backups = [b for b in all_backups if b["status"] == "completed"]
+
+        if not self.config.auto_rotate:
+            logger.info("Rotation übersprungen: manuelles Backup")
+            return
 
         if len(completed_backups) <= self.config.max_versions:
             logger.info(
