@@ -5,10 +5,12 @@ Orchestriert Vollbackups und inkrementelle Backups
 
 import hashlib
 import logging
+import shutil
+import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, List, Optional
+from typing import Callable, List, Optional, Tuple
 
 from src.core.compressor import Compressor
 from src.core.encryptor import Encryptor
@@ -250,48 +252,17 @@ class BackupEngine:
                 logger.info("Vollbackup erfolgreich abgeschlossen (leer)")
                 return result
 
-            # 2. Komprimieren
-            progress.phase = "compressing"
-            self._report_progress(progress)
-
-            # Erstelle Backup-Verzeichnis
+            # 2. Komprimieren + Verschlüsseln
+            # Erstelle Backup-Verzeichnis auf Zielmedium
             backup_dir = self.config.destination_path / backup_id
             backup_dir.mkdir(parents=True, exist_ok=True)
 
-            # Komprimiere alle Dateien
-            archive_base_path = backup_dir / "data.7z"
-
-            def compress_progress(current: int, total: int, filename: str) -> None:
-                progress.files_processed = current
-                progress.current_file = filename
-                self._report_progress(progress)
-
             file_paths = [f.path for f in all_files]
-            archives = self.compressor.compress_files(
-                files=file_paths,
-                output_path=archive_base_path,
-                progress_callback=compress_progress,
+            encrypted_archives = self._compress_and_encrypt(
+                file_paths=file_paths,
+                backup_dir=backup_dir,
+                progress=progress,
             )
-
-            logger.info(f"Komprimierung abgeschlossen: {len(archives)} Archive")
-
-            # 3. Verschlüsseln
-            progress.phase = "encrypting"
-            self._report_progress(progress)
-
-            encrypted_archives: List[Path] = []
-            for idx, archive_path in enumerate(archives):
-                progress.current_file = archive_path.name
-                self._report_progress(progress)
-
-                encrypted_path = archive_path.parent / f"{archive_path.name}.enc"
-                self.encryptor.encrypt_file(archive_path, encrypted_path)
-                encrypted_archives.append(encrypted_path)
-
-                # Lösche unkomprimiertes Archiv
-                archive_path.unlink()
-
-                logger.debug(f"Verschlüsselt: {archive_path.name}")
 
             # Berechne komprimierte Größe
             size_compressed = sum(p.stat().st_size for p in encrypted_archives)
@@ -552,36 +523,15 @@ class BackupEngine:
             )
 
             # 2-4: Komprimieren, Verschlüsseln, Metadaten speichern
-            # (gleicher Prozess wie Vollbackup)
-            progress.phase = "compressing"
-            self._report_progress(progress)
-
             backup_dir = self.config.destination_path / backup_id
             backup_dir.mkdir(parents=True, exist_ok=True)
-            archive_base_path = backup_dir / "data.7z"
-
-            def compress_progress(current: int, total: int, filename: str) -> None:
-                progress.files_processed = current
-                progress.current_file = filename
-                self._report_progress(progress)
 
             file_paths = [f.path for f in all_changed_files]
-            archives = self.compressor.compress_files(
-                files=file_paths,
-                output_path=archive_base_path,
-                progress_callback=compress_progress,
+            encrypted_archives = self._compress_and_encrypt(
+                file_paths=file_paths,
+                backup_dir=backup_dir,
+                progress=progress,
             )
-
-            # Verschlüsseln
-            progress.phase = "encrypting"
-            self._report_progress(progress)
-
-            encrypted_archives: List[Path] = []
-            for archive_path in archives:
-                encrypted_path = archive_path.parent / f"{archive_path.name}.enc"
-                self.encryptor.encrypt_file(archive_path, encrypted_path)
-                encrypted_archives.append(encrypted_path)
-                archive_path.unlink()
 
             size_compressed = sum(p.stat().st_size for p in encrypted_archives)
 
@@ -707,6 +657,122 @@ class BackupEngine:
             self.metadata_manager.delete_backup(backup_id)
 
         logger.info(f"Rotation abgeschlossen: {len(backups_to_delete)} alte Backups gelöscht")
+
+    def _check_temp_space(self, required_bytes: int) -> Tuple[bool, str]:
+        """
+        Prüft ob im Temp-Verzeichnis genug Speicher für ein lokales Zwischen-Archiv ist.
+
+        Args:
+            required_bytes: Benötigte Bytes (konservativ: unkomprimierte Größe)
+
+        Returns:
+            (genug_speicher, meldung)
+        """
+        tmp_path = tempfile.gettempdir()
+        try:
+            available = shutil.disk_usage(tmp_path).free
+        except OSError as e:
+            return False, f"Temp-Verzeichnis nicht lesbar: {e}"
+
+        # 10% Sicherheitspuffer
+        needed = int(required_bytes * 1.1)
+
+        if available >= needed:
+            return True, (
+                f"Temp ({tmp_path}): {available / 1024**2:.0f}MB verfügbar, "
+                f"~{needed / 1024**2:.0f}MB benötigt"
+            )
+        else:
+            return False, (
+                f"Temp ({tmp_path}): nur {available / 1024**2:.0f}MB verfügbar, "
+                f"~{needed / 1024**2:.0f}MB benötigt"
+            )
+
+    def _compress_and_encrypt(
+        self,
+        file_paths: List[Path],
+        backup_dir: Path,
+        progress: "BackupProgress",
+    ) -> List[Path]:
+        """
+        Komprimiert Dateien und verschlüsselt sie ins Backup-Verzeichnis.
+
+        Verwendet lokales Temp-Verzeichnis falls genug Speicher vorhanden
+        (schnell: kein doppelter USB-I/O). Fällt andernfalls auf direktes
+        Schreiben aufs Zielmedium zurück (langsamer, aber immer möglich).
+
+        Args:
+            file_paths: Zu sichernde Dateien
+            backup_dir: Zielverzeichnis auf dem Backup-Medium
+            progress: Progress-Objekt (wird für Phasen-Updates geändert)
+
+        Returns:
+            Liste der verschlüsselten Archive auf backup_dir
+        """
+        total_size = sum(f.stat().st_size for f in file_paths if f.exists())
+        has_space, space_msg = self._check_temp_space(total_size)
+
+        def compress_progress(current: int, total: int, filename: str) -> None:
+            progress.files_processed = current
+            progress.current_file = filename
+            self._report_progress(progress)
+
+        if has_space:
+            logger.info(f"Nutze Temp-Verzeichnis für Archivierung. {space_msg}")
+            progress.phase = "compressing"
+            self._report_progress(progress)
+
+            with tempfile.TemporaryDirectory() as tmp_dir:
+                archive_base = Path(tmp_dir) / "data.7z"
+                archives = self.compressor.compress_files(
+                    files=file_paths,
+                    output_path=archive_base,
+                    progress_callback=compress_progress,
+                )
+                logger.info(f"Komprimierung abgeschlossen: {len(archives)} Archive")
+
+                progress.phase = "encrypting"
+                self._report_progress(progress)
+
+                encrypted_archives: List[Path] = []
+                for archive_path in archives:
+                    progress.current_file = archive_path.name
+                    self._report_progress(progress)
+                    encrypted_path = backup_dir / f"{archive_path.name}.enc"
+                    self.encryptor.encrypt_file(archive_path, encrypted_path)
+                    encrypted_archives.append(encrypted_path)
+                    logger.debug(f"Verschlüsselt: {archive_path.name}")
+                # tmp_dir wird automatisch aufgeräumt
+        else:
+            logger.warning(
+                f"ACHTUNG: Nicht genug Temp-Speicher ({space_msg}). "
+                f"Archivierung direkt auf Zielmedium – Backup läuft deutlich langsamer!"
+            )
+            progress.phase = "compressing"
+            self._report_progress(progress)
+
+            archive_base = backup_dir / "data.7z"
+            archives = self.compressor.compress_files(
+                files=file_paths,
+                output_path=archive_base,
+                progress_callback=compress_progress,
+            )
+            logger.info(f"Komprimierung abgeschlossen: {len(archives)} Archive")
+
+            progress.phase = "encrypting"
+            self._report_progress(progress)
+
+            encrypted_archives = []
+            for archive_path in archives:
+                progress.current_file = archive_path.name
+                self._report_progress(progress)
+                encrypted_path = backup_dir / f"{archive_path.name}.enc"
+                self.encryptor.encrypt_file(archive_path, encrypted_path)
+                encrypted_archives.append(encrypted_path)
+                archive_path.unlink()  # .7z nach Verschlüsselung löschen
+                logger.debug(f"Verschlüsselt (direkt): {archive_path.name}")
+
+        return encrypted_archives
 
     def _generate_backup_id(self, backup_type: str) -> str:
         """
