@@ -253,9 +253,15 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
 
     # Quellen aus gespeicherter Config lesen
     config_manager = ConfigManager()
-    sources = [
-        Path(s["path"]) for s in config_manager.config.get("sources", []) if s.get("enabled", True)
-    ]
+    seen: set = set()
+    sources = []
+    for s in config_manager.config.get("sources", []):
+        if not s.get("enabled", True):
+            continue
+        resolved = Path(s["path"]).resolve()
+        if resolved not in seen:
+            seen.add(resolved)
+            sources.append(resolved)
 
     if not sources:
         QMessageBox.warning(None, "Fehler", "Keine Backup-Quellen konfiguriert.")
@@ -301,7 +307,7 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
         destination_type=dest_type,
         password=password,
         exclude_patterns=excludes if excludes else None,
-        compression_level=5,
+        compression_level=1,
     )
 
     logger.info(f"Backup starten: {len(sources)} Quellen → {dest_path} (Typ: {dest_type})")
