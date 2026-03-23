@@ -805,52 +805,45 @@ class NewFinishPage(QWizardPage):
         layout.addSpacing(20)
 
         # Backup jetzt starten
-        backup_group = QGroupBox()
-        backup_group.setStyleSheet("QGroupBox { border: 2px solid #e0e0e0; border-radius: 5px; }")
-        backup_layout = QVBoxLayout(backup_group)
+        self.backup_group = QGroupBox()
+        backup_layout = QVBoxLayout(self.backup_group)
 
         self.start_backup_now = QCheckBox("🚀 Backup jetzt starten")
         self.start_backup_now.setStyleSheet("font-size: 14px; font-weight: bold;")
         backup_layout.addWidget(self.start_backup_now)
 
-        backup_info = QLabel("   Führt sofort ein erstes vollständiges Backup durch")
-        backup_info.setStyleSheet("color: #666; font-size: 11px;")
-        backup_layout.addWidget(backup_info)
+        self.backup_info = QLabel("   Führt sofort ein erstes vollständiges Backup durch")
+        backup_layout.addWidget(self.backup_info)
 
-        layout.addWidget(backup_group)
+        layout.addWidget(self.backup_group)
 
         layout.addSpacing(10)
 
         # Tray starten
-        tray_group = QGroupBox()
-        tray_group.setStyleSheet("QGroupBox { border: 2px solid #e0e0e0; border-radius: 5px; }")
-        tray_layout = QVBoxLayout(tray_group)
+        self.tray_group = QGroupBox()
+        tray_layout = QVBoxLayout(self.tray_group)
 
         self.start_tray = QCheckBox("📍 Scrat-Backup im Hintergrund starten (Tray)")
         self.start_tray.setChecked(True)
         self.start_tray.setStyleSheet("font-size: 14px; font-weight: bold;")
         tray_layout.addWidget(self.start_tray)
 
-        tray_info = QLabel(
+        self.tray_info = QLabel(
             "   Startet Scrat-Backup im System-Tray für schnellen Zugriff\n"
             "   und automatische Backups"
         )
-        tray_info.setStyleSheet("color: #666; font-size: 11px;")
-        tray_layout.addWidget(tray_info)
+        tray_layout.addWidget(self.tray_info)
 
-        layout.addWidget(tray_group)
+        layout.addWidget(self.tray_group)
 
         layout.addSpacing(20)
 
-        success = QLabel(
+        self.success_label = QLabel(
             "✅ Du kannst den Assistenten jederzeit über das Tray-Menü\n"
             "erneut öffnen, um Einstellungen zu ändern."
         )
-        success.setWordWrap(True)
-        success.setStyleSheet(
-            "background-color: #e8f5e9; color: #2e7d32; " "padding: 15px; border-radius: 5px;"
-        )
-        layout.addWidget(success)
+        self.success_label.setWordWrap(True)
+        layout.addWidget(self.success_label)
 
         layout.addStretch()
         self.setLayout(layout)
@@ -860,6 +853,23 @@ class NewFinishPage(QWizardPage):
 
     def initializePage(self):
         """Wird aufgerufen wenn Seite angezeigt wird - erstellt Zusammenfassung"""
+        dark = _is_dark_mode()
+        border_color = "#3f3f3f" if dark else "#e0e0e0"
+        text_color = "#999" if dark else "#666"
+        group_style = f"QGroupBox {{ border: 2px solid {border_color}; border-radius: 5px; }}"
+        self.backup_group.setStyleSheet(group_style)
+        self.tray_group.setStyleSheet(group_style)
+        self.backup_info.setStyleSheet(f"color: {text_color}; font-size: 11px;")
+        self.tray_info.setStyleSheet(f"color: {text_color}; font-size: 11px;")
+        if dark:
+            self.success_label.setStyleSheet(
+                "background-color: #1a3a1a; color: #81c784; padding: 15px; border-radius: 5px;"
+            )
+        else:
+            self.success_label.setStyleSheet(
+                "background-color: #e8f5e9; color: #2e7d32; padding: 15px; border-radius: 5px;"
+            )
+
         wizard = self.wizard()
 
         summary_text = "<h3>📋 Deine Konfiguration:</h3>"
