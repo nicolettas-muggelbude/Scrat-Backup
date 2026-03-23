@@ -11,8 +11,9 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from PySide6.QtCore import Qt, QTime, Signal
-from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtGui import QIcon, QPalette, QPixmap
 from PySide6.QtWidgets import (
+    QApplication,
     QCheckBox,
     QComboBox,
     QFormLayout,
@@ -48,6 +49,15 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 ACCENT_COLOR = get_color("primary")  # Zentral aus theme.py
+
+
+def _is_dark_mode() -> bool:
+    """Erkennt Dark Mode anhand der aktuellen QPalette."""
+    app = QApplication.instance()
+    if app is None:
+        return False
+    bg = app.palette().color(QPalette.ColorRole.Window)
+    return (bg.red() + bg.green() + bg.blue()) / 3 < 128
 
 
 # ============================================================================
@@ -280,15 +290,18 @@ class TemplateCard(QFrame):
 
     def enterEvent(self, event):
         if not self._checked:
+            dark = _is_dark_mode()
             if self._is_available:
+                bg = "#1e3a4a" if dark else "#e3f2fd"
                 self.setStyleSheet(
-                    "TemplateCard { background-color: #e3f2fd; "
+                    f"TemplateCard {{ background-color: {bg}; "
                     f"border: 2px solid {self._accent_color}; "
                     "border-radius: 6px; }"
                 )
             else:
+                bg = "#3a2a1a" if dark else "#fff3e0"
                 self.setStyleSheet(
-                    "TemplateCard { background-color: #fff3e0; "
+                    f"TemplateCard {{ background-color: {bg}; "
                     "border: 2px solid #ff9800; border-radius: 6px; }"
                 )
         super().enterEvent(event)
@@ -300,6 +313,7 @@ class TemplateCard(QFrame):
 
     # --- Style-Update basierend auf Zustand ---
     def _update_style(self):
+        dark = _is_dark_mode()
         if self._checked:
             self.setStyleSheet(
                 f"TemplateCard {{ background-color: {self._accent_color}; "
@@ -313,16 +327,25 @@ class TemplateCard(QFrame):
                 "border: none; background: transparent; font-size: 13px; color: white;"
             )
         elif self._is_available:
+            bg = "#2d2d2d" if dark else "white"
+            border = "#555555" if dark else "#cccccc"
+            text_color = "#ffffff" if dark else "#000000"
             self.setStyleSheet(
-                "TemplateCard { background-color: white; "
-                "border: 2px solid #cccccc; border-radius: 6px; }"
+                f"TemplateCard {{ background-color: {bg}; "
+                f"border: 2px solid {border}; border-radius: 6px; }}"
             )
-            self.icon_label.setStyleSheet("border: none; background: transparent; font-size: 24px;")
-            self.name_label.setStyleSheet("border: none; background: transparent; font-size: 13px;")
+            self.icon_label.setStyleSheet(
+                f"border: none; background: transparent; font-size: 24px; color: {text_color};"
+            )
+            self.name_label.setStyleSheet(
+                f"border: none; background: transparent; font-size: 13px; color: {text_color};"
+            )
         else:
+            bg = "#252525" if dark else "#f5f5f5"
+            border = "#3f3f3f" if dark else "#e0e0e0"
             self.setStyleSheet(
-                "TemplateCard { background-color: #f5f5f5; "
-                "border: 2px solid #e0e0e0; border-radius: 6px; }"
+                f"TemplateCard {{ background-color: {bg}; "
+                f"border: 2px solid {border}; border-radius: 6px; }}"
             )
             self.icon_label.setStyleSheet(
                 "border: none; background: transparent; font-size: 24px; color: #999;"

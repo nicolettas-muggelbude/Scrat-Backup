@@ -10,7 +10,9 @@ from pathlib import Path
 from typing import List
 
 from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QPalette
 from PySide6.QtWidgets import (
+    QApplication,
     QButtonGroup,
     QCheckBox,
     QFileDialog,
@@ -33,6 +35,15 @@ from core.config_manager import ConfigManager
 from gui.theme import get_color
 
 logger = logging.getLogger(__name__)
+
+
+def _is_dark_mode() -> bool:
+    """Erkennt Dark Mode anhand der aktuellen QPalette."""
+    app = QApplication.instance()
+    if app is None:
+        return False
+    bg = app.palette().color(QPalette.ColorRole.Window)
+    return (bg.red() + bg.green() + bg.blue()) / 3 < 128
 
 
 class ClickableFrame(QFrame):
@@ -797,28 +808,7 @@ class SourceSelectionPage(QWizardPage):
         # Liste der benutzerdefinierten Ordner
         self.custom_list = QListWidget()
         self.custom_list.setMaximumHeight(150)
-        self.custom_list.setStyleSheet("""
-            QListWidget {
-                border: 1px solid #ccc;
-                border-radius: 4px;
-                background-color: white;
-            }
-            QListWidget::item {
-                border: none;
-                background: transparent;
-            }
-            QListWidget::item:hover {
-                background: transparent;
-            }
-            QListWidget::item:selected {
-                background: transparent;
-                border: none;
-            }
-            QListWidget::item:focus {
-                outline: none;
-                border: none;
-            }
-        """)
+        self._update_custom_list_style()
         self.custom_list.itemSelectionChanged.connect(self._on_selection_changed)
         layout.addWidget(self.custom_list)
 
@@ -979,15 +969,16 @@ class SourceSelectionPage(QWizardPage):
         # Custom Widget für schöne Darstellung
         widget = ClickableFrame(self.custom_list, item)
         widget.setMinimumHeight(40)
-        widget.setStyleSheet("""
-            QFrame {
+        hover_bg = "#3a3a3a" if _is_dark_mode() else "#e8e8e8"
+        widget.setStyleSheet(f"""
+            QFrame {{
                 background-color: transparent;
                 border-radius: 3px;
                 padding: 2px;
-            }
-            QFrame:hover {
-                background-color: #e8e8e8;
-            }
+            }}
+            QFrame:hover {{
+                background-color: {hover_bg};
+            }}
         """)
         widget_layout = QHBoxLayout(widget)
         widget_layout.setContentsMargins(10, 8, 10, 8)
@@ -1037,19 +1028,49 @@ class SourceSelectionPage(QWizardPage):
             logger.info(f"Eigener Ordner entfernt: {folder}")
             self._on_sources_changed()
 
+    def _update_custom_list_style(self):
+        """Setzt custom_list Stylesheet theme-aware."""
+        dark = _is_dark_mode()
+        bg = "#2d2d2d" if dark else "white"
+        border = "#555555" if dark else "#ccc"
+        self.custom_list.setStyleSheet(f"""
+            QListWidget {{
+                border: 1px solid {border};
+                border-radius: 4px;
+                background-color: {bg};
+            }}
+            QListWidget::item {{
+                border: none;
+                background: transparent;
+            }}
+            QListWidget::item:hover {{
+                background: transparent;
+            }}
+            QListWidget::item:selected {{
+                background: transparent;
+                border: none;
+            }}
+            QListWidget::item:focus {{
+                outline: none;
+                border: none;
+            }}
+        """)
+
     def _on_selection_changed(self):
         """Wird aufgerufen wenn Selection sich ändert"""
+        dark = _is_dark_mode()
+        hover_bg = "#3a3a3a" if dark else "#e8e8e8"
         # Setze alle Widgets auf normalen Hintergrund
         for item, widget in self.custom_widgets.values():
-            widget.setStyleSheet("""
-                QFrame {
+            widget.setStyleSheet(f"""
+                QFrame {{
                     background-color: transparent;
                     border-radius: 3px;
                     padding: 2px;
-                }
-                QFrame:hover {
-                    background-color: #e8e8e8;
-                }
+                }}
+                QFrame:hover {{
+                    background-color: {hover_bg};
+                }}
             """)
 
         # Setze selected Widget auf grauen Hintergrund
