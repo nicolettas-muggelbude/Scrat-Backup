@@ -182,7 +182,9 @@ sudo pacman -S python python-pip python-keyring libsecret smbclient cronie
 
 # Scrat-Backup klonen und installieren
 git clone https://github.com/nicolettas-muggelbude/Scrat-Backup.git
-cd scrat-backup
+cd Scrat-Backup
+python3 -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 
 # Starten
@@ -200,8 +202,10 @@ brew install python@3.12
 
 # Scrat-Backup klonen und installieren
 git clone https://github.com/nicolettas-muggelbude/Scrat-Backup.git
-cd scrat-backup
-pip3 install -r requirements.txt
+cd Scrat-Backup
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
 
 # Starten
 python3 src/main.py
