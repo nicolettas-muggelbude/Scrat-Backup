@@ -5,6 +5,7 @@ Orchestriert Vollbackups und inkrementelle Backups
 
 import hashlib
 import logging
+import platform
 import shutil
 import tempfile
 from dataclasses import dataclass, field
@@ -658,45 +659,57 @@ class BackupEngine:
 
         logger.info(f"Rotation abgeschlossen: {len(backups_to_delete)} alte Backups gelöscht")
 
-    def _check_temp_space(self, required_bytes: int) -> Tuple[bool, str]:
+    def _find_temp_dir(self, required_bytes: int) -> Tuple[Optional[Path], str]:
         """
-        Prüft ob im Temp-Verzeichnis genug Speicher für ein lokales Zwischen-Archiv ist.
+        Sucht das beste verfügbare Temp-Verzeichnis mit genug Speicher.
+
+        Auf Linux ist /tmp oft ein tmpfs (RAM-Dateisystem, max. RAM/2).
+        Deshalb werden mehrere Kandidaten in Prioritätsreihenfolge geprüft.
 
         Args:
-            required_bytes: Benötigte Bytes (unkomprimierte Quelldatei-Größe)
+            required_bytes: Quelldatei-Größe in Bytes
 
         Returns:
-            (genug_speicher, meldung)
+            (pfad_oder_None, meldung) – None bedeutet: kein Temp möglich,
+            Fallback auf direktes Schreiben aufs Zielmedium
         """
-        tmp_path = tempfile.gettempdir()
-        try:
-            usage = shutil.disk_usage(tmp_path)
-            available = usage.free
-            total = usage.total
-        except OSError as e:
-            return False, f"Temp-Verzeichnis nicht lesbar: {e}"
-
-        # Konservativer Puffer: zstd kann bereits komprimierte Daten leicht
-        # expandieren; 7z-Container-Overhead kommt hinzu → 1.5× als sicherer Wert
+        # Konservativer Puffer: zstd expandiert bereits komprimierte Daten
+        # leicht, 7z-Container-Overhead kommt hinzu
         needed = int(required_bytes * 1.5)
 
-        logger.info(
-            f"Temp-Speicherprüfung: Partition {tmp_path} "
-            f"({total / 1024**3:.1f}GB gesamt, {available / 1024**2:.0f}MB frei), "
-            f"Quelldaten {required_bytes / 1024**2:.0f}MB → ~{needed / 1024**2:.0f}MB benötigt"
-        )
+        # Kandidaten in Prioritätsreihenfolge
+        candidates: List[Path] = [Path(tempfile.gettempdir())]
+        if platform.system() == "Linux":
+            # /var/tmp ist auf Ubuntu immer auf der echten Disk (kein tmpfs)
+            candidates.append(Path("/var/tmp"))
+        # Letzter Ausweg: ~/.cache/scrat-backup (immer auf echter Disk)
+        candidates.append(Path.home() / ".cache" / "scrat-backup" / "tmp")
 
-        if available >= needed:
-            return True, (
-                f"Temp ({tmp_path}): {available / 1024**2:.0f}MB verfügbar, "
-                f"~{needed / 1024**2:.0f}MB benötigt"
-            )
-        else:
-            return False, (
-                f"Temp ({tmp_path}): nur {available / 1024**2:.0f}MB verfügbar, "
-                f"~{needed / 1024**2:.0f}MB benötigt "
-                f"(Quelldaten {required_bytes / 1024**2:.0f}MB × 1.5 Puffer)"
-            )
+        for candidate in candidates:
+            try:
+                candidate.mkdir(parents=True, exist_ok=True)
+                usage = shutil.disk_usage(candidate)
+                available = usage.free
+                total = usage.total
+                logger.info(
+                    f"Temp-Kandidat {candidate}: "
+                    f"{total / 1024**3:.1f}GB gesamt, {available / 1024**2:.0f}MB frei, "
+                    f"~{needed / 1024**2:.0f}MB benötigt"
+                )
+                if available >= needed:
+                    return candidate, (
+                        f"{candidate}: {available / 1024**2:.0f}MB frei, "
+                        f"~{needed / 1024**2:.0f}MB benötigt"
+                    )
+            except OSError as e:
+                logger.warning(f"Temp-Kandidat {candidate} nicht nutzbar: {e}")
+
+        msg = (
+            f"Kein Temp-Verzeichnis mit ~{needed / 1024**2:.0f}MB freiem Speicher gefunden "
+            f"(Quelldaten {required_bytes / 1024**2:.0f}MB × 1.5 Puffer). "
+            f"Geprüft: {', '.join(str(c) for c in candidates)}"
+        )
+        return None, msg
 
     def _compress_and_encrypt(
         self,
@@ -720,19 +733,19 @@ class BackupEngine:
             Liste der verschlüsselten Archive auf backup_dir
         """
         total_size = sum(f.stat().st_size for f in file_paths if f.exists())
-        has_space, space_msg = self._check_temp_space(total_size)
+        temp_dir_path, space_msg = self._find_temp_dir(total_size)
 
         def compress_progress(current: int, total: int, filename: str) -> None:
             progress.files_processed = current
             progress.current_file = filename
             self._report_progress(progress)
 
-        if has_space:
-            logger.info(f"Nutze Temp-Verzeichnis für Archivierung. {space_msg}")
+        if temp_dir_path is not None:
+            logger.info(f"Nutze Temp-Verzeichnis für Archivierung: {space_msg}")
             progress.phase = "compressing"
             self._report_progress(progress)
 
-            with tempfile.TemporaryDirectory() as tmp_dir:
+            with tempfile.TemporaryDirectory(dir=temp_dir_path) as tmp_dir:
                 archive_base = Path(tmp_dir) / "data.7z"
                 archives = self.compressor.compress_files(
                     files=file_paths,
@@ -755,7 +768,7 @@ class BackupEngine:
                 # tmp_dir wird automatisch aufgeräumt
         else:
             logger.warning(
-                f"ACHTUNG: Nicht genug Temp-Speicher ({space_msg}). "
+                f"ACHTUNG: Kein geeignetes Temp-Verzeichnis gefunden – {space_msg}. "
                 f"Archivierung direkt auf Zielmedium – Backup läuft deutlich langsamer!"
             )
             progress.phase = "compressing"
