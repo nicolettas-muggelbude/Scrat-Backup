@@ -90,59 +90,56 @@ Feature-Requests als [GitHub Issue](https://github.com/nicolettas-muggelbude/scr
 
 - **Python 3.10+** (empfohlen: 3.12)
 - **Git**
-- **Linux/WSL/Windows** (Development hauptsächlich auf Windows)
+- **Linux, macOS oder Windows** (Entwicklung auf Linux/WSL und Windows)
 
 ### Ersteinrichtung
 
 ```bash
-# System-Dependencies installieren
-# Debian/Ubuntu:
-sudo apt install python3.12 python3-pip python3-keyring libsecret-1-0 smbclient cron \
+# Linux (Debian/Ubuntu) – System-Dependencies:
+sudo apt install python3.12 python3-pip python3-keyring libsecret-1-0 smbclient \
                  libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
                  libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0
 
-# Fedora:
-sudo dnf install python3.12 python3-pip python3-keyring libsecret samba-client cronie
+# Linux (Fedora):
+sudo dnf install python3.12 python3-pip python3-keyring libsecret samba-client
 
-# Arch:
-sudo pacman -S python python-pip python-keyring libsecret smbclient cronie
+# Linux (Arch):
+sudo pacman -S python python-pip python-keyring libsecret smbclient
 
-# 1. Repository forken und klonen
-git clone https://github.com/nicolettas-muggelbude/scrat-backup.git
-cd scrat-backup
+# 1. Repository klonen
+git clone https://github.com/nicolettas-muggelbude/Scrat-Backup.git
+cd Scrat-Backup
 
-# 2. Virtual Environment erstellen
+# 2. Virtual Environment erstellen und aktivieren
 python3 -m venv venv
+source venv/bin/activate        # Linux/macOS
+# venv\Scripts\activate         # Windows
 
-# 3. Virtual Environment aktivieren
-# Linux/Mac:
-source venv/bin/activate
-# Windows:
-venv\Scripts\activate
-
-# 4. Dependencies installieren
+# 3. Dependencies installieren
 pip install -r requirements.txt
 
-# 5. Pre-commit Hooks installieren (optional)
-# TODO: Wird in Zukunft hinzugefügt
-
-# 6. Testen ob alles funktioniert
-./dev.sh check
-
-# Starten
+# 4. Programm starten
 python3 src/main.py
+
+# 5. Code-Quality prüfen (optional, vor erstem Commit)
+./dev.sh check
 ```
 
 ### Nützliche Befehle
 
-Das `dev.sh` Script erleichtert die Entwicklung:
+Das `dev.sh` Script erleichtert die Entwicklung (Linux/macOS):
 
 ```bash
 ./dev.sh help      # Alle verfügbaren Befehle
-./dev.sh check     # Code-Quality Checks
-./dev.sh format    # Code automatisch formatieren
-./dev.sh test      # Tests ausführen
 ./dev.sh run       # Programm starten
+./dev.sh test      # Tests ausführen (pytest)
+./dev.sh coverage  # Tests + Coverage-Report (htmlcov/index.html)
+./dev.sh format    # Code automatisch formatieren (black + isort)
+./dev.sh check     # Code-Quality: black + isort + flake8 + mypy
+./dev.sh lint      # Nur flake8
+./dev.sh types     # Nur mypy
+./dev.sh clean     # __pycache__, .pyc, .coverage aufräumen
+./dev.sh install   # Dependencies neu installieren
 ```
 
 ---
@@ -186,8 +183,8 @@ git checkout -b docs/improve-readme
 ### 3. Committen
 
 ```bash
-# Änderungen stagen
-git add .
+# Geänderte Dateien stagen
+git add src/gui/wizard_v2.py
 
 # Status prüfen
 git status
@@ -201,7 +198,7 @@ Siehe [Commit-Messages](#commit-messages) für Konventionen.
 ### 4. Push und Pull Request
 
 ```bash
-# Zu deinem Fork pushen
+# Branch pushen
 git push origin feature/mein-feature
 
 # Pull Request auf GitHub erstellen
@@ -286,12 +283,12 @@ import sys
 from pathlib import Path
 
 # 2. Third-Party
-from PyQt6.QtWidgets import QMainWindow
+from PySide6.QtWidgets import QMainWindow
 import pytest
 
 # 3. Local
 from src.core.backup_engine import BackupEngine
-from src.utils.config import load_config
+from src.utils.credential_manager import get_credential_manager
 ```
 
 ### Fehlerbehandlung
@@ -355,14 +352,33 @@ if file.exists():
 
 ```
 tests/
-├── unit/               # Unit-Tests
-│   ├── test_backup_engine.py
-│   └── test_encryptor.py
-├── integration/        # Integration-Tests
-│   └── test_full_backup.py
-├── fixtures/           # Test-Daten
+├── unit/                      # Unit-Tests
+│   └── test_*.py
+├── test_backup_engine.py      # BackupEngine-Tests
+├── test_compressor.py         # Compressor-Tests
+├── test_scanner.py            # Scanner-Tests
+├── test_config_manager.py     # Config-Tests
+├── test_gui.py                # GUI-Tests (pytest-qt)
+├── fixtures/                  # Test-Daten
 │   └── sample_files/
-└── conftest.py         # Pytest-Konfiguration
+└── conftest.py                # Pytest-Konfiguration
+```
+
+### Tests ausführen
+
+```bash
+# Alle Tests
+./dev.sh test
+
+# Mit Coverage-Report
+./dev.sh coverage
+# → Bericht öffnen: htmlcov/index.html
+
+# Einzelne Datei
+venv/bin/pytest tests/test_compressor.py -v
+
+# Nur schnelle Tests (ohne langsame Integrations-Tests)
+venv/bin/pytest tests/ -m "not slow" -v
 ```
 
 ### Test schreiben
@@ -378,27 +394,27 @@ class TestEncryptor:
     def test_encrypt_decrypt_roundtrip(self):
         """Verschlüsseln und Entschlüsseln ergibt Original"""
         # Arrange
-        encryptor = Encryptor(password="test123")
+        encryptor = Encryptor(password="TestPasswort123!")
         original_data = b"Geheime Daten"
 
         # Act
-        encrypted = encryptor.encrypt(original_data)
-        decrypted = encryptor.decrypt(encrypted)
+        ciphertext, nonce = encryptor.encrypt_bytes(original_data)
+        decrypted = encryptor.decrypt_bytes(ciphertext, nonce)
 
         # Assert
         assert decrypted == original_data
-        assert encrypted != original_data
+        assert ciphertext != original_data
 
     def test_wrong_password_raises_error(self):
         """Falsches Passwort wirft Fehler"""
-        # Arrange
-        enc1 = Encryptor(password="correct")
-        enc2 = Encryptor(password="wrong")
-        encrypted = enc1.encrypt(b"data")
+        from cryptography.exceptions import InvalidTag
 
-        # Act & Assert
-        with pytest.raises(DecryptionError):
-            enc2.decrypt(encrypted)
+        enc1 = Encryptor(password="correct123!")
+        enc2 = Encryptor(password="wrong123!", salt=enc1.salt)
+        ciphertext, nonce = enc1.encrypt_bytes(b"data")
+
+        with pytest.raises(InvalidTag):
+            enc2.decrypt_bytes(ciphertext, nonce)
 ```
 
 ### Test-Coverage
@@ -504,8 +520,8 @@ Closes #42"
 ./dev.sh test
 
 # Branch ist aktuell
-git fetch upstream
-git rebase upstream/main
+git fetch origin
+git rebase origin/main
 ```
 
 ### 2. PR erstellen
@@ -556,7 +572,7 @@ Closes #42
 ```bash
 # Cleanup
 git checkout main
-git pull upstream main
+git pull origin main
 git branch -d feature/mein-feature
 ```
 
@@ -566,33 +582,32 @@ git branch -d feature/mein-feature
 
 ```
 src/
-├── gui/            # PyQt6 GUI
-├── core/           # Business Logic
-├── storage/        # Storage-Backends
-├── utils/          # Hilfsfunktionen
-└── models/         # Datenmodelle
+├── main.py                    # Entry Point
+├── gui/                       # PySide6 GUI (Wizard, MainWindow, Tabs)
+├── core/                      # Business Logic (BackupEngine, Encryptor, …)
+├── templates/
+│   ├── handlers/              # Template-Handler (USB, OneDrive, Nextcloud, …)
+│   └── *.json                 # Template-Definitionen
+└── utils/                     # Hilfsfunktionen (CredentialManager, …)
 
-tests/
-├── unit/           # Unit-Tests
-└── integration/    # Integration-Tests
-
+tests/                         # pytest-Tests
 docs/
-├── developer_guide.md
-└── architecture.md
+└── TESTING.md                 # Test-Anleitung
 ```
 
 **Wichtig:**
-- Keine GUI-Code in `core/`
+- Kein GUI-Code in `core/`
 - Keine Business-Logic in `gui/`
-- Storage-Backends erben von `StorageBackend`
+- Template-Handler erben von `TemplateHandler` (base.py)
 
 ---
 
 ## Hilfe bekommen
 
-- **Dokumentation:** [CLAUDE.md](CLAUDE.md), [docs/](docs/)
-- **Issues:** [GitHub Issues](https://github.com/nicolettas-muggelbude/scrat-backup/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/nicolettas-muggelbude/scrat-backup/discussions)
+- **Technische Doku:** [CLAUDE.md](CLAUDE.md) – Architektur, Entscheidungen, Sessions
+- **Test-Anleitung:** [docs/TESTING.md](docs/TESTING.md)
+- **Issues:** [GitHub Issues](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/nicolettas-muggelbude/Scrat-Backup/discussions)
 
 ---
 

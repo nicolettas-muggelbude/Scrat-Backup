@@ -48,14 +48,14 @@
 ### 🔐 Sicherheit
 - ✅ **AES-256-GCM Verschlüsselung** für alle Backups (Pflicht!)
 - ✅ **PBKDF2** Key-Derivation (100.000 Iterationen)
-- ✅ **Sichere Passwort-Speicherung** (Windows Credential Manager, Linux/macOS Keyring)
+- ✅ **Sichere Passwort-Speicherung** (Windows Credential Manager / Linux GNOME Keyring/KWallet / macOS Schlüsselbund)
 - ✅ **Kein Plaintext** - sensible Daten immer verschlüsselt
 
 ### 💾 Backup-Funktionen
 - ✅ **Vollbackups** und **Inkrementelle Backups**
 - ✅ **Versionierung** (3 Versionen, konfigurierbar)
-- ✅ **Automatische Rotation** alter Backups
-- ✅ **Komprimierung** mit 7z (effizient & schnell)
+- ✅ **Automatische Rotation** alter Backups (nur bei Scheduler-Backups, manuelle Backups werden nie gelöscht)
+- ✅ **Komprimierung** mit 7z/zstd Level 1 (schnell, ~41s für 2GB)
 - ✅ **Exclude-Patterns** (z.B. *.tmp, node_modules/)
 - ✅ **Progress-Tracking** mit Speed (MB/s) und ETA
 
@@ -214,25 +214,27 @@ python3 src/main.py
 ```bash
 # Repository klonen
 git clone https://github.com/nicolettas-muggelbude/Scrat-Backup.git
-cd scrat-backup
+cd Scrat-Backup
 
-# Virtual Environment erstellen
-python -m venv venv
-
-# Aktivieren (Windows)
-venv\Scripts\activate
+# Virtual Environment erstellen und aktivieren
+python3 -m venv venv
+source venv/bin/activate        # Linux/macOS
+# venv\Scripts\activate         # Windows
 
 # Dependencies installieren
 pip install -r requirements.txt
 
-# Tests ausführen
-pytest tests/ -v
+# Programm starten
+python3 src/main.py
 
-# Code-Quality-Checks
+# Tests ausführen
+./dev.sh test
+
+# Code-Quality-Checks (black + isort + flake8 + mypy)
 ./dev.sh check
 
-# Programm starten
-python src/main.py
+# Code automatisch formatieren
+./dev.sh format
 ```
 
 ---
@@ -266,15 +268,15 @@ GUI → Restore-Tab → Backup auswählen → Dateien wählen → "Wiederherstel
 
 | Komponente | Technologie | Version |
 |------------|-------------|---------|
-| **Sprache** | Python | 3.12+ |
-| **GUI** | PyQt6 | 6.10.0 |
-| **Verschlüsselung** | cryptography (AES-256-GCM) | 46.0.3 |
-| **Komprimierung** | py7zr | 1.0.0 |
+| **Sprache** | Python | 3.10+ |
+| **GUI** | PySide6 (Qt6) | 6.6.0+ |
+| **Verschlüsselung** | cryptography (AES-256-GCM) | 41.0.0+ |
+| **Komprimierung** | py7zr (zstd Level 1) | 1.0.0+ |
 | **Datenbank** | SQLite | (built-in) |
-| **SFTP** | paramiko | 4.0.0 |
-| **WebDAV** | webdavclient3 | 3.14.6 |
-| **SMB** | smbprotocol | 1.14.0 |
-| **Testing** | pytest | 9.0.1 |
+| **SFTP** | paramiko | 3.4.0+ |
+| **WebDAV** | webdavclient3 | 3.14.6+ |
+| **SMB** | smbprotocol | 1.12.0+ |
+| **Testing** | pytest | 7.4.0+ |
 
 ---
 
@@ -285,34 +287,39 @@ GUI → Restore-Tab → Backup auswählen → Dateien wählen → "Wiederherstel
 ```
 scrat-backup/
 ├── src/
-│   ├── main.py                 # Entry Point
-│   ├── gui/                    # GUI-Komponenten
-│   │   ├── main_window.py      # Hauptfenster
-│   │   ├── wizard.py           # Setup-Wizard
-│   │   ├── backup_tab.py       # Backup-Tab
-│   │   ├── restore_tab.py      # Restore-Tab
-│   │   ├── settings_tab.py     # Settings-Tab
-│   │   └── ...
-│   ├── core/                   # Core-Module
-│   │   ├── backup_engine.py    # Backup-Logik
-│   │   ├── restore_engine.py   # Restore-Logik
-│   │   ├── encryptor.py        # Verschlüsselung
-│   │   ├── compressor.py       # Komprimierung
-│   │   └── ...
-│   ├── storage/                # Storage-Backends
-│   │   ├── usb_storage.py      # USB/Lokal
-│   │   ├── sftp_storage.py     # SFTP
-│   │   ├── webdav_storage.py   # WebDAV
-│   │   ├── rclone_storage.py   # Rclone
-│   │   └── smb_storage.py      # SMB/CIFS
-│   └── utils/                  # Utilities
-├── tests/                      # 143 Tests (>80% Coverage)
-├── docs/                       # Dokumentation
-│   ├── developer_guide.md
-│   └── architecture.md
-├── assets/                     # Icons, Themes
-├── TODO.md                     # Roadmap
-└── claude.md                   # Technische Dokumentation
+│   ├── main.py                    # Entry Point + start_backup_after_wizard()
+│   ├── gui/
+│   │   ├── wizard_v2.py           # SetupWizardV2, TemplateCard, Seiten-Routing
+│   │   ├── wizard_pages.py        # StartPage, SourceSelectionPage, FinishPage
+│   │   ├── dynamic_template_form.py  # Dynamisches Formular aus Template-ui_fields
+│   │   ├── main_window.py         # MainWindow (Experten-Modus)
+│   │   ├── backup_tab.py          # Backup-Tab
+│   │   ├── restore_tab.py         # Restore-Tab
+│   │   ├── settings_tab.py        # Settings-Tab
+│   │   ├── theme_manager.py       # Dark/Light Mode, Auto-Detection
+│   │   ├── theme.py               # Farb-Palette (Light Mode)
+│   │   └── password_dialog.py     # Passwort-Dialog (plattformspezifisch)
+│   ├── core/
+│   │   ├── backup_engine.py       # Backup-Orchestrierung, Temp-Dir-Logik
+│   │   ├── encryptor.py           # AES-256-GCM (Chunked, 64MB)
+│   │   ├── compressor.py          # py7zr/zstd Level 1, Split-Archive
+│   │   ├── scanner.py             # Datei-Scanner, Änderungs-Erkennung
+│   │   ├── metadata_manager.py    # SQLite-Datenbank
+│   │   ├── config_manager.py      # ~/.scrat-backup/config.json
+│   │   └── template_manager.py    # Template laden, validieren, erstellen
+│   ├── templates/
+│   │   ├── handlers/              # USB, OneDrive, Google Drive, Nextcloud, …
+│   │   └── *.json                 # Template-Definitionen
+│   └── utils/
+│       └── credential_manager.py  # keyring (Windows/Linux/macOS)
+├── tests/                         # pytest-Tests
+├── docs/
+│   └── TESTING.md                 # Test-Anleitung
+├── assets/                        # Icons
+├── dev.sh                         # Entwickler-Hilfsskript
+├── CLAUDE.md                      # Technische Dokumentation (diese Datei)
+├── CONTRIBUTING.md                # Beitrags-Richtlinien
+└── TODO.md                        # Roadmap
 ```
 
 ### Code-Quality
@@ -407,7 +414,7 @@ Siehe [LICENSE](LICENSE) für Details.
 
 | Bibliothek | Lizenz | Kompatibel? |
 |------------|--------|-------------|
-| PyQt6 | GPL / Commercial | ✅ GPL |
+| PySide6 | LGPL | ✅ GPL |
 | cryptography | Apache 2.0 / BSD | ✅ Ja |
 | py7zr | LGPL | ✅ Ja |
 | paramiko | LGPL | ✅ Ja |
@@ -425,7 +432,7 @@ Scrat-Backup nimmt **Sicherheit ernst**:
 - 🔒 **AES-256-GCM**: Authenticated Encryption für alle Backups
 - 🔑 **PBKDF2**: 100.000 Iterationen für Key-Derivation
 - 🚫 **Kein Plaintext**: Alle sensiblen Daten verschlüsselt
-- 💾 **Windows Credential Manager**: Optionale Passwort-Speicherung
+- 💾 **Sicherer Schlüsselbund**: Windows Credential Manager / GNOME Keyring / macOS Keychain
 
 ### Sicherheitslücken melden
 

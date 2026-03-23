@@ -103,7 +103,8 @@ src/
 ## Offene TODOs
 
 ### Wizard / GUI
-- [x] **"Backup ändern" überspringt SourceSelectionPage** ✅ – "edit" routet jetzt über PAGE_SOURCE; SourceSelectionPage.initializePage() vorbefüllt aus Config
+- [x] **"Backup ändern" überspringt SourceSelectionPage** ✅
+- [x] **Dark Mode: TemplateCard-Kacheln, Ordner-Liste, Ausschlüsse, Finish-Page** ✅
 - [ ] Tray-Icon mit Theme-Toggle
 - [ ] Restore-Flow (eigener Wizard)
 - [x] Schedule-Page (Zeitplan im Wizard) ✅
@@ -262,6 +263,60 @@ pip install secretstorage python-notify2 pyxdg
 - [ ] Tray-Start implementieren (aktuell TODO)
 - [ ] Restore-Flow (eigener Wizard)
 
+---
+
+## Session 2026-03-24: Performance-Krise, Dark Mode Fixes
+
+### Hauptprobleme gelöst:
+
+#### 1. **9 Splits für 2GB, 14 Minuten → 2 Splits, 41 Sekunden** ✅
+- **Root Cause:** `config.json` hatte denselben Quellpfad mehrfach – Ordner wurde ~10× gescannt und gepackt
+- **Lösung:** Quellen in `main.py` werden vor dem Backup dedupliziert (`Path.resolve()`-Vergleich via `set`)
+
+#### 2. **`compression_level=5` hardcoded in main.py** ✅
+- `main.py` und `main_window.py` übergaben Level 5, ignorierten den Level-1-Default
+- **Fix:** Überall `compression_level=1`; `BackupConfig`-Default ebenfalls auf 1 gesetzt
+
+#### 3. **Temp-Speicher-Schätzung zu gering (1.9GB statt 2.9GB)** ✅
+- Multiplikator 1.1× → 1.5× (zstd expandiert bereits komprimierte Dateien leicht)
+- tmpfs `/tmp` auf Ubuntu mit 8GB RAM zu klein → Fallback-Kette: `/tmp` → `/var/tmp` → `~/.cache/scrat-backup/tmp`
+
+#### 4. **Rotation löscht manuelle Backups** ✅
+- **Anforderung:** Rotation nur bei automatisch ausgelösten (Scheduled) Backups, nie bei manuellen
+- **Lösung:** `BackupConfig.auto_rotate: bool = False` – nur `main_window.py` (Schedule-Trigger) setzt `True`
+
+#### 5. **Dark Mode: TemplateCard-Kacheln leuchtend weiß (Seite 3)** ✅
+- `TemplateCard._update_style()` und `enterEvent` hatten hardcoded `white`/`#f5f5f5`
+- **Fix:** `_is_dark_mode()` Hilfsfunktion (Palette-Check) in `wizard_v2.py`; alle Zustände theme-aware
+
+#### 6. **Dark Mode: Eigene-Ordner-Liste leuchtend weiß (Seite 2)** ✅
+- `custom_list` hatte `background-color: white`
+- **Fix:** `_update_custom_list_style()` + ClickableFrame-Hover nutzen `_is_dark_mode()`
+
+#### 7. **Dark Mode: Ausschlüsse-Label** ✅
+- `excludes_label`: `#f5f5f5` → `#252525` im Dark Mode
+
+#### 8. **Passwort-Dialog zeigt Windows-Text auf Linux** ✅
+- Checkbox/Info-Text zeigte immer "Windows Credential Manager"
+- **Fix:** `platform.system()` → Windows / macOS / Linux-spezifischer Text
+
+#### 9. **Dark Mode: Letzte Wizard-Seite (leuchtende Rahmen)** ✅
+- `backup_group` / `tray_group`: fixer Rahmen `#e0e0e0` → `#3f3f3f` im Dark Mode
+- `success_label`: Hellgrün → dunkles Grün im Dark Mode
+- Styles werden in `initializePage()` gesetzt (Theme zum Anzeige-Zeitpunkt)
+
+### Commits dieser Session:
+1. `e417d4a` - fix: Quell-Duplikate entfernen und Kompression auf Level 1 setzen
+2. `4feaa2c` - feat: Rotation nur bei automatischen Backups, nie bei manuellen
+3. `4281e3a` - fix: Dark Mode TemplateCard-Kacheln + Eigene-Ordner-Liste
+4. `cb153a4` - fix: Dark Mode Ausschlüsse-Label + Passwort-Dialog plattformspezifisch
+5. `59a5d85` - fix: Dark Mode letzte Wizard-Seite
+
+### Offene Punkte nach dieser Session:
+- [ ] Tray-Start implementieren
+- [ ] Restore-Flow (eigener Wizard)
+- [ ] `_rotate_old_backups()`: löscht noch keine Disk-Dateien (nur DB-Einträge)
+- [ ] Dark Mode: weitere hardcodierte Farben in anderen Tabs/Dialogen prüfen
 
 ---
 
