@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Optional
 
+from utils.paths import get_app_data_dir
+
 logger = logging.getLogger(__name__)
 
 
@@ -66,7 +68,7 @@ class TemplateManager:
     def __init__(self):
         # Template-Verzeichnisse
         self.system_templates_dir = self._get_system_templates_dir()
-        self.user_templates_dir = Path.home() / ".scrat-backup" / "templates"
+        self.user_templates_dir = get_app_data_dir() / "templates"
 
         # Erstelle User-Templates-Verzeichnis falls nicht vorhanden
         self.user_templates_dir.mkdir(parents=True, exist_ok=True)
@@ -105,7 +107,7 @@ class TemplateManager:
 
         # Option 4: Schreibbares Fallback – Bundle/AppImage ist read-only,
         # mkdir dort würde fehlschlagen
-        fallback = Path.home() / ".scrat-backup" / "templates"
+        fallback = get_app_data_dir() / "templates"
         fallback.mkdir(parents=True, exist_ok=True)
         logger.warning(f"Kein System-Templates-Verzeichnis gefunden, nutze Fallback: {fallback}")
         return fallback

@@ -7,6 +7,83 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.3.11-beta] - 2026-04-08
+
+### Fixed
+- **Auto-Updater: Tägliche Prüfung** – letzte Prüfung wird in `~/.scrat-backup/last_update_check` gespeichert, kein unnötiger API-Request bei jedem Start
+- **`from src import __version__` im Bundle** – try/except mit Fallback-Versionsnummer verhindert ImportError in PyInstaller-Builds
+
+## [0.3.10-beta] - 2026-04-08
+
+### Fixed
+- **NameError QPushButton / QTableWidget / QProgressBar / QFileDialog** – fehlende Imports in `wizard_v2.py` ergänzt
+- **0 Templates geladen** – Template-JSON-Dateien (`usb.json`, `nextcloud.json`, `onedrive.json`, `google_drive.json`, `dropbox.json`, `synology.json`, `qnap.json`) waren nicht im Repository – alle 7 Dateien angelegt und committed
+
+## [0.3.9-beta] - 2026-04-08
+
+### Fixed
+- **OSError: read-only filesystem im AppImage** – `template_manager._get_system_templates_dir()` rief `mkdir()` im squashfs-Read-only-Dateisystem auf
+  - Neu: `sys._MEIPASS`-basierte Pfadermittlung für Bundle-Umgebung
+  - Fallback-Kette: PyInstaller-Bundle → `/usr/share/scrat-backup/templates/` → relativ zu `__file__` → `~/.scrat-backup/templates/`
+
+## [0.3.8-beta] - 2026-04-08
+
+### Fixed
+- **Windows: App startet ohne Ausgabe** – `console=False` schluckte alle Fehler; Debug-Build bestätigte, dass App korrekt läuft sobald Import-Fehler behoben sind
+
+## [0.3.7-beta] - 2026-04-08
+
+### Fixed
+- **LoadLibrary: Unzulässiger Zugriff (Windows DLL)** – UPX-Komprimierung löst Windows Exploit Guard / DEP-Speicherschutz aus
+  - `upx=False` und `strip=False` in `scrat_backup.spec` (EXE + COLLECT) gesetzt
+
+## [0.3.6-beta] - 2026-04-08
+
+### Fixed
+- **ModuleNotFoundError: PySide6 (Windows)** – `pyproject.toml` hat keine `[project.dependencies]`-Sektion; `pip install -e ".[dev]"` installierte keine Pakete
+  - GitHub Actions: auf `pip install -r requirements.txt` umgestellt
+
+## [0.3.5-beta] - 2026-04-08
+
+### Fixed
+- **Inno Setup: WizardImageFile nicht gefunden** – `WizModernImage-IS.bmp` existiert nicht in der CI-Inno-Setup-Version
+  - `WizardImageFile=` und `WizardSmallImageFile=` Zeilen aus `installer.iss` entfernt
+
+## [0.3.4-beta] - 2026-04-08
+
+### Changed
+- **Windows: ZIP → Installer (.exe)** – Windows-Build erstellt jetzt einen richtigen Inno Setup Installer statt eines ZIP-Archivs
+  - Installiert nach `%LocalAppData%\Scrat-Backup` (kein Administratorrecht erforderlich)
+  - Startmenü-Integration und optionaler Desktop-Shortcut
+  - Version wird per `/DMyAppVersion=` Kommandozeilenparameter übergeben
+
+## [0.3.3-beta] - 2026-04-08
+
+### Added
+- **Auto-Updater:** Prüft täglich auf neue Versionen via GitHub Releases API
+  - `src/core/update_checker.py`: `UpdateChecker(QThread)` mit `update_available`-Signal
+  - `src/gui/update_dialog.py`: Dialog mit Release-Notes, Download-Link und Direktdownload-Button
+  - Plattformspezifischer Download-Link aus den Release-Assets
+  - Einmalige Prüfung pro Tag (Datum in `~/.scrat-backup/last_update_check`)
+
+## [0.3.2-beta] - 2026-04-08
+
+### Added
+- **GitHub Actions CI:** Automatische Builds bei `v*`-Tags
+  - `build-windows` (windows-latest): PyInstaller → Inno Setup EXE
+  - `build-linux` (ubuntu-22.04): PyInstaller → AppImage
+  - Release-Assets werden automatisch hochgeladen (`softprops/action-gh-release@v2`)
+
+## [0.3.1-beta] - 2026-04-08
+
+### Fixed
+- **PyInstaller-Optimierung:** `scrat_backup.spec` überarbeitet
+  - Explizite `hidden_imports` (nur gebrauchte Module)
+  - Große `excludes`-Liste (Qt6Quick, Qml, Pdf, Multimedia, Bluetooth, WebEngine, 3D)
+  - `remove_qt_libs()`: filtert ungenutzle Qt-`.so`-Dateien post-Analyse
+  - `optimize=1` in PYZ (entfernt Docstrings, kleinere `.pyc`)
+  - Template-JSON-Dateien über `glob.glob()` in `datas` eingebunden
+
 ## [0.3.0-beta] - 2026-04-08
 
 ### Added
@@ -245,7 +322,19 @@ Wir folgen [Semantic Versioning](https://semver.org/lang/de/):
 - [Issues](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues)
 - [Discussions](https://github.com/nicolettas-muggelbude/Scrat-Backup/discussions)
 
-[Unreleased]: https://github.com/nicolettas-muggelbude/Scrat-Backup/compare/v0.2.0-beta...HEAD
+[Unreleased]: https://github.com/nicolettas-muggelbude/Scrat-Backup/compare/v0.3.11-beta...HEAD
+[0.3.11-beta]: https://github.com/nicolettas-muggelbude/Scrat-Backup/compare/v0.3.10-beta...v0.3.11-beta
+[0.3.10-beta]: https://github.com/nicolettas-muggelbude/Scrat-Backup/compare/v0.3.9-beta...v0.3.10-beta
+[0.3.9-beta]: https://github.com/nicolettas-muggelbude/Scrat-Backup/compare/v0.3.8-beta...v0.3.9-beta
+[0.3.8-beta]: https://github.com/nicolettas-muggelbude/Scrat-Backup/compare/v0.3.7-beta...v0.3.8-beta
+[0.3.7-beta]: https://github.com/nicolettas-muggelbude/Scrat-Backup/compare/v0.3.6-beta...v0.3.7-beta
+[0.3.6-beta]: https://github.com/nicolettas-muggelbude/Scrat-Backup/compare/v0.3.5-beta...v0.3.6-beta
+[0.3.5-beta]: https://github.com/nicolettas-muggelbude/Scrat-Backup/compare/v0.3.4-beta...v0.3.5-beta
+[0.3.4-beta]: https://github.com/nicolettas-muggelbude/Scrat-Backup/compare/v0.3.3-beta...v0.3.4-beta
+[0.3.3-beta]: https://github.com/nicolettas-muggelbude/Scrat-Backup/compare/v0.3.2-beta...v0.3.3-beta
+[0.3.2-beta]: https://github.com/nicolettas-muggelbude/Scrat-Backup/compare/v0.3.1-beta...v0.3.2-beta
+[0.3.1-beta]: https://github.com/nicolettas-muggelbude/Scrat-Backup/compare/v0.3.0-beta...v0.3.1-beta
+[0.3.0-beta]: https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/tag/v0.3.0-beta
 [0.2.0-beta]: https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/tag/v0.2.0-beta
 [0.1.0-dev]: https://github.com/nicolettas-muggelbude/Scrat-Backup/compare/v0.0.1-alpha...v0.1.0-dev
 [0.0.1-alpha]: https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/tag/v0.0.1-alpha

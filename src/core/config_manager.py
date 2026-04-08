@@ -8,6 +8,8 @@ import logging
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from utils.paths import get_app_data_dir
+
 logger = logging.getLogger(__name__)
 
 
@@ -72,7 +74,7 @@ class ConfigManager:
         """
         # Config-Datei-Pfad
         if config_file is None:
-            config_dir = Path.home() / ".scrat-backup"
+            config_dir = get_app_data_dir()
             config_dir.mkdir(parents=True, exist_ok=True)
             self.config_file = config_dir / "config.json"
         else:

@@ -1,0 +1,12 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Scrat-Backup
+GenericName=Backup-Programm
+Comment=Verschlüsseltes Backup-Tool für Privatnutzer
+Exec=scrat-backup
+Icon=scrat-backup
+Terminal=false
+Categories=Utility;Archiving;
+Keywords=backup;verschlüsselung;sicherung;restore;
+StartupWMClass=ScratBackup

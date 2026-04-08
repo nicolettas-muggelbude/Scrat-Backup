@@ -21,6 +21,7 @@ from PySide6.QtWidgets import QApplication  # noqa: E402
 
 from src.core.config_manager import ConfigManager  # noqa: E402
 from src.core.update_checker import UpdateChecker  # noqa: E402
+from src.utils.paths import get_app_data_dir  # noqa: E402
 from src.gui.main_window import MainWindow  # noqa: E402
 from src.gui.theme_manager import ThemeManager  # noqa: E402
 from src.gui.update_dialog import show_update_dialog  # noqa: E402
@@ -47,7 +48,7 @@ def check_first_run() -> bool:
     Returns:
         True wenn erster Start oder Konfiguration ungültig
     """
-    config_dir = Path.home() / ".scrat-backup"
+    config_dir = get_app_data_dir()
     config_file = config_dir / "config.json"
 
     # Wenn config.json nicht existiert → erster Start
@@ -323,7 +324,7 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
     excludes = set(wizard_config.get("excludes", []))
 
     # Metadaten-DB Pfad
-    db_path = Path.home() / ".scrat-backup" / "metadata.db"
+    db_path = get_app_data_dir() / "metadata.db"
 
     backup_config = BackupConfig(
         sources=sources,

@@ -12,6 +12,7 @@ from paramiko.sftp_client import SFTPClient
 from paramiko.ssh_exception import AuthenticationException, SSHException
 
 from src.storage.base import StorageBackend
+from src.utils.paths import get_app_data_dir
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ class SFTPStorage(StorageBackend):
             self.ssh_client.load_system_host_keys()
 
             # Scrat-eigene Known-Hosts (~/.scrat-backup/known_hosts)
-            scrat_known_hosts = Path.home() / ".scrat-backup" / "known_hosts"
+            scrat_known_hosts = get_app_data_dir() / "known_hosts"
             if scrat_known_hosts.exists():
                 self.ssh_client.load_host_keys(str(scrat_known_hosts))
 

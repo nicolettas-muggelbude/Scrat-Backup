@@ -1,140 +1,140 @@
-# 🔨 Build-Anleitung für Scrat-Backup
+# Build-Anleitung für Scrat-Backup
 
-Diese Anleitung beschreibt, wie du Scrat-Backup als eigenständiges Windows-Executable bauen kannst.
-
-## 📋 Voraussetzungen
+## Voraussetzungen
 
 ### System
-- **Windows 10/11** (empfohlen für Windows-Build)
-- **Python 3.11+** installiert
-- **Git** für Repository-Cloning
+- **Windows 10/11** oder **Ubuntu 22.04+** (je nach Zielplattform)
+- **Python 3.12+**
+- **Git**
 
 ### Python-Pakete
-Alle benötigten Pakete sind in `requirements.txt` aufgelistet:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Wichtigste Pakete für den Build:
-- `pyinstaller>=6.0.0` - Erstellt das Executable
-- `PyQt6>=6.6.0` - GUI-Framework
-- Alle weiteren Runtime-Dependencies
+Wichtigste Build-Pakete:
+- `pyinstaller>=6.0.0` – erstellt das Executable
+- `PySide6>=6.6.0` – GUI-Framework
 
-## 🚀 Build-Prozess
+---
 
-### Methode 1: Automatisches Build-Script (Empfohlen)
+## Windows: Installer (.exe)
 
-Das Projekt enthält ein automatisches Build-Script:
+### Voraussetzungen (Windows)
+- [Inno Setup 6](https://jrsoftware.org/isinfo.php) installiert
+- `iscc` im PATH (normalerweise `C:\Program Files (x86)\Inno Setup 6\`)
 
-```bash
-python build_exe.py
+### Manuell bauen
+
+```powershell
+# 1. PyInstaller-Build
+pyinstaller scrat_backup.spec --clean --noconfirm
+
+# 2. Installer erstellen
+iscc /DMyAppVersion=0.3.11 installer.iss
+
+# Ergebnis: output\ScratBackup-v0.3.11-Setup.exe
 ```
 
-**Optionen:**
-```bash
-# Ohne Bereinigung alter Builds
-python build_exe.py --skip-clean
+### Installer-Details
+- Installiert nach `%LocalAppData%\Scrat-Backup` (**kein Administratorrecht erforderlich**)
+- Erstellt Startmenü-Einträge und optionalen Desktop-Shortcut
+- Deinstallation über Windows Einstellungen
 
-# Ohne ZIP-Archiv-Erstellung
-python build_exe.py --no-zip
+---
 
-# Hilfe anzeigen
-python build_exe.py --help
-```
+## Linux: AppImage
 
-Das Script führt automatisch aus:
-1. ✓ Bereinigung alter Build-Verzeichnisse
-2. ✓ Prüfung aller Dependencies
-3. ✓ Icon-Validierung
-4. ✓ PyInstaller-Build
-5. ✓ ZIP-Archiv-Erstellung für Distribution
-
-### Methode 2: Manuell mit PyInstaller
-
-Für erweiterte Kontrolle kannst du PyInstaller direkt verwenden:
+### Voraussetzungen (Linux)
 
 ```bash
-# One-Directory Build (empfohlen)
-pyinstaller scrat-backup.spec --clean --noconfirm
+# Ubuntu/Debian
+sudo apt install python3-dev python3-venv libxcb-cursor0 libxcb-icccm4 \
+                 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
+                 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0
 
-# One-File Build (langsamer Start, aber eine Datei)
-# Bearbeite scrat-backup.spec und kommentiere One-File-Abschnitt ein
-pyinstaller scrat-backup.spec --clean --noconfirm --onefile
+# appimagetool herunterladen
+wget -O appimagetool "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage"
+chmod +x appimagetool
 ```
 
-## 📂 Build-Ausgabe
+### Manuell bauen
 
-Nach erfolgreichem Build findest du:
+```bash
+# 1. PyInstaller-Build
+pyinstaller scrat_backup.spec --clean --noconfirm
+
+# 2. AppDir-Struktur erstellen
+mkdir -p AppDir/usr/bin
+cp -r dist/ScratBackup/* AppDir/usr/bin/
+# AppRun, .desktop und Icon hinzufügen (siehe CI-Workflow)
+
+# 3. AppImage packen
+./appimagetool AppDir ScratBackup-v0.3.11-x86_64.AppImage
+```
+
+Für Details zum AppDir-Layout siehe `.github/workflows/build-release.yml`.
+
+---
+
+## CI/CD: GitHub Actions
+
+Builds werden automatisch ausgelöst wenn ein Tag mit `v*` gepusht wird:
+
+```bash
+git tag v0.3.11
+git push origin v0.3.11
+```
+
+Der Workflow (`.github/workflows/build-release.yml`) baut:
+- `build-windows` (windows-latest): PyInstaller → Inno Setup → `ScratBackup-vX.X.X-Setup.exe`
+- `build-linux` (ubuntu-22.04): PyInstaller → appimagetool → `ScratBackup-vX.X.X-x86_64.AppImage`
+
+Beide Artefakte werden automatisch als GitHub Release Assets hochgeladen.
+
+---
+
+## Build-Ausgabe (PyInstaller)
 
 ```
 dist/
 └── ScratBackup/
-    ├── ScratBackup.exe          # Haupt-Executable
-    ├── _internal/                # Python-Runtime & Dependencies
-    ├── assets/                   # Icons, Themes, etc.
-    └── config/                   # Konfigurations-Vorlagen
+    ├── ScratBackup.exe      # Haupt-Executable
+    ├── _internal/           # Python-Runtime & Dependencies
+    └── assets/              # Icons etc.
 ```
 
-**Größe:** Ca. 150-200 MB (entpackt)
+Größe: ca. 130–180 MB (entpackt), ca. 60–80 MB (AppImage komprimiert)
 
-## 🧪 Build testen
+---
 
-1. Navigiere zum Build-Verzeichnis:
-   ```bash
-   cd dist/ScratBackup
-   ```
+## Versionsnummer angeben
 
-2. Starte das Executable:
-   ```bash
-   ScratBackup.exe
-   ```
+Die Version wird an Inno Setup per Kommandozeile übergeben:
 
-3. Teste Kernfunktionen:
-   - ✓ GUI startet ohne Fehler
-   - ✓ Wizard wird beim ersten Start angezeigt
-   - ✓ Quellen/Ziele können hinzugefügt werden
-   - ✓ Backup-Engine funktioniert
-   - ✓ Restore-Engine funktioniert
-   - ✓ Einstellungen können gespeichert werden
-
-## 📦 Distribution
-
-### ZIP-Archiv
-
-Das Build-Script erstellt automatisch ein ZIP-Archiv:
-
-```
-dist/ScratBackup-v0.2.0-beta-windows.zip
+```powershell
+iscc /DMyAppVersion=0.3.11 installer.iss
 ```
 
-Dieses kann direkt an Benutzer verteilt werden. Sie müssen nur:
-1. ZIP entpacken
-2. `ScratBackup.exe` starten
-3. Setup-Wizard durchlaufen
+In der `installer.iss` ist definiert:
+```
+#ifndef MyAppVersion
+  #define MyAppVersion "0.0.0"
+#endif
+```
 
-### Windows Installer (Optional)
+---
 
-Für professionellere Distribution kannst du einen Installer mit **Inno Setup** erstellen:
+## Bekannte Probleme & Lösungen
 
-1. Installiere [Inno Setup](https://jrsoftware.org/isinfo.php)
-2. Verwende das bereitgestellte Script: `installer.iss`
-3. Compile mit Inno Setup Compiler
-
-Der Installer:
-- Erstellt Startmenü-Einträge
-- Fügt Deinstallations-Option hinzu
-- Kann Desktop-Shortcut erstellen
-- Registriert die Anwendung in Windows
-
-## 🐛 Häufige Probleme
+### UPX deaktiviert
+UPX-komprimierte Binaries lösen auf Windows Exploit Guard / DEP-Schutz aus
+(`LoadLibrary: Unzulässiger Zugriff`). In `scrat_backup.spec` ist `upx=False` gesetzt –
+**nicht ändern**.
 
 ### Import-Fehler beim Start
-
-**Problem:** `ModuleNotFoundError` oder `ImportError` beim Start des EXE
-
-**Lösung:** Füge fehlende Module zu `hiddenimports` in `scrat-backup.spec` hinzu:
-
+Fehlende Module zu `hiddenimports` in `scrat_backup.spec` hinzufügen:
 ```python
 hiddenimports = [
     'dein_fehlendes_modul',
@@ -142,182 +142,35 @@ hiddenimports = [
 ]
 ```
 
-### Icon wird nicht angezeigt
+### Templates werden nicht gefunden (AppImage)
+AppImages laufen in einem read-only squashfs. Der `TemplateManager` nutzt
+`sys._MEIPASS` für Bundle-Pfade – kein `mkdir` mehr im Bundle-Verzeichnis nötig.
+Fallback: `~/.scrat-backup/templates/`
 
-**Problem:** Executable hat kein Icon oder Standard-Python-Icon
-
-**Lösung:**
-- Stelle sicher dass `assets/icons/scrat.ico` existiert
-- Format muss .ICO sein (nicht PNG oder SVG)
-- Rebuild mit: `python build_exe.py`
-
-### Lange Startzeit
-
-**Problem:** One-File Build startet langsam (10-30 Sekunden)
-
-**Lösung:**
-- Verwende **One-Directory Build** (Standard in `scrat-backup.spec`)
-- One-File entpackt beim Start alles in Temp-Ordner
-
-### UPX-Komprimierungs-Fehler
-
-**Problem:** Build schlägt fehl mit UPX-Fehler
-
-**Lösung:**
+### Debug-Build (Console-Fenster anzeigen)
 ```python
-# In scrat-backup.spec:
-upx=False  # statt upx=True
-```
-
-### Antivirus False Positive
-
-**Problem:** Antivirus markiert EXE als verdächtig
-
-**Lösung:**
-- PyInstaller-EXEs werden manchmal fälschlich erkannt
-- Code-Signing-Zertifikat besorgen (für echte Releases)
-- Bei VirusTotal hochladen für Reputation
-- Whitelist-Exception in Antivirus erstellen
-
-## 🔧 Build-Konfiguration anpassen
-
-### Eigenes Icon verwenden
-
-Ersetze `assets/icons/scrat.ico` mit deinem Icon oder ändere in `scrat-backup.spec`:
-
-```python
-icon_path = Path("dein/pfad/zum/icon.ico")
-```
-
-### Versionsnummer ändern
-
-Aktualisiere in mehreren Dateien:
-1. `src/gui/main_window.py` → Version-Label im Info-Tab
-2. `build_exe.py` → Header-Version
-3. `setup.py` (falls vorhanden)
-
-### One-File Build aktivieren
-
-In `scrat-backup.spec` am Ende:
-1. Kommentiere `COLLECT(...)` aus
-2. Aktiviere den One-File `EXE(...)` Abschnitt
-
-### Konsolen-Fenster anzeigen (Debug)
-
-Für Debugging kann Console-Fenster hilfreich sein:
-
-```python
-# In scrat-backup.spec:
+# In scrat_backup.spec:
 console=True  # statt console=False
 ```
 
-## 📊 Build-Optimierung
-
-### Reduziere Größe
-
-1. **Exclude unnötige Module:**
-   ```python
-   excludes=['matplotlib', 'numpy', 'scipy', 'pandas', 'PIL', 'tkinter']
-   ```
-
-2. **UPX-Komprimierung aktivieren:**
-   ```python
-   upx=True
-   upx_exclude=[]
-   ```
-
-3. **Strip Debug-Symbols:**
-   ```python
-   strip=True  # Nur auf Linux/Mac
-   ```
-
-### Schnellere Builds
-
-1. Verwende `--skip-clean` wenn du mehrfach buildest:
-   ```bash
-   python build_exe.py --skip-clean
-   ```
-
-2. PyInstaller-Cache nutzen (Standard aktiv)
-
-## 🌐 Cross-Platform Builds
-
-### Windows-Build von Linux/Mac
-
-**Nicht empfohlen!** PyInstaller erstellt plattformspezifische Builds.
-
-**Alternativen:**
-- Virtual Machine mit Windows
-- GitHub Actions CI/CD (siehe `.github/workflows/build.yml`)
-- Docker mit Wine (komplex, nicht empfohlen)
-
-### Empfehlung
-
-Baue immer auf der Ziel-Plattform:
-- Windows EXE → Build auf Windows
-- macOS App → Build auf macOS
-- Linux Binary → Build auf Linux
-
-## 📝 CI/CD mit GitHub Actions
-
-Für automatische Builds bei jedem Release kannst du GitHub Actions verwenden.
-
-Beispiel-Workflow: `.github/workflows/build.yml`
-
-```yaml
-name: Build Windows EXE
-
-on:
-  push:
-    tags:
-      - 'v*'
-
-jobs:
-  build:
-    runs-on: windows-latest
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-
-    - name: Install dependencies
-      run: |
-        pip install -r requirements.txt
-
-    - name: Build with PyInstaller
-      run: python build_exe.py
-
-    - name: Upload artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: ScratBackup-Windows
-        path: dist/ScratBackup-*.zip
-```
-
-## 💡 Best Practices
-
-1. **Teste gründlich** nach jedem Build
-2. **Version-Tags** verwenden für Releases (`v0.2.0-beta`)
-3. **Clean Builds** vor Releases
-4. **Multiple PCs** testen wenn möglich
-5. **Antivirus-Scan** vor Distribution
-6. **Changelog** pflegen
-7. **Backup** der Build-Konfiguration in Git
-
-## 🆘 Support
-
-Bei Problemen:
-1. Prüfe [PyInstaller Dokumentation](https://pyinstaller.org/en/stable/)
-2. Suche in [PyInstaller Issues](https://github.com/pyinstaller/pyinstaller/issues)
-3. Erstelle Issue in diesem Repository
-4. Debug-Build mit `console=True` erstellen
+### Long-Start (One-File-Build)
+One-Directory-Build (Standard) bevorzugen. One-File entpackt beim Start alles
+in ein Temp-Verzeichnis (langsam).
 
 ---
 
-**Happy Building! 🎉**
+## Entwicklungsumgebung
+
+```bash
+git clone https://github.com/nicolettas-muggelbude/Scrat-Backup.git
+cd Scrat-Backup
+python3 -m venv venv
+source venv/bin/activate     # Linux/macOS
+# venv\Scripts\activate      # Windows
+pip install -r requirements.txt
+python3 src/main.py
+```
+
+---
 
 *Erstellt mit [Claude Code](https://claude.com/claude-code)*

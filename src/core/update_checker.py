@@ -14,6 +14,8 @@ from urllib.error import URLError
 
 from PySide6.QtCore import QThread, Signal
 
+from utils.paths import get_app_data_dir
+
 logger = logging.getLogger(__name__)
 
 GITHUB_API = "https://api.github.com/repos/nicolettas-muggelbude/Scrat-Backup/releases/latest"
@@ -51,7 +53,7 @@ def _is_newer(latest: str, current: str) -> bool:
 
 
 def _last_check_path() -> Path:
-    return Path.home() / ".scrat-backup" / "last_update_check"
+    return get_app_data_dir() / "last_update_check"
 
 
 def _should_check() -> bool:

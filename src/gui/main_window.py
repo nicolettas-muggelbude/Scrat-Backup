@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from src.core.backup_engine import BackupConfig, BackupEngine
+from src.utils.paths import get_app_data_dir
 from src.core.config_manager import ConfigManager
 from src.core.metadata_manager import MetadataManager
 from src.core.scheduler import Schedule, Scheduler
@@ -57,7 +58,7 @@ class MainWindow(QMainWindow):
         self.config_manager = ConfigManager()  # Lädt/erstellt Konfiguration
 
         # MetadataManager für Backup-Datenbank
-        db_path = Path.home() / ".scrat-backup" / "metadata.db"
+        db_path = get_app_data_dir() / "metadata.db"
         self.metadata_manager = MetadataManager(db_path)
 
         # Setup UI

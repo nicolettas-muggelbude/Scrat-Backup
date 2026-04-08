@@ -1,214 +1,209 @@
-# 🎉 Scrat-Backup v0.2.0-beta Release Notes
+# 🎉 Scrat-Backup v0.3.11-beta Release Notes
 
-**Release Date:** 2025-12-15
+**Release Date:** 2026-04-09
 **Status:** Public Beta
-**Type:** Feature Release
+**Type:** Feature + Bugfix Release
 
 ---
 
-## 🐿️ Willkommen zur Beta-Version!
+## 🐿️ Installer, Auto-Updater & Linux Desktop-Integration!
 
-Nach Monaten intensiver Entwicklung präsentieren wir stolz **Scrat-Backup v0.2.0-beta** - die erste öffentliche Testversion unseres verschlüsselten Backup-Tools für Windows!
+**Scrat-Backup v0.3.11-beta** bringt einen echten Windows-Installer, tägliche Update-Prüfung, alle 7 Templates und eine vollständige Linux Desktop-Integration – plus zahlreiche Packaging-Fixes damit die App auf beiden Plattformen zuverlässig startet.
 
-**Wie ein Eichhörnchen seine Eicheln für den Winter bewahrt, so bewahren wir deine Daten.** 🌰
+**Wie ein Eichhörnchen seine Eicheln immer wiederfindet, so findest du deine Daten jetzt auf jedem Gerät.** 🌰
 
 ---
 
 ## ✨ Highlights dieser Version
 
-### 🎯 Phase 10: Scheduler & Automatisierung ✅
+### 🪟 Windows-Installer (kein Admin nötig)
 
-Die größte Neuerung in dieser Version ist der **vollautomatische Scheduler**:
+Statt eines ZIP-Archivs gibt es jetzt einen echten Inno Setup Installer:
 
-- **Zeitpläne erstellen** (Täglich, Wöchentlich, Monatlich, bei Start/Shutdown)
-- **Scheduler-Worker** läuft im Hintergrund und prüft alle 60 Sekunden
-- **Automatische Backup-Ausführung** zu geplanten Zeiten
-- **Missed-Backup-Detection** - erkennt wenn Backups verpasst wurden (z.B. PC war aus)
-- **"Nächster Lauf"-Anzeige** für jeden Zeitplan im Settings-Tab
-- **Verpasste Backups nachholen** - Dialog fragt ob Backup nachgeholt werden soll
+- Installiert nach `%LocalAppData%\Scrat-Backup` – **kein Administratorrecht erforderlich**
+- Erstellt Startmenü-Eintrag und optionalen Desktop-Shortcut
+- Deinstallation über Windows Einstellungen
 
-### 🔨 Phase 12: Packaging & Distribution ✅
+### 🔔 Auto-Updater
 
-- **PyInstaller Build** - Eigenständiges Windows-Executable
-- **Portable Version** - Einfach entpacken und starten
-- **Inno Setup Installer** (optional) - Professionelle Installation mit Startmenü
-- **Build-Dokumentation** - Für Entwickler die eigene Builds erstellen wollen
+Scrat-Backup prüft automatisch einmal täglich auf neue Versionen:
+
+- Vergleich mit GitHub Releases API
+- Dialog mit Release-Notes und direktem Download-Link
+- Plattformspezifischer Download (Setup.exe / AppImage)
+
+### 🐧 Linux Desktop-Integration
+
+Mit dem mitgelieferten `install.sh` wird Scrat-Backup vollständig ins System integriert:
+
+- AppImage nach `~/.local/bin/` kopieren
+- Icons in allen Größen (16–256px) installieren
+- Menü-Eintrag in `~/.local/share/applications/` erstellen
+- **Kein sudo nötig** – alles im Home-Verzeichnis
+
+```bash
+./install.sh ScratBackup-vX.X.X-x86_64.AppImage
+```
+
+### 📁 Plattformspezifische Config-Pfade
+
+Die Konfiguration liegt jetzt dort, wo das System sie erwartet:
+
+- **Windows:** `%LocalAppData%\Scrat-Backup\`
+- **Linux/macOS:** `~/.scrat-backup/`
 
 ---
 
 ## 🚀 Neue Features
 
-### Scheduler & Automatisierung
-- ✅ Zeitplan-Dialog zum Erstellen und Bearbeiten
-- ✅ Schedule-Verwaltung im Settings-Tab
-- ✅ Background-Worker (QThread) für automatische Ausführung
-- ✅ Windows Task Scheduler Integration für Start/Shutdown-Trigger
-- ✅ Pause/Resume-Funktionalität für Scheduler
-- ✅ System Tray Notifications für geplante Backups
+### Linux Desktop-Integration
+- ✅ **`install.sh`** – installiert AppImage, Icons und Menü-Eintrag ohne sudo
+- ✅ **`scrat-backup.desktop`** – für manuelle Installation
+- ✅ Icons in allen Größen (16, 32, 48, 64, 128, 256px) + SVG
 
-### UI-Verbesserungen
-- ✅ "Nächster Lauf"-Anzeige mit deutschem Datumsformat
-- ✅ Live-Updates wenn sich Zeitpläne ändern
-- ✅ Verbessertes Schedule-Details-Panel
-- ✅ Icon-Integration in allen Dialogen
+### Auto-Updater
+- ✅ **`UpdateChecker`** (QThread) – prüft GitHub Releases API einmal täglich
+- ✅ **`UpdateDialog`** – zeigt Release-Notes, Download-Button, Release-Seite
+- ✅ Plattformspezifischer Download-Link aus Release-Assets
 
-### Build & Packaging
-- ✅ Automatisches Build-Script (`build_exe.py`)
-- ✅ PyInstaller `.spec`-Konfiguration
-- ✅ Inno Setup Installer-Script (`installer.iss`)
-- ✅ Umfassende Build-Dokumentation (`BUILD.md`)
-- ✅ ZIP-Archiv-Erstellung für Distribution
+### Windows Installer
+- ✅ **Inno Setup** statt ZIP – `ScratBackup-vX.X.X-Setup.exe`
+- ✅ Installation nach `%LocalAppData%\Scrat-Backup` (kein Admin)
+- ✅ CI übergibt Version automatisch per `/DMyAppVersion=`
+
+### Plattformspezifische Pfade
+- ✅ **`src/utils/paths.py`** – zentrale `get_app_data_dir()` Funktion
+- ✅ Windows: `%LocalAppData%\Scrat-Backup\`, Linux: `~/.scrat-backup\`
+- ✅ Alle 10 betroffenen Dateien umgestellt
+
+### Templates
+- ✅ Alle **7 Template-JSON-Dateien** angelegt: USB, Nextcloud, OneDrive, Google Drive, Dropbox, Synology, QNAP
+
+### Wizard Start-Screen
+- ✅ **Immer** sichtbar: "Backup einrichten" + "Backup wiederherstellen"
+- ✅ **Zusätzlich** wenn Config vorhanden: "Einstellungen ändern" + "Neues Ziel"
+- ✅ Korrekte Subtitles je nach Status ("erste Verwendung" vs. "bereits eingerichtet")
 
 ---
 
 ## 🔧 Was funktioniert
 
 ### Core-Funktionen
-- ✅ **Backup-Engine** - Vollbackups und inkrementelle Backups
-- ✅ **Restore-Engine** - Einzelne Dateien oder komplette Backups
-- ✅ **AES-256-GCM Verschlüsselung** - Alle Backups verschlüsselt
-- ✅ **7z Komprimierung** - Effiziente Speichernutzung
-- ✅ **Versionierung** - Bis zu 10 Versionen pro Backup
-- ✅ **Progress-Tracking** - Live-Anzeige mit Speed und ETA
+- ✅ **Backup-Engine** – Vollbackups und inkrementelle Backups
+- ✅ **Restore-Engine** – Einzelne Dateien oder komplette Backups
+- ✅ **AES-256-GCM Verschlüsselung** – Alle Backups verschlüsselt (Chunked, 64MB)
+- ✅ **zstd-Komprimierung** – ~5–10× schneller als LZMA, Level 1
+- ✅ **Versionierung** – Konfigurierbare Rotationsanzahl
+- ✅ **metadata.db-Portabilität** – Restore auf beliebigem Gerät
 
-### Storage-Backends (alle 5!)
-- ✅ **USB / Lokale Laufwerke**
-- ✅ **SFTP (SSH)**
-- ✅ **WebDAV** (Nextcloud, ownCloud, etc.)
-- ✅ **Rclone** (Google Drive, Dropbox, OneDrive, S3, etc.)
-- ✅ **SMB/CIFS** (Windows-Freigaben, NAS)
+### Storage-Backends
+- ✅ **USB / Lokale Laufwerke** (Win + Linux, inkl. externer Festplatten)
+- ✅ **SFTP (SSH)** – mit sicherer Host-Key-Prüfung
+- ✅ **WebDAV / Nextcloud**
+- ✅ **Rclone** (Google Drive, Dropbox, OneDrive, 40+ Provider)
+- ✅ **SMB/CIFS** (Synology, QNAP, Windows-Freigaben)
 
-### GUI
-- ✅ **Setup-Wizard** - Komplett auf Deutsch mit automatischer Erkennung
-- ✅ **Backup-Tab** - Quellen/Ziele verwalten, Backups starten
-- ✅ **Restore-Tab** - Backups durchsuchen und wiederherstellen
-- ✅ **Settings-Tab** - Alle Einstellungen inkl. Zeitplan-Verwaltung
-- ✅ **Logs-Tab** - Backup-Historie und Fehlersuche
-- ✅ **System Tray** - Minimize to Tray, Notifications
+### Wizard
+- ✅ **StartPage** – Aktionsauswahl (Backup einrichten / ändern / Restore / Experten-Modus)
+- ✅ **SourceSelectionPage** – Quellen mit Bibliotheks-Checkboxen, eigene Ordner, Ausschlüsse
+- ✅ **TemplateDestinationPage** – Template-Kacheln, nicht verfügbare Backends gesperrt
+- ✅ **SchedulePage** – Täglich/Wöchentlich/Monatlich/beim Start, Zeitangabe, Wochentag
+- ✅ **EncryptionPage** – Passwort + Keyring (NEU)
+- ✅ **RestoreWizardPage** – DB- und Verzeichnis-Modus (NEU)
+- ✅ **FinishPage** – Tray-Start oder Experten-Modus
 
-### Sicherheit
-- ✅ **Windows Credential Manager** - Sichere Passwort-Speicherung
-- ✅ **Input-Validierung** - Alle Benutzereingaben werden geprüft
-- ✅ **Error-Handling** - Robuste Fehlerbehandlung
+### Dark Mode
+- ✅ Auto-Detection + manuelles Umschalten
+- ✅ Alle Wizard-Seiten theme-aware (TemplateCards, Ordner-Liste, Ausschlüsse, FinishPage)
+
+---
+
+## 📥 Download & Installation
+
+### 🪟 Windows
+1. `ScratBackup-vX.X.X-Setup.exe` herunterladen
+2. Installer starten – **kein Administratorrecht erforderlich**
+3. Scrat-Backup startet automatisch nach der Installation
+
+### 🐧 Linux (AppImage)
+
+**Schnellstart (ohne Menü-Eintrag):**
+```bash
+chmod +x ScratBackup-vX.X.X-x86_64.AppImage
+./ScratBackup-vX.X.X-x86_64.AppImage
+```
+
+**Mit Desktop-Integration (empfohlen):**
+```bash
+./install.sh ScratBackup-vX.X.X-x86_64.AppImage
+```
+
+Das Script installiert die App nach `~/.local/bin/`, trägt sie ins Anwendungsmenü ein und installiert alle Icons. Danach ist sie über `scrat-backup` oder das Menü erreichbar.
+
+**Ubuntu/Debian – falls GUI nicht startet:**
+```bash
+sudo apt install libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+                 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0
+```
+
+### Aus dem Quellcode
+```bash
+git clone https://github.com/nicolettas-muggelbude/Scrat-Backup.git
+cd Scrat-Backup
+python3 -m venv venv
+source venv/bin/activate   # Linux/macOS
+pip install -r requirements.txt
+python3 src/main.py
+```
 
 ---
 
 ## ⚠️ Bekannte Limitierungen (Beta)
 
-### Was noch nicht funktioniert
-- ❌ **Tatsächliche Backup-Ausführung durch Scheduler** - Der Scheduler triggert Backups, aber die Integration mit der BackupEngine ist noch nicht vollständig
-- ❌ **User Guide mit Screenshots** - Kommt im nächsten Release
-- ❌ **Internationalisierung** - Aktuell nur Deutsch
-- ❌ **Dark Mode** - Nur helles Theme verfügbar
-- ❌ **Update-Funktion** - Manuelle Updates erforderlich
-- ❌ **Hilfefunktion** - Keine eingebaute Hilfe
-
-### Bekannte Bugs
-- 🐛 Scheduler-Worker Signal-Tests sind fragil (3 Tests geskippt)
-- 🐛 One-File Build hat lange Startzeit (10-30 Sekunden)
-- 🐛 Antivirus-Programme können False Positives melden (PyInstaller-typisch)
+- ❌ **macOS-Build** – noch kein macOS-Runner in CI
+- ❌ **Internationalisierung** – aktuell nur Deutsch
+- ❌ **Template-Manager-Tab** im MainWindow noch nicht implementiert
+- ⚠️ **SFTP:** Unbekannte Hosts werden abgelehnt – vorher `ssh user@host` ausführen (einmalig)
+- ⚠️ **Upgrade von älteren Versionen (Windows):** Config-Pfad hat sich geändert – alte Config von `%USERPROFILE%\.scrat-backup\` nach `%LocalAppData%\Scrat-Backup\` verschieben
 
 ---
 
 ## 📋 Systemanforderungen
 
-### Minimum
-- **OS:** Windows 10 (64-bit) oder neuer
-- **RAM:** 4 GB
-- **Festplatte:** 500 MB freier Speicher
-- **Python:** Nicht erforderlich (Standalone-Executable)
-
-### Empfohlen
-- **OS:** Windows 11 (64-bit)
-- **RAM:** 8 GB
-- **Festplatte:** 1 GB freier Speicher
-- **Internet:** Für Cloud-Backups
-
----
-
-## 📥 Installation
-
-### Portable Version (Empfohlen für Beta)
-1. Lade `ScratBackup-v0.2.0-beta-windows.zip` herunter
-2. Entpacke das Archiv in einen beliebigen Ordner
-3. Starte `ScratBackup.exe`
-4. Folge dem Setup-Wizard
-
-### Installer-Version
-1. Lade `ScratBackup-v0.2.0-beta-Setup.exe` herunter
-2. Führe den Installer aus (Admin-Rechte erforderlich)
-3. Starte über Startmenü: "Scrat-Backup"
-
----
-
-## 🧪 Beta-Testing
-
-### Was wir testen müssen
-- ✅ Backup-Erstellung auf allen Storage-Backends
-- ✅ Restore-Funktionalität
-- ✅ Zeitplan-Erstellung und -Verwaltung
-- ✅ Scheduler-Worker-Stabilität
-- ✅ UI-Usability
-- ✅ Installer-Funktionalität
-- ✅ Performance auf verschiedenen Systemen
-
-### Wie du helfen kannst
-1. **Lade die Beta** herunter und installiere sie
-2. **Teste die Kernfunktionen** (Backup, Restore, Scheduler)
-3. **Melde Bugs** auf [GitHub Issues](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues)
-4. **Gib Feedback** auf [GitHub Discussions](https://github.com/nicolettas-muggelbude/Scrat-Backup/discussions)
-5. **Teile deine Erfahrungen** mit anderen Beta-Testern
+| | Minimum | Empfohlen |
+|---|---|---|
+| **Windows** | Windows 10 64-bit | Windows 11 64-bit |
+| **Linux** | Ubuntu 22.04 / vergleichbar | Ubuntu 24.04 |
+| **RAM** | 4 GB | 8 GB |
+| **Speicher** | 500 MB | 1 GB |
+| **Python** | nicht nötig (Standalone) | – |
 
 ---
 
 ## 📊 Statistiken
 
-- **Code-Zeilen:** ~7.500+ (ohne Tests)
-- **Tests:** 143 Tests passing (22 neue Scheduler-Tests)
-- **Coverage:** >80%
-- **Commits seit v0.1.0:** 50+
-- **Entwicklungszeit:** 3+ Monate
-- **Dependencies:** 15+ Python-Pakete
+- **Commits seit v0.3.0-beta:** 11
+- **Neue Dateien:** `install.sh`, `scrat-backup.desktop`, `src/utils/paths.py`, `src/core/update_checker.py`, `src/gui/update_dialog.py`, 7× Template-JSON
+- **CI-Jobs:** 2 (Windows Installer, Linux AppImage)
+- **AppImage-Größe:** ~70 MB
 
 ---
 
-## 🙏 Danksagungen
+## 🗺️ Was kommt als Nächstes
 
-Ein herzliches Dankeschön an:
-- **Claude Code** - Development-Assistent für dieses Projekt
-- **PyQt6-Team** - Für das großartige GUI-Framework
-- **Python-Community** - Für all die fantastischen Libraries
-- **Alle zukünftigen Beta-Tester** - Danke fürs Testen!
-
----
-
-## 🗺️ Roadmap bis Release 1.0
-
-### Nächste Schritte
-- [ ] Beta-Testing-Phase (2-4 Wochen)
-- [ ] Bug-Fixes basierend auf Beta-Feedback
-- [ ] Backup-Ausführung durch Scheduler vervollständigen
-- [ ] User Guide mit Screenshots
-- [ ] Hilfefunktion in der App
-- [ ] Dark Mode implementieren
-- [ ] Internationalisierung (Englisch)
-
-### Release 1.0 (Q2 2025)
-- [ ] Stabile Version für Produktiv-Einsatz
-- [ ] Vollständige Dokumentation
-- [ ] Update-Funktion
-- [ ] Barrierefreiheit (A11y)
-- [ ] Community-Aufbau
-- [ ] Marketing & Projektwebseite
+- [ ] Weitere Templates: SFTP, FTP, iCloud, AWS S3
+- [ ] macOS-Build (GitHub Actions)
+- [ ] Dark Mode: restliche Dialoge und Tabs
+- [ ] Template-Manager-Tab im MainWindow
+- [ ] XDG User Directories (Linux)
+- [ ] `.deb`-Paket für Debian/Ubuntu
 
 ---
 
 ## 📖 Weitere Informationen
 
-- **Dokumentation:** [README.md](README.md)
+- **Changelog:** [CHANGELOG.md](CHANGELOG.md)
 - **Build-Anleitung:** [BUILD.md](BUILD.md)
-- **Technische Details:** [claude.md](claude.md)
-- **Roadmap:** [TODO.md](TODO.md)
 - **Contributing:** [CONTRIBUTING.md](CONTRIBUTING.md)
 
 ---
@@ -218,7 +213,6 @@ Ein herzliches Dankeschön an:
 - 🐛 **Bug Reports:** [GitHub Issues](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues)
 - 💡 **Feature Requests:** [GitHub Discussions](https://github.com/nicolettas-muggelbude/Scrat-Backup/discussions)
 - ❓ **Fragen:** [GitHub Discussions Q&A](https://github.com/nicolettas-muggelbude/Scrat-Backup/discussions/categories/q-a)
-- 📧 **Security:** security@scrat-backup.example
 
 ---
 
@@ -226,10 +220,8 @@ Ein herzliches Dankeschön an:
 
 Scrat-Backup ist **Open Source** unter der **GNU General Public License v3.0**.
 
-Das bedeutet:
 - ✅ Kostenlos für alle Zwecke
-- ✅ Quellcode einsehbar
-- ✅ Frei modifizierbar
+- ✅ Quellcode einsehbar und modifizierbar
 - ✅ Weitergabe unter gleicher Lizenz
 
 Siehe [LICENSE](LICENSE) für Details.
@@ -242,7 +234,7 @@ Siehe [LICENSE](LICENSE) für Details.
 
 **Wie ein Eichhörnchen seine Eicheln bewahrt, so bewahren wir deine Daten.** 🐿️🌰
 
-[📥 Download Beta](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/tag/v0.2.0-beta) • [⭐ Star auf GitHub](https://github.com/nicolettas-muggelbude/Scrat-Backup) • [🐛 Bug melden](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues)
+[📥 Download](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/tag/v0.3.11-beta) • [⭐ Star auf GitHub](https://github.com/nicolettas-muggelbude/Scrat-Backup) • [🐛 Bug melden](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues)
 
 </div>
 

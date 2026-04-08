@@ -10,7 +10,7 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![Development Status](https://img.shields.io/badge/status-beta%20(v0.3.0-beta)-yellow)](https://github.com/nicolettas-muggelbude/Scrat-Backup)
+[![Development Status](https://img.shields.io/badge/status-beta%20(v0.3.11)-yellow)](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/latest)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)](#)
 
 [Features](#-features) •
@@ -30,8 +30,8 @@
 
 **Unterstützte Plattformen:**
 - 🪟 **Windows** 10/11
-- 🐧 **Linux** (alle Distributionen)
-- 🍎 **macOS** (10.15+)
+- 🐧 **Linux** (Ubuntu, Fedora, Arch und weitere)
+- 🍎 **macOS** (10.15+, experimentell)
 
 ### 🎯 Für wen ist Scrat-Backup?
 
@@ -46,199 +46,91 @@
 ## ✨ Features
 
 ### 🔐 Sicherheit
-- ✅ **AES-256-GCM Verschlüsselung** für alle Backups (Pflicht!)
+- ✅ **AES-256-GCM Verschlüsselung** für alle Backups
 - ✅ **PBKDF2** Key-Derivation (100.000 Iterationen)
-- ✅ **Sichere Passwort-Speicherung** (Windows Credential Manager / Linux GNOME Keyring/KWallet / macOS Schlüsselbund)
-- ✅ **Kein Plaintext** - sensible Daten immer verschlüsselt
+- ✅ **Sichere Passwort-Speicherung** (Windows Credential Manager / Linux GNOME Keyring / macOS Schlüsselbund)
+- ✅ **SFTP Host-Key-Verifizierung** mit `RejectPolicy` + System Known-Hosts
 
 ### 💾 Backup-Funktionen
 - ✅ **Vollbackups** und **Inkrementelle Backups**
-- ✅ **Versionierung** (3 Versionen, konfigurierbar)
-- ✅ **Automatische Rotation** alter Backups (nur bei Scheduler-Backups, manuelle Backups werden nie gelöscht)
-- ✅ **Komprimierung** mit 7z/zstd Level 1 (schnell, ~41s für 2GB)
-- ✅ **Exclude-Patterns** (z.B. *.tmp, node_modules/)
-- ✅ **Progress-Tracking** mit Speed (MB/s) und ETA
+- ✅ **Versionierung** (konfigurierbare Rotationsanzahl)
+- ✅ **Automatische Rotation** (nur bei Scheduler-Backups, manuelle Backups werden nie gelöscht)
+- ✅ **metadata.db auf Backup-Ziel** – Restore auf neuem System ohne Originalrechner möglich
+- ✅ **Komprimierung** mit zstd Level 1 (~41s für 2 GB)
+- ✅ **Chunked Encryption** (64 MB Chunks, kein OOM bei großen Dateien)
+- ✅ **Exclude-Patterns** (z.B. `*.tmp`, `node_modules/`)
 
-### 🗄️ Storage-Backends (5 Optionen!)
-- 💾 **USB / Lokale Laufwerke** - mit automatischer Laufwerk-Erkennung
-- 🌐 **SFTP (SSH)** - für Remote-Server
-- ☁️ **WebDAV** - Nextcloud, ownCloud, SharePoint
-- 🚀 **Rclone** - 40+ Cloud-Provider (Google Drive, Dropbox, OneDrive, S3, etc.)
-- 🏢 **SMB/CIFS** - Windows-Netzwerkfreigaben, NAS-Geräte
+### 🗄️ Storage-Backends
+- 💾 **USB / Lokale Laufwerke** – automatische Laufwerk-Erkennung (Win/Linux/macOS)
+- 🌐 **SFTP (SSH)** – für Remote-Server
+- ☁️ **WebDAV / Nextcloud** – inkl. ownCloud, SharePoint
+- 🚀 **Rclone** – 40+ Cloud-Provider (Google Drive, Dropbox, OneDrive, S3 …)
+- 🏢 **SMB/CIFS** – Windows-Netzwerkfreigaben, Synology, QNAP
 
 ### 🔄 Wiederherstellung
-- ✅ **Einzelne Dateien** oder **komplette Backups**
-- ✅ **Zeitpunkt-Wiederherstellung** (Version wählen)
-- ✅ **Vorschau** der Backup-Inhalte
-- ✅ **Wiederherstellung auf beliebigen Systemen** (unabhängig vom Original-User)
+- ✅ **Restore-Flow im Wizard** – direkt aus dem Setup-Assistenten
+- ✅ **DB-Modus** (vorhandene Config) und **Verzeichnis-Modus** (neues System)
+- ✅ **Fortschrittsanzeige** mit Phase, Dateiname, Zähler
 
 ### 🖥️ Benutzeroberfläche
-- ✅ **Moderne GUI** mit nativer Optik (PySide6/Qt6)
-- ✅ **Setup-Wizard V3** mit Template-System
-  - Komplett auf Deutsch mit Qt-Übersetzungen
-  - Template-basierte Konfiguration (7 Templates verfügbar)
-  - Persönliche Ordner mit automatischer Erkennung
-  - **Plattformspezifisch**: Automatische Anpassung an Windows/Linux/macOS
-  - Barrierefreie Ordner-Auswahl (Textfeld + Schnellauswahl)
-- ✅ **Dark Mode** mit automatischer System-Erkennung (alle Plattformen)
-- ✅ **Barrierefreiheit**: Vollständige Tastatur-Navigation im Wizard
-- ✅ **Backup-Tab** mit Quellen/Ziele-Auswahl
-- ✅ **Restore-Tab** mit Backup-Details
-- ✅ **Settings-Tab** mit umfassenden Konfigurationen
-- ✅ **Logs-Tab** für Fehlersuche
+- ✅ **Moderner Setup-Wizard** mit Template-System (7 Templates)
+- ✅ **Dark Mode** mit automatischer System-Erkennung
+- ✅ **System Tray** – läuft im Hintergrund, Kontextmenü
+- ✅ **Auto-Updater** – prüft täglich auf neue Versionen
+- ✅ **Vollständige Tastatur-Navigation**
+- ✅ **Deutsche Lokalisierung** (Qt-Übersetzungen)
 
-### ⏰ Automatisierung & Scheduler
-- ✅ **Zeitpläne erstellen** (Täglich, Wöchentlich, Monatlich, bei Start/Shutdown)
-- ✅ **Scheduler-Worker** läuft im Hintergrund (prüft alle 60 Sekunden)
-- ✅ **Automatische Backup-Ausführung** zu geplanten Zeiten
-- ✅ **Missed-Backup-Detection** (erkennt verpasste Backups)
-- ✅ **"Nächster Lauf"-Anzeige** für jeden Zeitplan
-- ✅ **System Tray** Integration mit Notifications
-- ✅ **Pause/Resume** für Scheduler
-
----
-
-## 🚀 Status
-
-**Aktuell: Beta v0.3.0-beta - Ready for Testing! 🎉**
-
-### ✅ Abgeschlossen
-- [x] **Phase 1-5:** Core-Module (Backup/Restore-Engine, Verschlüsselung, Komprimierung)
-- [x] **Phase 6-9:** GUI (Hauptfenster, Wizard, Settings, Tabs)
-- [x] **Phase 10:** Scheduler & Automatisierung
-  - Zeitpläne (Täglich, Wöchentlich, Monatlich)
-  - Scheduler-Worker läuft im Hintergrund
-  - Missed-Backup-Detection
-  - "Nächster Lauf"-Anzeige
-  - 22 Scheduler-Tests ✅
-- [x] **Phase 11:** Polishing
-  - Passwort-Management mit Windows Credential Manager
-  - UI-Verbesserungen (Backup/Restore-Tabs)
-  - Input-Validierung & Error-Handling
-  - Setup-Wizard komplett überarbeitet (Deutsch, Auto-Erkennung)
-- [x] **Wizard V3** (2026-02-01/02)
-  - Template-System mit 7 Templates (USB, OneDrive, Google Drive, Nextcloud, Dropbox, Synology, QNAP)
-  - DynamicTemplateForm mit Handler-Actions
-  - Dark Mode mit Auto-Detection
-  - Barrierefreiheit: Tastatur-Navigation, Textfeld + Schnellauswahl
-  - Einheitliches Design (ohne Frames)
-  - Deutsche Qt-Übersetzungen
-
-### 🔨 Phase 12: Packaging & Beta-Release (In Arbeit)
-- [x] PyInstaller-Konfiguration
-- [x] Build-Script (build_exe.py)
-- [x] Inno Setup Installer-Script
-- [x] Build-Dokumentation (BUILD.md)
-- [ ] Beta-Testing
-- [ ] GitHub Release
-
-### 📅 Geplant (siehe [TODO.md](TODO.md))
-- [ ] Hilfefunktion / Guided Tour
-- [x] Barrierefreiheit: Tastatur-Navigation ✅ (Wizard)
-- [ ] Barrierefreiheit: Screen-Reader-Unterstützung (in Arbeit)
-- [ ] Internationalisierung (Englisch, weitere Sprachen)
-- [x] Dark Mode ✅ (mit Auto-Detection)
-- [ ] Restore-Flow im Wizard
-- [ ] Update-Funktion
-- [ ] Release 1.0 (Q2 2026)
-
-**Aktueller Meilenstein:** Public Beta Testing 🎯
+### ⏰ Automatisierung
+- ✅ **Zeitpläne** (Täglich, Wöchentlich, Monatlich, bei Start)
+- ✅ **Scheduler-Worker** im Hintergrund
+- ✅ **Missed-Backup-Detection**
 
 ---
 
 ## 📦 Installation
 
-### 🎉 Beta-Version verfügbar!
+### 🎉 Aktuelle Version: v0.3.11-beta
 
-**Download: [Releases](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases)**
+**[→ Zum Download](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/latest)**
 
-#### Windows 10/11
+#### 🪟 Windows 10/11
 
-**Variante 1: Portable ZIP (Empfohlen)**
-1. Lade `ScratBackup-v0.3.0-beta-beta-windows.zip` herunter
-2. Entpacke das ZIP-Archiv
-3. Starte `ScratBackup.exe`
-4. Folge dem Setup-Wizard
+1. [`ScratBackup-vX.X.X-Setup.exe`](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/latest) herunterladen
+2. Installer ausführen – **kein Administratorrecht erforderlich**
+3. Scrat-Backup startet automatisch nach der Installation
 
-**Variante 2: Installer**
-1. Lade `ScratBackup-v0.3.0-beta-beta-Setup.exe` herunter
-2. Führe den Installer aus
-3. Starte über Startmenü oder Desktop-Icon
+> Installiert nach `%LocalAppData%\Scrat-Backup`
 
-#### Linux (alle Distributionen)
+#### 🐧 Linux (AppImage)
 
 ```bash
-# System-Dependencies installieren
-# Debian/Ubuntu:
-sudo apt install python3.12 python3-pip python3-keyring libsecret-1-0 smbclient cron \
-                 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
+# AppImage herunterladen und ausführbar machen
+chmod +x ScratBackup-vX.X.X-x86_64.AppImage
+./ScratBackup-vX.X.X-x86_64.AppImage
+```
+
+**Ubuntu/Debian – falls GUI nicht startet:**
+```bash
+sudo apt install libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
                  libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0
-
-# Fedora:
-sudo dnf install python3.12 python3-pip python3-keyring libsecret samba-client cronie
-
-# Arch:
-sudo pacman -S python python-pip python-keyring libsecret smbclient cronie
-
-# Scrat-Backup klonen und installieren
-git clone https://github.com/nicolettas-muggelbude/Scrat-Backup.git
-cd Scrat-Backup
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# Starten
-python3 src/main.py
 ```
 
-#### macOS (10.15+)
+#### Aus dem Quellcode (alle Plattformen)
 
 ```bash
-# Homebrew installieren (falls nicht vorhanden)
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# Python 3.12 installieren
-brew install python@3.12
-
-# Scrat-Backup klonen und installieren
 git clone https://github.com/nicolettas-muggelbude/Scrat-Backup.git
 cd Scrat-Backup
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-
-# Starten
-python3 src/main.py
-```
-
-**⚠️ Beta-Hinweis:** Dies ist eine Testversion. Bitte melde Bugs auf [GitHub Issues](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues).
-
-### Für Entwickler
-
-```bash
-# Repository klonen
-git clone https://github.com/nicolettas-muggelbude/Scrat-Backup.git
-cd Scrat-Backup
-
-# Virtual Environment erstellen und aktivieren
 python3 -m venv venv
 source venv/bin/activate        # Linux/macOS
 # venv\Scripts\activate         # Windows
-
-# Dependencies installieren
 pip install -r requirements.txt
-
-# Programm starten
 python3 src/main.py
+```
 
-# Tests ausführen
-./dev.sh test
-
-# Code-Quality-Checks (black + isort + flake8 + mypy)
-./dev.sh check
-
-# Code automatisch formatieren
-./dev.sh format
+**Zusätzliche System-Pakete (Linux):**
+```bash
+sudo apt install python3-keyring libsecret-1-0 smbclient cron
+pip install secretstorage
 ```
 
 ---
@@ -247,23 +139,26 @@ python3 src/main.py
 
 ### Erste Schritte
 
-1. **Setup-Wizard** wird beim ersten Start automatisch geöffnet
-2. **Backup-Quellen** wählen (Persönliche Ordner: Dokumente, Bilder, etc.)
-3. **Backup-Ziel** auswählen (USB, Cloud, NAS, etc.)
-4. **Verschlüsselungs-Passwort** festlegen
+1. **Setup-Wizard** öffnet sich beim Start
+2. **Aktion wählen:** Backup einrichten, ändern, Wiederherstellen oder Experten-Modus
+3. **Quellen** wählen (Dokumente, Bilder, eigene Ordner)
+4. **Backup-Ziel** auswählen (USB, Cloud, NAS …)
 5. **Zeitplan** konfigurieren (optional)
-6. **Fertig!** Erstes Backup erstellen
+6. **Passwort** festlegen (wird sicher im Schlüsselbund gespeichert)
+7. **Fertig!** – Scrat-Backup läuft im System Tray
 
 ### Backup erstellen
 
 ```
-GUI → Backup-Tab → Quellen wählen → Ziel wählen → "Backup starten"
+Tray-Icon → "Backup starten"
+oder: Wizard → Experten-Modus → Backup-Tab
 ```
 
 ### Dateien wiederherstellen
 
 ```
-GUI → Restore-Tab → Backup auswählen → Dateien wählen → "Wiederherstellen"
+Tray-Icon → "Wiederherstellen"
+oder: Wizard → "Backup wiederherstellen"
 ```
 
 ---
@@ -272,14 +167,15 @@ GUI → Restore-Tab → Backup auswählen → Dateien wählen → "Wiederherstel
 
 | Komponente | Technologie | Version |
 |------------|-------------|---------|
-| **Sprache** | Python | 3.10+ |
+| **Sprache** | Python | 3.12+ |
 | **GUI** | PySide6 (Qt6) | 6.6.0+ |
 | **Verschlüsselung** | cryptography (AES-256-GCM) | 41.0.0+ |
 | **Komprimierung** | py7zr (zstd Level 1) | 1.0.0+ |
-| **Datenbank** | SQLite | (built-in) |
+| **Datenbank** | SQLite | built-in |
 | **SFTP** | paramiko | 3.4.0+ |
 | **WebDAV** | webdavclient3 | 3.14.6+ |
 | **SMB** | smbprotocol | 1.12.0+ |
+| **Passwörter** | keyring | 24.0.0+ |
 | **Testing** | pytest | 7.4.0+ |
 
 ---
@@ -291,99 +187,69 @@ GUI → Restore-Tab → Backup auswählen → Dateien wählen → "Wiederherstel
 ```
 scrat-backup/
 ├── src/
-│   ├── main.py                    # Entry Point + start_backup_after_wizard()
+│   ├── main.py                       # Entry Point
 │   ├── gui/
-│   │   ├── wizard_v2.py           # SetupWizardV2, TemplateCard, Seiten-Routing
-│   │   ├── wizard_pages.py        # StartPage, SourceSelectionPage, FinishPage
-│   │   ├── dynamic_template_form.py  # Dynamisches Formular aus Template-ui_fields
-│   │   ├── main_window.py         # MainWindow (Experten-Modus)
-│   │   ├── backup_tab.py          # Backup-Tab
-│   │   ├── restore_tab.py         # Restore-Tab
-│   │   ├── settings_tab.py        # Settings-Tab
-│   │   ├── theme_manager.py       # Dark/Light Mode, Auto-Detection
-│   │   ├── theme.py               # Farb-Palette (Light Mode)
-│   │   └── password_dialog.py     # Passwort-Dialog (plattformspezifisch)
+│   │   ├── wizard_v2.py              # SetupWizardV2, alle Wizard-Seiten
+│   │   ├── wizard_pages.py           # StartPage, SourceSelectionPage
+│   │   ├── dynamic_template_form.py  # Formular aus Template-ui_fields
+│   │   ├── update_dialog.py          # Auto-Updater Dialog
+│   │   ├── theme_manager.py          # Dark/Light Mode
+│   │   └── ...
 │   ├── core/
-│   │   ├── backup_engine.py       # Backup-Orchestrierung, Temp-Dir-Logik
-│   │   ├── encryptor.py           # AES-256-GCM (Chunked, 64MB)
-│   │   ├── compressor.py          # py7zr/zstd Level 1, Split-Archive
-│   │   ├── scanner.py             # Datei-Scanner, Änderungs-Erkennung
-│   │   ├── metadata_manager.py    # SQLite-Datenbank
-│   │   ├── config_manager.py      # ~/.scrat-backup/config.json
-│   │   └── template_manager.py    # Template laden, validieren, erstellen
-│   ├── templates/
-│   │   ├── handlers/              # USB, OneDrive, Google Drive, Nextcloud, …
-│   │   └── *.json                 # Template-Definitionen
-│   └── utils/
-│       └── credential_manager.py  # keyring (Windows/Linux/macOS)
-├── tests/                         # pytest-Tests
-├── docs/
-│   └── TESTING.md                 # Test-Anleitung
-├── assets/                        # Icons
-├── dev.sh                         # Entwickler-Hilfsskript
-├── CLAUDE.md                      # Technische Dokumentation (diese Datei)
-├── CONTRIBUTING.md                # Beitrags-Richtlinien
-└── TODO.md                        # Roadmap
+│   │   ├── backup_engine.py          # Backup-Orchestrierung
+│   │   ├── restore_engine.py         # Wiederherstellung
+│   │   ├── encryptor.py              # AES-256-GCM (Chunked)
+│   │   ├── update_checker.py         # GitHub Releases API Check
+│   │   └── ...
+│   └── templates/
+│       ├── handlers/                 # USB, OneDrive, Nextcloud …
+│       └── *.json                    # Template-Definitionen (7 Stück)
+├── .github/workflows/
+│   └── build-release.yml            # CI: Windows EXE + Linux AppImage
+├── installer.iss                    # Inno Setup Installer-Script
+├── scrat_backup.spec                # PyInstaller Spec
+├── requirements.txt
+└── BUILD.md                         # Build-Anleitung
 ```
 
-### Code-Quality
+### Entwicklungsumgebung
 
 ```bash
-# Alle Checks
-./dev.sh check
-
-# Nur Formatierung
-./dev.sh format
-
-# Nur Tests
-./dev.sh test
+git clone https://github.com/nicolettas-muggelbude/Scrat-Backup.git
+cd Scrat-Backup
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+python3 src/main.py
 ```
 
-**Standards:**
-- ✅ **PEP 8** Coding Style
-- ✅ **Type Hints** für alle Funktionen
-- ✅ **Docstrings** (Google Style)
-- ✅ **>80% Test Coverage**
+### Tests
 
----
-
-## 📖 Dokumentation
-
-| Dokument | Beschreibung |
-|----------|--------------|
-| [claude.md](claude.md) | Vollständige technische Dokumentation |
-| [BUILD.md](BUILD.md) | Build-Anleitung für Entwickler |
-| [TODO.md](TODO.md) | Roadmap & geplante Features |
-| [docs/developer_guide.md](docs/developer_guide.md) | Entwickler-Handbuch |
-| [docs/architecture.md](docs/architecture.md) | Architektur-Übersicht |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Beitrags-Richtlinien |
+```bash
+pytest
+pytest --cov=src --cov-report=html
+```
 
 ---
 
 ## 🗺️ Roadmap
 
-Siehe [TODO.md](TODO.md) für die vollständige Roadmap.
+### Abgeschlossen ✅
+- [x] Core-Engine (Backup/Restore, AES-256-GCM, zstd)
+- [x] 5 Storage-Backends (USB, SFTP, WebDAV, Rclone, SMB)
+- [x] Setup-Wizard V3 mit Template-System
+- [x] Dark Mode + System Tray
+- [x] Scheduler & Automatisierung
+- [x] Restore-Flow im Wizard
+- [x] GitHub Actions CI (Windows + Linux)
+- [x] Auto-Updater
 
-### Vor Release 1.0
-
-**Priorität: Hoch**
-- [ ] Hilfefunktion / Guided Tour
-- [x] Barrierefreiheit (A11y) - Tastatur-Navigation ✅
-- [ ] Barrierefreiheit - Screen-Reader, Hochkontrast
-- [ ] Internationalisierung (i18n)
-- [x] Dark Mode ✅
-- [ ] Farbenblindheit-freundliche Farben
-- [ ] Restore-Flow im Wizard
-
-**Priorität: Mittel**
-- [ ] Update-Funktion
-- [ ] Vollständige Test-Coverage
-- [ ] Performance-Optimierungen
-
-**Nach dem Release**
-- [ ] Projektwebseite
-- [ ] Social Media Content
-- [ ] Community aufbauen
+### Geplant
+- [ ] SFTP-Template (Community-Wunsch)
+- [ ] macOS-Build (GitHub Actions)
+- [ ] Desktop-Integration für Linux (.desktop-Datei)
+- [ ] Lokalisierung (DE/EN)
+- [ ] Template-Marketplace
 
 ---
 
@@ -392,95 +258,41 @@ Siehe [TODO.md](TODO.md) für die vollständige Roadmap.
 Contributions sind herzlich willkommen! 🎉
 
 1. Fork das Repository
-2. Erstelle einen Feature-Branch (`git checkout -b feature/AmazingFeature`)
-3. Committe deine Änderungen (`git commit -m 'Add: AmazingFeature'`)
-4. Push zum Branch (`git push origin feature/AmazingFeature`)
-5. Öffne einen Pull Request
+2. Feature-Branch erstellen (`git checkout -b feature/MeinFeature`)
+3. Committen (`git commit -m 'feat: MeinFeature'`)
+4. Pushen (`git push origin feature/MeinFeature`)
+5. Pull Request öffnen
 
 Siehe [CONTRIBUTING.md](CONTRIBUTING.md) für Details.
-
-### Contributors
-
-<!-- ALL-CONTRIBUTORS-LIST:START -->
-Noch keine Contributors - sei der Erste! 🚀
-<!-- ALL-CONTRIBUTORS-LIST:END -->
-
----
-
-## 📄 Lizenz
-
-**GNU General Public License v3.0**
-
-Dieses Projekt ist **Open-Source** und unter der GPLv3 lizenziert.
-Siehe [LICENSE](LICENSE) für Details.
-
-### Verwendete Bibliotheken
-
-| Bibliothek | Lizenz | Kompatibel? |
-|------------|--------|-------------|
-| PySide6 | LGPL | ✅ GPL |
-| cryptography | Apache 2.0 / BSD | ✅ Ja |
-| py7zr | LGPL | ✅ Ja |
-| paramiko | LGPL | ✅ Ja |
-| webdavclient3 | MIT | ✅ Ja |
-| smbprotocol | MIT | ✅ Ja |
-
-Alle Dependencies sind **GPLv3-kompatibel**.
 
 ---
 
 ## 🔐 Sicherheit
 
-Scrat-Backup nimmt **Sicherheit ernst**:
+Sicherheitslücken bitte **nicht** als öffentliches Issue melden, sondern per E-Mail an: **nicoletta@muggelbude.it**
 
-- 🔒 **AES-256-GCM**: Authenticated Encryption für alle Backups
-- 🔑 **PBKDF2**: 100.000 Iterationen für Key-Derivation
-- 🚫 **Kein Plaintext**: Alle sensiblen Daten verschlüsselt
-- 💾 **Sicherer Schlüsselbund**: Windows Credential Manager / GNOME Keyring / macOS Keychain
+---
 
-### Sicherheitslücken melden
+## 📄 Lizenz
 
-**Bitte NICHT als öffentliches Issue!**
-
-Sende eine E-Mail an: **nicoletta@muggelbude.it**
+**GNU General Public License v3.0** – siehe [LICENSE](LICENSE)
 
 ---
 
 ## 💬 Support
 
-- 📚 **Dokumentation**: [claude.md](claude.md)
-- 🐛 **Bug Reports**: [GitHub Issues](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues)
-- 💡 **Feature Requests**: [GitHub Discussions](https://github.com/nicolettas-muggelbude/Scrat-Backup/discussions)
-- ❓ **Fragen**: [GitHub Discussions](https://github.com/nicolettas-muggelbude/Scrat-Backup/discussions/categories/q-a)
-
----
-
-## 🙏 Danksagungen
-
-- **Inspiration**: rsync, duplicati, borg backup
-- **Icon**: Eichel 🌰 (Scrat aus Ice Age)
-- **Community**: Alle zukünftigen Contributors!
-- **Claude Code**: Development-Assistent 🤖
-
----
-
-## 📊 Statistiken
-
-![Tests](https://img.shields.io/badge/tests-143%20passed-success)
-![Coverage](https://img.shields.io/badge/coverage-80%25+-success)
-![Python](https://img.shields.io/badge/python-3.12+-blue)
-![License](https://img.shields.io/badge/license-GPLv3-green)
-![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)
-![Status](https://img.shields.io/badge/status-beta%20v0.3.0-beta-yellow)
+- 🐛 **Bug Reports:** [GitHub Issues](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues)
+- 💡 **Feature Requests:** [GitHub Discussions](https://github.com/nicolettas-muggelbude/Scrat-Backup/discussions)
+- 📚 **Technische Doku:** [CLAUDE.md](CLAUDE.md)
 
 ---
 
 <div align="center">
 
-**Entwickelt mit ❤️ für die Open-Source-Community**
-
 *Wie ein Eichhörnchen seine Eicheln bewahrt, so bewahren wir deine Daten.* 🐿️🌰
 
-**[⭐ Star das Projekt](https://github.com/nicolettas-muggelbude/Scrat-Backup) • [📥 Download Beta](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases) • [🐛 Report Bug](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues) • [💡 Request Feature](https://github.com/nicolettas-muggelbude/Scrat-Backup/discussions)**
+**[⭐ Star das Projekt](https://github.com/nicolettas-muggelbude/Scrat-Backup) • [📥 Download](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/latest) • [🐛 Bug melden](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues)**
+
+*Entwickelt mit ❤️ und [Claude Code](https://claude.com/claude-code)*
 
 </div>

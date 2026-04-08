@@ -46,6 +46,7 @@ from gui.dynamic_template_form import DynamicTemplateForm  # noqa: E402
 from gui.theme import get_color  # noqa: E402
 from gui.wizard_pages import SourceSelectionPage, StartPage  # noqa: E402
 from templates.handlers.base import TemplateHandler  # noqa: E402
+from utils.paths import get_app_data_dir  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -1198,8 +1199,8 @@ class RestoreWizardPage(QWizardPage):
 
         db_hint = QLabel(
             "ℹ️ Die metadata.db wird benötigt, um Backups entschlüsseln zu können "
-            "(enthält den Schlüssel-Salt). Auf dem alten System lag sie unter "
-            "~/.scrat-backup/metadata.db."
+            f"(enthält den Schlüssel-Salt). Auf dem alten System lag sie unter "
+            f"{get_app_data_dir() / 'metadata.db'}."
         )
         db_hint.setWordWrap(True)
         db_hint.setStyleSheet("color: #856404; background-color: #fff3cd; "
@@ -1323,7 +1324,7 @@ class RestoreWizardPage(QWizardPage):
     # ── Initialisierung ───────────────────────────────────────────────
 
     def initializePage(self):
-        local_db = Path.home() / ".scrat-backup" / "metadata.db"
+        local_db = get_app_data_dir() / "metadata.db"
         if local_db.exists():
             self._db_radio.setEnabled(True)
             self._db_info_label.setText(f"Konfiguration: {local_db}")
@@ -1445,7 +1446,7 @@ class RestoreWizardPage(QWizardPage):
             f"Es wurden {len(found)} Backup(s) gefunden, aber keine metadata.db.\n\n"
             "Ohne die metadata.db kann kein Backup entschlüsselt werden, da der "
             "Schlüssel-Salt dort gespeichert ist.\n\n"
-            "Bitte kopiere die Datei\n  ~/.scrat-backup/metadata.db\n"
+            f"Bitte kopiere die Datei\n  {get_app_data_dir() / 'metadata.db'}\n"
             "vom alten System in diesen Ordner und klicke erneut auf 'Backups suchen'.",
         )
         self._restore_btn.setEnabled(False)

@@ -71,6 +71,7 @@ hidden_imports = [
     'src.utils.validators',
     'src.utils.credential_manager',
     'src.utils.performance_logger',
+    'src.utils.paths',
 
     'py7zr',
     'cryptography',

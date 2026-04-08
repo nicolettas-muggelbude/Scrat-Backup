@@ -33,6 +33,7 @@ from PySide6.QtWidgets import (
 
 from core.config_manager import ConfigManager
 from gui.theme import get_color
+from utils.paths import get_app_data_dir
 
 logger = logging.getLogger(__name__)
 
@@ -85,9 +86,8 @@ class StartPage(QWizardPage):
 
         # Setup UI
         self.setTitle("Willkommen bei Scrat-Backup! 🐿️")
-
         if self.has_config:
-            self.setSubTitle("Dein Backup-System ist bereits eingerichtet. " "Was möchtest du tun?")
+            self.setSubTitle("Dein Backup-System ist bereits eingerichtet. Was möchtest du tun?")
         else:
             self.setSubTitle("Richte dein Backup-System ein oder stelle Dateien wieder her.")
 
@@ -95,29 +95,17 @@ class StartPage(QWizardPage):
         layout = QVBoxLayout(self)
         layout.setSpacing(20)
 
-        # Info-Text
-        if not self.has_config:
-            info = QLabel(
-                "👋 Dies ist deine erste Verwendung von Scrat-Backup.\n"
-                "Wähle eine der folgenden Optionen:"
-            )
-        else:
-            info = QLabel("Was möchtest du tun?")
-
-        info.setWordWrap(True)
-        info.setStyleSheet("color: #666; font-size: 13px; margin-bottom: 10px;")
-        layout.addWidget(info)
-
         # Button-Group für Radio-Buttons
         self.button_group = QButtonGroup(self)
         self.selected_action = None
         self.radio_buttons = {}  # Speichert Radio-Buttons für späteren Zugriff
 
-        # Erstelle Optionen basierend auf Config-Status
+        # Immer: Grundoptionen
+        self._create_first_run_options(layout)
+
+        # Zusätzlich: Bearbeitungs-Optionen wenn Config existiert
         if self.has_config:
             self._create_existing_system_options(layout)
-        else:
-            self._create_first_run_options(layout)
 
         layout.addStretch()
 
@@ -131,8 +119,7 @@ class StartPage(QWizardPage):
         Returns:
             True wenn Config vorhanden und gültig
         """
-        config_dir = Path.home() / ".scrat-backup"
-        config_file = config_dir / "config.json"
+        config_file = get_app_data_dir() / "config.json"
 
         if not config_file.exists():
             return False
@@ -155,7 +142,7 @@ class StartPage(QWizardPage):
             return False
 
     def _create_first_run_options(self, layout: QVBoxLayout):
-        """Erstellt Optionen für Ersteinrichtung"""
+        """Erstellt die Grundoptionen (immer sichtbar)"""
 
         # Option 1: Backup einrichten
         backup_frame = self._create_option_radio(
@@ -163,57 +150,46 @@ class StartPage(QWizardPage):
         )
         layout.addWidget(backup_frame)
 
-        # Spacing (wie ModePage)
         layout.addSpacing(15)
 
         # Option 2: Backup wiederherstellen
         restore_frame = self._create_option_radio(
             "restore",
-            "♻️ Backup wiederherstellen (Restore)",
+            "♻️ Backup wiederherstellen",
             "Stelle Dateien aus einem vorhandenen Backup wieder her",
         )
         layout.addWidget(restore_frame)
 
-        # Standard-Auswahl (über gespeicherten Radio-Button)
+        # Standard-Auswahl: Backup einrichten
         if "backup" in self.radio_buttons:
             self.radio_buttons["backup"].setChecked(True)
             self.selected_action = "backup"
 
     def _create_existing_system_options(self, layout: QVBoxLayout):
-        """Erstellt Optionen für bestehendes System"""
+        """Erstellt zusätzliche Optionen wenn Config vorhanden"""
 
-        # Option 1: Einstellungen ändern
+        layout.addSpacing(15)
+
+        # Trennlinie
+        layout.addWidget(self._create_separator())
+
+        layout.addSpacing(5)
+
+        # Option: Einstellungen ändern
         edit_frame = self._create_option_radio(
             "edit", "⚙️ Backup-Einstellungen ändern", "Ändere Quellen, Ziele oder Zeitplan"
         )
         layout.addWidget(edit_frame)
 
-        # Spacing (wie ModePage)
         layout.addSpacing(15)
 
-        # Option 2: Neues Ziel hinzufügen
+        # Option: Neues Ziel hinzufügen
         add_frame = self._create_option_radio(
             "add_destination",
             "➕ Neues Backup-Ziel hinzufügen",
             "Füge ein weiteres Backup-Ziel hinzu",
         )
         layout.addWidget(add_frame)
-
-        # Spacing (wie ModePage)
-        layout.addSpacing(15)
-
-        # Option 3: Restore
-        restore_frame = self._create_option_radio(
-            "restore",
-            "♻️ Backup wiederherstellen (Restore)",
-            "Stelle Dateien aus einem deiner Backups wieder her",
-        )
-        layout.addWidget(restore_frame)
-
-        # Standard-Auswahl (über gespeicherten Radio-Button)
-        if "edit" in self.radio_buttons:
-            self.radio_buttons["edit"].setChecked(True)
-            self.selected_action = "edit"
 
     def _create_option_radio(self, action_id: str, title: str, description: str) -> QWidget:
         """
@@ -412,7 +388,7 @@ class SourceSelectionPage(QWizardPage):
 
         # Vorhandene Quellen aus gespeicherter Config laden
         try:
-            config_file = Path.home() / ".scrat-backup" / "config.json"
+            config_file = get_app_data_dir() / "config.json"
             if not config_file.exists():
                 return
 
