@@ -1,5 +1,9 @@
 # Scrat-Backup .gitignore
 
+# Release-Artefakte
+*.AppImage
+*.zip
+
 # Python
 __pycache__/
 *.py[cod]

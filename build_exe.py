@@ -167,7 +167,7 @@ class BuildScript:
             print("✗ Dist-Ordner nicht gefunden!")
             return False
 
-        zip_name = "ScratBackup-v0.2.0-beta-windows"
+        zip_name = "ScratBackup-v0.3.0-beta-windows"
         zip_path = self.dist_dir / zip_name
 
         print(f"Erstelle: {zip_path}.zip")
@@ -186,7 +186,7 @@ class BuildScript:
         print("""
 ╔══════════════════════════════════════════════════════════════╗
 ║                  Scrat-Backup Build-Script                   ║
-║                     Version 0.2.0 Beta                       ║
+║                     Version 0.3.0 Beta                       ║
 ╚══════════════════════════════════════════════════════════════╝
         """)
 
