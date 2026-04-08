@@ -118,27 +118,33 @@ Die Konfiguration liegt jetzt dort, wo das System sie erwartet:
 
 ---
 
-## 📥 Download & Installation
+## 💾 Downloads
+
+| Plattform | Datei | Hinweis |
+|-----------|-------|---------|
+| 🪟 **Windows** (x64) | `ScratBackup-v0.3.11-beta-Setup.exe` | Installer starten, kein Admin nötig |
+| 🐧 **Linux** (x86_64) | `ScratBackup-v0.3.11-beta-x86_64.AppImage` | Siehe Installation unten |
 
 ### 🪟 Windows
-1. `ScratBackup-vX.X.X-Setup.exe` herunterladen
+1. `ScratBackup-v0.3.11-beta-Setup.exe` herunterladen
 2. Installer starten – **kein Administratorrecht erforderlich**
 3. Scrat-Backup startet automatisch nach der Installation
 
 ### 🐧 Linux (AppImage)
 
-**Schnellstart (ohne Menü-Eintrag):**
-```bash
-chmod +x ScratBackup-vX.X.X-x86_64.AppImage
-./ScratBackup-vX.X.X-x86_64.AppImage
-```
-
 **Mit Desktop-Integration (empfohlen):**
 ```bash
-./install.sh ScratBackup-vX.X.X-x86_64.AppImage
+chmod +x install.sh
+./install.sh ScratBackup-v0.3.11-beta-x86_64.AppImage
 ```
 
-Das Script installiert die App nach `~/.local/bin/`, trägt sie ins Anwendungsmenü ein und installiert alle Icons. Danach ist sie über `scrat-backup` oder das Menü erreichbar.
+Das Script installiert die App nach `~/.local/bin/`, trägt sie ins Anwendungsmenü ein und installiert alle Icons. Danach ist sie über `scrat-backup` oder das Menü erreichbar. Kein `sudo` nötig.
+
+**Schnellstart (ohne Menü-Eintrag):**
+```bash
+chmod +x ScratBackup-v0.3.11-beta-x86_64.AppImage
+./ScratBackup-v0.3.11-beta-x86_64.AppImage
+```
 
 **Ubuntu/Debian – falls GUI nicht startet:**
 ```bash
