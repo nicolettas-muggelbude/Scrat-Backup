@@ -19,9 +19,12 @@ from PySide6.QtCore import QLibraryInfo, QTranslator  # noqa: E402
 from PySide6.QtGui import QIcon  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
+from src import __version__  # noqa: E402
 from src.core.config_manager import ConfigManager  # noqa: E402
+from src.core.update_checker import UpdateChecker  # noqa: E402
 from src.gui.main_window import MainWindow  # noqa: E402
 from src.gui.theme_manager import ThemeManager  # noqa: E402
+from src.gui.update_dialog import show_update_dialog  # noqa: E402
 from src.gui.wizard_v2 import SetupWizardV2  # noqa: E402
 
 # Logging konfigurieren
@@ -680,6 +683,19 @@ def run_gui() -> int:
         return 1
 
     logger.info("GUI gestartet - Event-Loop läuft")
+
+    # Update-Check im Hintergrund starten
+    _update_checker = UpdateChecker(current_version=__version__, parent=app)
+    _update_checker.update_available.connect(
+        lambda ver, notes, dl_url, rel_url: show_update_dialog(
+            latest_version=ver,
+            release_notes=notes,
+            download_url=dl_url,
+            release_url=rel_url,
+            current_version=__version__,
+        )
+    )
+    _update_checker.start()
 
     # Event-Loop starten
     return app.exec()

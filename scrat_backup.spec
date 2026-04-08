@@ -57,6 +57,8 @@ hidden_imports = [
     'src.gui.theme',
     'src.gui.theme_manager',
     'src.gui.run_wizard',
+    'src.gui.update_dialog',
+    'src.core.update_checker',
 
     'src.templates.handlers.usb_handler',
     'src.templates.handlers.onedrive_handler',
