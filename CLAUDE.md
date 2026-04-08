@@ -59,7 +59,7 @@ src/
 ## Was ist fertig
 
 - **Template-System:** TemplateManager, 7 Handler, 7 JSON-Definitionen
-- **Wizard V3:** StartPage, SourceSelectionPage, TemplateDestinationPage, FinishPage – produktionsreif
+- **Wizard V3:** StartPage, SourceSelectionPage, TemplateDestinationPage, SchedulePage, EncryptionPage, RestoreWizardPage, FinishPage – produktionsreif
 - **DynamicTemplateForm:** Feldtypen text, password, combo, button, status, drive_selector, checkbox
 - **Dark Mode:** ThemeManager mit Auto-Detection, Light/Dark Themes, ACCENT_COLOR globalisiert
 - **Plattform-Abstraktionen:** PlatformScheduler (Win/Linux/macOS), AutostartManager
@@ -67,12 +67,20 @@ src/
 - **Lokalisierung:** QTranslator für deutsche Qt-Dialoge
 - **USB-Template:** vollständig funktionsfähig inkl. drive_selector + Refresh
 - **SchedulePage:** Zeitplan-Seite im Wizard – Auto-Checkbox, Frequenz (täglich/wöchentlich/monatlich/beim Start), Uhrzeit, Wochentage, Tag des Monats; dynamische Gruppen-Sichtbarkeit; gibt `schedule`-Config aus
+- **EncryptionPage:** Passwort + Bestätigung + Live-Validierung + Keyring-Speicherung; Passwort-Kette: wizard_config → keyring → Dialog
+- **RestoreWizardPage:** DB-Modus (aus `~/.scrat-backup/metadata.db`) + Verzeichnis-Modus (manuell, sucht `metadata.db` im Backup-Ordner); Fortschrittsanzeige mit Phase, Dateinamen, Zähler
 - **Backup nach Wizard:** `start_backup_after_wizard()` in `main.py` – Fortschrittsanzeige (QProgressDialog ohne Abbrechen-Button), Thread-sichere Fortschritts-Updates, Multi-Threading aktiviert
 - **App-Logo:** Eichel-Icon auf allen Fenstern (QApplication-Level `setWindowIcon` in `main.py` + `run_wizard.py`)
-- **TemplateCard-Kacheln:** QFrame-basierte Kacheln mit 24px-Icons, Hover/Check-Styles, rahmenlos (ersetzt QPushButton)
+- **TemplateCard-Kacheln:** QFrame-basierte Kacheln mit 24px-Icons, Hover/Check-Styles, rahmenlos; gesperrt wenn Backend nicht verfügbar (ForbiddenCursor)
 - **USB-Erkennung Linux:** Robuste Username-Ermittlung (Fallbacks: $USER, getpass, pwd), `/media/USER/` ohne strenge removable-Prüfung (erkennt externe Festplatten)
 - **MainWindow closeEvent:** Beendet Programm korrekt wenn kein Tray läuft, minimiert zu Tray nur wenn Tray sichtbar
 - **SourceSelectionPage Edit-Modus:** Bei "Einstellungen ändern" werden vorhandene Quellen aus Config vorbefüllt (Standard-Bibliotheken + eigene Ordner)
+- **System Tray vollständig verdrahtet:** `main.py` verbindet alle 5 Signals (start_backup, show_main_window, start_restore, show_settings, quit)
+- **metadata.db auf Backup-Ziel:** Nach jedem Backup wird `metadata.db` automatisch auf das Zielmedium kopiert → Restore auf neuem System möglich
+- **Rotation löscht Disk-Dateien:** `_rotate_old_backups()` entfernt `.enc`-Dateien via `shutil.rmtree()` (nicht nur DB-Einträge)
+- **SFTP Host-Key-Sicherheit:** `RejectPolicy` + System-Known-Hosts; klare Fehlermeldung mit `ssh user@host` Anleitung bei unbekanntem Host
+- **GitHub Actions CI:** `.github/workflows/build-release.yml` – baut Windows EXE + Linux AppImage automatisch bei `v*`-Tags
+- **Release v0.3.0-beta:** Verfügbar auf GitHub mit Windows ZIP, Linux AppImage, Source ZIP
 
 ---
 
@@ -105,10 +113,11 @@ src/
 ### Wizard / GUI
 - [x] **"Backup ändern" überspringt SourceSelectionPage** ✅
 - [x] **Dark Mode: TemplateCard-Kacheln, Ordner-Liste, Ausschlüsse, Finish-Page** ✅
-- [ ] Tray-Icon mit Theme-Toggle
-- [ ] Restore-Flow (eigener Wizard)
+- [x] Tray vollständig verdrahtet ✅
+- [x] Restore-Flow im Wizard (PAGE_RESTORE=6) ✅
 - [x] Schedule-Page (Zeitplan im Wizard) ✅
-- [ ] Encryption-Page (Verschlüsselung im Wizard)
+- [x] Encryption-Page (Verschlüsselung im Wizard, PAGE_ENCRYPTION=7) ✅
+- [ ] Tray-Icon mit Theme-Toggle
 - [ ] Template-Manager-Tab im MainWindow
 
 ### Templates & Handler
@@ -120,7 +129,8 @@ src/
 - [ ] XDG User Directories Support (`xdg-user-dir`)
 - [ ] Linux-Packaging: PyPI + .deb
 - [ ] Desktop-Dateien (`scrat-backup.desktop`, `scrat-backup-tray.desktop`)
-- [ ] GitHub Actions CI (Ubuntu / Windows / macOS Matrix)
+- [x] GitHub Actions CI (Ubuntu + Windows) ✅
+- [ ] macOS Build (GitHub Actions)
 
 ### Zukunft
 - [ ] Lokalisierung (DE/EN) – Strings externalisieren
@@ -129,6 +139,7 @@ src/
 - [ ] Template-Wizard: eigene Templates aus bestehender Config erstellen
 - [ ] Handler als Plugins (`~/.scrat-backup/plugins/`)
 - [ ] Config-Migration: alte Destinations → Template-basiert
+- [ ] GitHub Actions auf Node.js 24 aktualisieren (Deadline Juni 2026; actions v5 abwarten)
 
 ---
 
@@ -149,9 +160,12 @@ src/
 | Fortschritts-Dialog | QProgressDialog ohne Schließ-Button (`CustomizeWindowHint \| WindowTitleHint`), Fortschritt via shared dict zwischen Backup-Thread und Qt-Event-Loop |
 
 ### Wizard-Seitenfolge & Routing
-- Page-IDs: `PAGE_START=0`, `PAGE_SOURCE=1`, `PAGE_MODE=2`, `PAGE_DESTINATION=3`, `PAGE_SCHEDULE=4`, `PAGE_FINISH=5`
+- Page-IDs: `PAGE_START=0`, `PAGE_SOURCE=1`, `PAGE_MODE=2`, `PAGE_DESTINATION=3`, `PAGE_SCHEDULE=4`, `PAGE_FINISH=5`, `PAGE_RESTORE=6`, `PAGE_ENCRYPTION=7`
 - `nextId()` routet dynamisch basierend auf StartPage-Auswahl
+- Restore-Aktion: StartPage → PAGE_RESTORE (6) → fertig
+- Normal/Experten-Modus: PAGE_SOURCE → PAGE_DESTINATION → PAGE_SCHEDULE → PAGE_ENCRYPTION → PAGE_FINISH
 - SchedulePage gibt `None` zurück wenn Auto-Zeitplan deaktiviert; sonst `{"enabled": True, "frequency", "time", "weekdays", "day_of_month"}`
+- EncryptionPage gibt Passwort in `get_config()["password"]` zurück; speichert optional im Keyring
 - `sourcesChanged` Signal auf SourceSelectionPage aktiviert den Weiter-Button
 
 ### DynamicTemplateForm
@@ -313,10 +327,123 @@ pip install secretstorage python-notify2 pyxdg
 5. `59a5d85` - fix: Dark Mode letzte Wizard-Seite
 
 ### Offene Punkte nach dieser Session:
-- [ ] Tray-Start implementieren
-- [ ] Restore-Flow (eigener Wizard)
-- [ ] `_rotate_old_backups()`: löscht noch keine Disk-Dateien (nur DB-Einträge)
+- [x] Tray-Start implementieren ✅ (Session 2026-04-08)
+- [x] Restore-Flow ✅ (Session 2026-04-08)
+- [x] `_rotate_old_backups()`: löscht jetzt Disk-Dateien ✅ (Session 2026-04-08)
 - [ ] Dark Mode: weitere hardcodierte Farben in anderen Tabs/Dialogen prüfen
+
+---
+
+## Session 2026-04-08: Beta-Release v0.3.0-beta
+
+### Hauptprobleme gelöst:
+
+#### 1. **Restore-Flow im Wizard** ✅
+- **PAGE_RESTORE (6):** Neue Wizard-Seite mit 2 Modi
+  - **DB-Modus:** lädt automatisch aus `~/.scrat-backup/metadata.db` (vorhandene Konfiguration)
+  - **Verzeichnis-Modus:** Backup-Ordner manuell wählen, `metadata.db` wird automatisch gesucht (neues System)
+  - Vollständige Fortschrittsanzeige (Phase, Dateizähler, aktuellem Dateinamen)
+- Routing: `StartPage.nextId()` → PAGE_RESTORE bei action="restore"
+
+#### 2. **Encryption-Page im Wizard** ✅
+- **PAGE_ENCRYPTION (7):** Passwort + Bestätigung, Live-Validierung, optionale Keyring-Speicherung
+- Routing: SchedulePage.nextId() → PAGE_ENCRYPTION → PAGE_FINISH
+- Passwort-Kette in `start_backup_after_wizard()`: wizard_config → keyring → Dialog
+
+#### 3. **System Tray vollständig verdrahtet** ✅
+- `main.py run_gui()`: alle 5 Signals verbunden (war zuvor auskommentiertes TODO)
+- `start_restore` öffnet Wizard direkt auf PAGE_RESTORE
+
+#### 4. **metadata.db auf Backup-Ziel kopieren** ✅
+- `backup_engine._copy_db_to_destination()`: nach jedem Backup (full/incremental/keine Änderungen)
+- Fehler nicht-fatal (Backup trotzdem erfolgreich)
+- Ermöglicht Restore auf neuem System ohne Originalrechner
+
+#### 5. **Rotation löscht Disk-Dateien** ✅
+- `_rotate_old_backups()`: `shutil.rmtree(backup_dir)` für physisches Löschen
+- Vorher: nur DB-Einträge gelöscht, `.enc`-Dateien blieben auf Disk
+
+#### 6. **SFTP Host-Key-Sicherheit** ✅
+- `AutoAddPolicy` → `RejectPolicy` + `load_system_host_keys()`
+- Zusätzlich: `~/.scrat-backup/known_hosts` als projektspezifische Known-Hosts
+- Klare Fehlermeldung: `ssh username@host` ausführen, dann retry
+
+#### 7. **TemplateCard sperrt nicht verfügbare Backends** ✅
+- `mousePressEvent`: blockiert Klick wenn `not self._is_available`
+- Cursor wechselt zu `Qt.CursorShape.ForbiddenCursor` bei nicht-installierten Backends (rclone, smbclient)
+
+#### 8. **PyInstaller-Optimierung (87MB → ~70MB AppImage)** ✅
+- `scrat_backup.spec` vollständig überarbeitet:
+  - Explizite `hidden_imports` (nur gebrauchte Module)
+  - `hooksconfig` für PySide6 QML-Plugin-Ausschluss
+  - Große `excludes`-Liste (Qt6Quick, Qml, Pdf, Multimedia, Bluetooth, WebEngine, 3D)
+  - `remove_qt_libs()`: filtert Qt-`.so`-Dateien post-Analyse
+  - `strip=True` in EXE + COLLECT, `optimize=1` in PYZ
+  - `glob.glob()` Loop statt Glob-Pattern in datas (verhindert FileNotFoundError)
+
+#### 9. **GitHub Actions CI** ✅
+- `.github/workflows/build-release.yml`: ausgelöst bei `v*`-Tags
+- `build-windows` (windows-latest): EXE → ZIP → Release-Upload
+- `build-linux` (ubuntu-22.04): apt-deps → appimagetool → AppImage → Release-Upload
+- `softprops/action-gh-release@v2` mit `permissions: contents: write`
+
+### Commits dieser Session:
+1. `41c2b57` - fix: venv-Aktivierung in Linux/macOS Installations-Anleitungen
+2. `1b624fc` - docs: Session 2026-03-24 dokumentiert, README + CONTRIBUTING aktualisiert
+3. *(Viele Commits für Beta-Features, Encryption-Page, Restore-Flow, Tray, CI)*
+
+### Release v0.3.0-beta Assets (GitHub):
+- `ScratBackup-v0.3.0-beta-windows.zip` (CI: Windows EXE)
+- `ScratBackup-v0.3.0-beta-x86_64.AppImage` (CI: Linux AppImage)
+- `scrat-backup-v0.3.0-beta-source.zip` (manuell)
+
+### Offene Punkte nach dieser Session:
+- [ ] Node.js 20 Deprecation in GitHub Actions (Deadline Juni 2026; auf v5 Actions warten)
+- [ ] macOS-Build (kein macOS-Runner aktuell konfiguriert)
+- [ ] Dark Mode: weitere hardcodierte Farben in anderen Tabs/Dialogen
+
+---
+
+## Session 2026-04-09: Packaging-Fixes, Auto-Updater, Template-JSONs
+
+### Hauptprobleme gelöst:
+
+#### 1. **Windows: python312.dll LoadLibrary-Fehler** ✅
+- Installer installierte nach `C:\Program Files\` → DEP/CFG blockierte DLL
+- Fix: `{autopf}` → `{localappdata}`, `PrivilegesRequired=lowest`
+- UPX-Komprimierung war zweite Ursache → `upx=False` in EXE + COLLECT
+
+#### 2. **Linux/Windows: App startet nicht (NameError)** ✅
+- `QPushButton`, `QTableWidget`, `QProgressBar`, `QFileDialog` fehlten in `wizard_v2.py`
+- `from src import __version__` schlug im PyInstaller-Bundle fehl → Fallback eingebaut
+
+#### 3. **Linux: TemplateManager read-only Fehler** ✅
+- `_get_system_templates_dir()` versuchte `mkdir` im AppImage (squashfs, read-only)
+- Fix: `sys._MEIPASS` für Bundle-Pfad, schreibbarer Fallback `~/.scrat-backup/templates/`
+
+#### 4. **Template-JSONs fehlten komplett** ✅
+- 7 JSON-Definitionen waren nie im Repo vorhanden
+- Erstellt: `usb.json`, `nextcloud.json`, `onedrive.json`, `google_drive.json`,
+  `dropbox.json`, `synology.json`, `qnap.json`
+
+#### 5. **Windows Installer → Inno Setup statt ZIP** ✅
+- `installer.iss`: Version per `/DMyAppVersion=` aus CI übergeben
+- CI baut `ScratBackup-vX.X.X-Setup.exe` statt ZIP
+
+#### 6. **Auto-Updater implementiert** ✅
+- `src/core/update_checker.py`: QThread, GitHub Releases API, einmal täglich
+- `src/gui/update_dialog.py`: Dialog mit Release Notes + Download-Button
+- Plattformspezifischer Download-Link (Setup.exe / AppImage)
+
+#### 7. **pip install -r requirements.txt im CI** ✅
+- `pyproject.toml` hat keine `dependencies`-Sektion
+- `pip install -e ".[dev]"` installierte nichts → PySide6 fehlte im Bundle
+
+### Release v0.3.11-beta:
+- Windows + Linux starten ✅
+- 7 Templates geladen ✅
+- Inno Setup Installer (kein Admin nötig) ✅
+- Auto-Updater aktiv ✅
 
 ---
 
