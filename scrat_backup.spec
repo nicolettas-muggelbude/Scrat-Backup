@@ -219,7 +219,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,   # UPX deaktiviert – verursacht LoadLibrary-Fehler auf Windows
-    console=True,  # DEBUG: Konsole aktiviert um Fehler zu sehen
+    console=False,
     icon=str(icon_path) if icon_path else None,
 )
 
