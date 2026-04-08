@@ -11,7 +11,9 @@
 ; 3. Installer wird in Output/ erstellt
 
 #define MyAppName "Scrat-Backup"
-#define MyAppVersion "0.2.1-beta"
+#ifndef MyAppVersion
+  #define MyAppVersion "0.0.0"
+#endif
 #define MyAppPublisher "Scrat-Backup Project"
 #define MyAppURL "https://github.com/nicolettas-muggelbude/Scrat-Backup"
 #define MyAppExeName "ScratBackup.exe"
@@ -33,7 +35,7 @@ AllowNoIcons=yes
 LicenseFile=LICENSE
 InfoBeforeFile=docs\INSTALL.txt
 OutputDir=output
-OutputBaseFilename=ScratBackup-{#MyAppVersion}-Setup
+OutputBaseFilename=ScratBackup-v{#MyAppVersion}-Setup
 SetupIconFile=assets\icons\{#MyAppIconName}
 Compression=lzma2/ultra64
 SolidCompression=yes

@@ -32,18 +32,19 @@ jobs:
       - name: EXE bauen
         run: python -m PyInstaller scrat_backup.spec --clean --noconfirm
 
-      - name: ZIP erstellen
+      - name: Installer bauen (Inno Setup)
         shell: pwsh
         run: |
-          $version = "${{ github.ref_name }}"
-          $zipName = "ScratBackup-${version}-windows.zip"
-          Compress-Archive -Path dist\ScratBackup\* -DestinationPath $zipName
-          echo "ZIP_NAME=$zipName" >> $env:GITHUB_ENV
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          iscc "/DMyAppVersion=$version" installer.iss
+          $setupName = "ScratBackup-${{ github.ref_name }}-Setup.exe"
+          Move-Item "output\ScratBackup-v${version}-Setup.exe" $setupName
+          echo "SETUP_NAME=$setupName" >> $env:GITHUB_ENV
 
       - name: Zum Release hochladen
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.ZIP_NAME }}
+          files: ${{ env.SETUP_NAME }}
 
   # ── Linux AppImage ──────────────────────────────────────────────────────
   build-linux:
