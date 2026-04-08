@@ -83,19 +83,32 @@ class TemplateManager:
 
     def _get_system_templates_dir(self) -> Path:
         """Ermittelt System-Templates-Verzeichnis"""
-        # Option 1: /usr/share/scrat-backup/templates/ (installiert)
+        import sys
+
+        # Option 1: PyInstaller-Bundle (_internal/src/templates/)
+        # sys._MEIPASS ist nur in PyInstaller-Bundles gesetzt
+        if hasattr(sys, "_MEIPASS"):
+            bundle_path = Path(sys._MEIPASS) / "src" / "templates"
+            if bundle_path.exists():
+                logger.debug(f"Templates aus Bundle: {bundle_path}")
+                return bundle_path
+
+        # Option 2: /usr/share/scrat-backup/templates/ (system-installiert)
         system_path = Path("/usr/share/scrat-backup/templates")
         if system_path.exists():
             return system_path
 
-        # Option 2: assets/templates/ (Development)
-        dev_path = Path(__file__).parent.parent.parent / "templates"
+        # Option 3: src/templates/ relativ zu dieser Datei (Entwicklung)
+        dev_path = Path(__file__).resolve().parent.parent / "templates"
         if dev_path.exists():
             return dev_path
 
-        # Option 3: Erstelle assets/templates/
-        dev_path.mkdir(parents=True, exist_ok=True)
-        return dev_path
+        # Option 4: Schreibbares Fallback – Bundle/AppImage ist read-only,
+        # mkdir dort würde fehlschlagen
+        fallback = Path.home() / ".scrat-backup" / "templates"
+        fallback.mkdir(parents=True, exist_ok=True)
+        logger.warning(f"Kein System-Templates-Verzeichnis gefunden, nutze Fallback: {fallback}")
+        return fallback
 
     def get_available_templates(self, force_refresh: bool = False) -> List[Template]:
         """
