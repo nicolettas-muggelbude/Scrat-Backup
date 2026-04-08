@@ -1,8 +1,11 @@
 # 🎉 Scrat-Backup v0.3.11-beta Release Notes
 
-**Release Date:** 2026-04-09
-**Status:** Public Beta
-**Type:** Feature + Bugfix Release
+## 💾 Downloads
+
+| Plattform | Download |
+|-----------|----------|
+| 🪟 **Windows** (x64) | [⬇ ScratBackup-v0.3.11-beta-Setup.exe](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.11-beta/ScratBackup-v0.3.11-beta-Setup.exe) |
+| 🐧 **Linux** (x86_64) | [⬇ ScratBackup-v0.3.11-beta-x86_64.AppImage](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.11-beta/ScratBackup-v0.3.11-beta-x86_64.AppImage) |
 
 ---
 
@@ -115,52 +118,6 @@ Die Konfiguration liegt jetzt dort, wo das System sie erwartet:
 ### Dark Mode
 - ✅ Auto-Detection + manuelles Umschalten
 - ✅ Alle Wizard-Seiten theme-aware (TemplateCards, Ordner-Liste, Ausschlüsse, FinishPage)
-
----
-
-## 💾 Downloads
-
-| Plattform | Download |
-|-----------|----------|
-| 🪟 **Windows** (x64) | [⬇ ScratBackup-v0.3.11-beta-Setup.exe](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.11-beta/ScratBackup-v0.3.11-beta-Setup.exe) |
-| 🐧 **Linux** (x86_64) | [⬇ ScratBackup-v0.3.11-beta-x86_64.AppImage](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.11-beta/ScratBackup-v0.3.11-beta-x86_64.AppImage) |
-
-### 🪟 Windows
-1. `ScratBackup-v0.3.11-beta-Setup.exe` herunterladen
-2. Installer starten – **kein Administratorrecht erforderlich**
-3. Scrat-Backup startet automatisch nach der Installation
-
-### 🐧 Linux (AppImage)
-
-**Mit Desktop-Integration (empfohlen):**
-```bash
-chmod +x install.sh
-./install.sh ScratBackup-v0.3.11-beta-x86_64.AppImage
-```
-
-Das Script installiert die App nach `~/.local/bin/`, trägt sie ins Anwendungsmenü ein und installiert alle Icons. Danach ist sie über `scrat-backup` oder das Menü erreichbar. Kein `sudo` nötig.
-
-**Schnellstart (ohne Menü-Eintrag):**
-```bash
-chmod +x ScratBackup-v0.3.11-beta-x86_64.AppImage
-./ScratBackup-v0.3.11-beta-x86_64.AppImage
-```
-
-**Ubuntu/Debian – falls GUI nicht startet:**
-```bash
-sudo apt install libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
-                 libxcb-randr0 libxcb-render-util0 libxcb-xinerama0 libxcb-xfixes0
-```
-
-### Aus dem Quellcode
-```bash
-git clone https://github.com/nicolettas-muggelbude/Scrat-Backup.git
-cd Scrat-Backup
-python3 -m venv venv
-source venv/bin/activate   # Linux/macOS
-pip install -r requirements.txt
-python3 src/main.py
-```
 
 ---
 
