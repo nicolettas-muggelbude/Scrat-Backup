@@ -1,0 +1,35 @@
+{
+  "id": "usb",
+  "version": "1.0",
+  "display_name": "USB-Laufwerk",
+  "icon": "🔌",
+  "description": "Backup auf USB-Stick oder externe Festplatte",
+  "category": "local",
+  "storage_type": "local",
+  "handler": "src.templates.handlers.usb_handler.UsbHandler",
+  "platforms": ["windows", "linux", "darwin"],
+  "availability_check": {
+    "type": "drive_detection"
+  },
+  "ui_fields": [
+    {
+      "id": "drive",
+      "type": "drive_selector",
+      "label": "Laufwerk",
+      "required": true,
+      "placeholder": "USB-Laufwerk auswählen"
+    },
+    {
+      "id": "path",
+      "type": "text",
+      "label": "Unterordner",
+      "required": false,
+      "default": "Scrat-Backup",
+      "placeholder": "z.B. Backups"
+    }
+  ],
+  "config_mapping": {
+    "drive": "drive",
+    "path": "path"
+  }
+}

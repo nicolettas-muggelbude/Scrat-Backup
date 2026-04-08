@@ -1,0 +1,72 @@
+{
+  "id": "qnap",
+  "version": "1.0",
+  "display_name": "QNAP NAS",
+  "icon": "🗄️",
+  "description": "Backup auf QNAP NAS via SMB",
+  "category": "nas",
+  "storage_type": "smb",
+  "handler": "src.templates.handlers.qnap_handler.QnapHandler",
+  "platforms": ["windows", "linux", "darwin"],
+  "availability_check": {
+    "type": "command",
+    "command": "smbclient",
+    "windows_alternative": "net"
+  },
+  "ui_fields": [
+    {
+      "id": "host",
+      "type": "text",
+      "label": "IP / Hostname",
+      "required": true,
+      "placeholder": "192.168.1.101 oder qnap.local"
+    },
+    {
+      "id": "share",
+      "type": "text",
+      "label": "Freigabe",
+      "required": true,
+      "placeholder": "Backup"
+    },
+    {
+      "id": "user",
+      "type": "text",
+      "label": "Benutzername",
+      "required": true,
+      "placeholder": "admin"
+    },
+    {
+      "id": "password",
+      "type": "password",
+      "label": "Passwort",
+      "required": true,
+      "placeholder": "Passwort"
+    },
+    {
+      "id": "path",
+      "type": "text",
+      "label": "Unterordner",
+      "required": false,
+      "default": "Scrat-Backup",
+      "placeholder": "z.B. Backups"
+    },
+    {
+      "id": "test",
+      "type": "button",
+      "label": "Verbindung testen",
+      "action": "test_connection"
+    },
+    {
+      "id": "status",
+      "type": "status",
+      "label": ""
+    }
+  ],
+  "config_mapping": {
+    "host": "host",
+    "share": "share",
+    "user": "username",
+    "password": "password",
+    "path": "path"
+  }
+}

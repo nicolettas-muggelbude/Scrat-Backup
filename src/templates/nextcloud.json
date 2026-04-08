@@ -1,0 +1,62 @@
+{
+  "id": "nextcloud",
+  "version": "1.0",
+  "display_name": "Nextcloud",
+  "icon": "☁️",
+  "description": "Backup auf eigene Nextcloud-Instanz via WebDAV",
+  "category": "cloud",
+  "storage_type": "webdav",
+  "handler": "src.templates.handlers.nextcloud_handler.NextcloudHandler",
+  "platforms": ["windows", "linux", "darwin"],
+  "availability_check": {
+    "type": "network"
+  },
+  "ui_fields": [
+    {
+      "id": "url",
+      "type": "text",
+      "label": "Server-URL",
+      "required": true,
+      "placeholder": "https://cloud.example.com"
+    },
+    {
+      "id": "user",
+      "type": "text",
+      "label": "Benutzername",
+      "required": true,
+      "placeholder": "mein-benutzername"
+    },
+    {
+      "id": "password",
+      "type": "password",
+      "label": "Passwort / App-Token",
+      "required": true,
+      "placeholder": "Passwort oder App-Passwort"
+    },
+    {
+      "id": "path",
+      "type": "text",
+      "label": "Zielordner",
+      "required": false,
+      "default": "Scrat-Backup",
+      "placeholder": "z.B. Backups"
+    },
+    {
+      "id": "test",
+      "type": "button",
+      "label": "Verbindung testen",
+      "action": "test_connection"
+    },
+    {
+      "id": "status",
+      "type": "status",
+      "label": ""
+    }
+  ],
+  "config_mapping": {
+    "url": "url",
+    "user": "username",
+    "password": "password",
+    "path": "remote_path"
+  }
+}

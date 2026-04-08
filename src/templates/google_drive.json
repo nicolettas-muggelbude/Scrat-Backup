@@ -1,0 +1,48 @@
+{
+  "id": "google_drive",
+  "version": "1.0",
+  "display_name": "Google Drive",
+  "icon": "📗",
+  "description": "Backup auf Google Drive via rclone",
+  "category": "cloud",
+  "storage_type": "rclone",
+  "handler": "src.templates.handlers.google_drive_handler.GoogleDriveHandler",
+  "platforms": ["windows", "linux", "darwin"],
+  "availability_check": {
+    "type": "command",
+    "command": "rclone"
+  },
+  "ui_fields": [
+    {
+      "id": "remote_name",
+      "type": "text",
+      "label": "rclone Remote-Name",
+      "required": true,
+      "default": "gdrive",
+      "placeholder": "gdrive"
+    },
+    {
+      "id": "path",
+      "type": "text",
+      "label": "Zielordner",
+      "required": false,
+      "default": "Scrat-Backup",
+      "placeholder": "z.B. Backups"
+    },
+    {
+      "id": "oauth",
+      "type": "button",
+      "label": "Mit Google Drive verbinden",
+      "action": "oauth_login"
+    },
+    {
+      "id": "status",
+      "type": "status",
+      "label": ""
+    }
+  ],
+  "config_mapping": {
+    "remote_name": "remote",
+    "path": "path"
+  }
+}
