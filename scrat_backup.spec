@@ -217,9 +217,8 @@ exe = EXE(
     name='ScratBackup',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=True,   # Debug-Symbole entfernen
-    upx=True,
-    upx_exclude=['vcruntime140.dll', 'python*.dll'],
+    strip=False,
+    upx=False,   # UPX deaktiviert – verursacht LoadLibrary-Fehler auf Windows
     console=False,
     icon=str(icon_path) if icon_path else None,
 )
@@ -228,8 +227,7 @@ coll = COLLECT(
     exe,
     a.binaries,
     a.datas,
-    strip=True,   # Auch in COLLECT strippen
-    upx=True,
-    upx_exclude=['vcruntime140.dll'],
+    strip=False,
+    upx=False,   # UPX deaktiviert – verursacht LoadLibrary-Fehler auf Windows
     name='ScratBackup',
 )
