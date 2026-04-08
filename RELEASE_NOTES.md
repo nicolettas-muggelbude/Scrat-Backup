@@ -6,6 +6,7 @@
 |-----------|----------|
 | 🪟 **Windows** (x64) | [⬇ ScratBackup-v0.3.11-beta-Setup.exe](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.11-beta/ScratBackup-v0.3.11-beta-Setup.exe) |
 | 🐧 **Linux** (x86_64) | [⬇ ScratBackup-v0.3.11-beta-x86_64.AppImage](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.11-beta/ScratBackup-v0.3.11-beta-x86_64.AppImage) |
+| 🐧 **Linux** Desktop-Integration | [⬇ install.sh](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.11-beta/install.sh) |
 
 ---
 
