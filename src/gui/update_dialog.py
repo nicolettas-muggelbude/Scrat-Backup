@@ -3,24 +3,16 @@ Update-Dialog für Scrat-Backup
 Zeigt verfügbare neue Version mit Changelog und Download-Button.
 """
 
-import sys
-from urllib.request import urlopen, Request
 import logging
-import threading
-from pathlib import Path
 
-from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QDialog,
-    QDialogButtonBox,
     QLabel,
-    QProgressBar,
     QPushButton,
     QTextBrowser,
     QVBoxLayout,
     QHBoxLayout,
-    QApplication,
 )
 
 logger = logging.getLogger(__name__)
