@@ -7,6 +7,23 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.3.0-beta] - 2026-04-08
+
+### Added
+- **Restore-Flow im Wizard:** Neue Wizard-Seite für Wiederherstellung direkt aus dem Setup-Assistenten
+  - DB-Modus: lädt automatisch aus `~/.scrat-backup/metadata.db` (vorhandene Konfiguration)
+  - Verzeichnis-Modus: Backup-Ordner manuell wählen, `metadata.db` wird automatisch gesucht (für neues System)
+  - Vollständige Fortschrittsanzeige mit Phase, Dateizähler und aktuellem Dateinamen
+- **metadata.db auf Backup-Ziel kopieren:** Nach jedem Backup wird die Datenbank automatisch auf das Zielmedium kopiert – ermöglicht Restore auf neuem System ohne Originalrechner
+- **Encryption-Page im Wizard:** Passwort-Eingabe mit Bestätigung, Live-Validierung und optionaler Keyring-Speicherung
+- **System Tray funktionsfähig:** Nach dem Wizard startet Scrat-Backup im Hintergrund; Kontextmenü mit Backup starten, Wiederherstellen, Hauptfenster, Beenden
+- **Passwort-Kette:** Passwort wird automatisch aus Wizard → Keyring → Dialog gelesen (kein unnötiger Dialog-Popup mehr bei gespeichertem Passwort)
+
+### Fixed
+- **Rotation löscht jetzt Backup-Dateien auf Disk:** `_rotate_old_backups()` entfernt auch die `.enc`-Dateien auf dem Backup-Medium, nicht nur die DB-Einträge
+- **SFTP Host-Key-Sicherheit:** Ersetzt `AutoAddPolicy` durch `RejectPolicy` + System-Known-Hosts; klare Fehlermeldung mit Lösungsanleitung bei unbekanntem Host
+- **Template-Kacheln blockieren Klick wenn nicht verfügbar:** Nicht-installierte Backends (rclone, smbclient) können nicht mehr versehentlich ausgewählt werden; Cursor wechselt zu ⊘
+
 ## [0.2.1] - 2026-02-07
 
 ### 🔥 Kritische Fixes & Remote-Upload Support

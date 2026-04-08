@@ -306,16 +306,14 @@ class StartPage(QWizardPage):
         # Page-IDs (korrespondieren zu wizard_v2.py)
         PAGE_MODE = 2
         PAGE_DESTINATION = 3
-        PAGE_FINISH = 5
+        PAGE_RESTORE = 6
 
         if self.selected_action == "backup":
             # Backup einrichten → Erst Modus wählen (Normal/Experten)
             return PAGE_MODE
 
         elif self.selected_action == "restore":
-            # Restore → Vorerst zum Finish mit Hinweis
-            # TODO: Eigener Restore-Flow
-            return PAGE_FINISH
+            return PAGE_RESTORE
 
         elif self.selected_action == "edit":
             # Bei "edit": Quellen anzeigen (vorbefüllt aus Config)

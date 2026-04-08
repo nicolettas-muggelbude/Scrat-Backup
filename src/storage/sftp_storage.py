@@ -70,9 +70,16 @@ class SFTPStorage(StorageBackend):
             # SSH-Client erstellen
             self.ssh_client = paramiko.SSHClient()
 
-            # Auto-Add Host Keys (WARNUNG: Unsicher für Production)
-            # TODO: Implement proper host key verification
-            self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            # System-Known-Hosts laden (~/.ssh/known_hosts)
+            self.ssh_client.load_system_host_keys()
+
+            # Scrat-eigene Known-Hosts (~/.scrat-backup/known_hosts)
+            scrat_known_hosts = Path.home() / ".scrat-backup" / "known_hosts"
+            if scrat_known_hosts.exists():
+                self.ssh_client.load_host_keys(str(scrat_known_hosts))
+
+            # RejectPolicy: unbekannte Hosts werden abgelehnt
+            self.ssh_client.set_missing_host_key_policy(paramiko.RejectPolicy())
 
             # Verbinde
             connect_kwargs = {
@@ -112,6 +119,17 @@ class SFTPStorage(StorageBackend):
             raise ConnectionError(f"Authentifizierung fehlgeschlagen: {e}") from e
 
         except SSHException as e:
+            error_msg = str(e)
+            # Unbekannter Host-Key → hilfreiche Fehlermeldung
+            if "not found in known_hosts" in error_msg or "Unknown server" in error_msg:
+                logger.error(f"Unbekannter Host-Key für {self.host}: {e}")
+                raise ConnectionError(
+                    f"Server '{self.host}' ist nicht in den bekannten Hosts.\n\n"
+                    "Lösung: Verbinde einmalig manuell per SSH mit dem Server:\n"
+                    f"  ssh {self.username}@{self.host}\n\n"
+                    "Dadurch wird der Host-Key in ~/.ssh/known_hosts gespeichert\n"
+                    "und Scrat-Backup kann sich zukünftig sicher verbinden."
+                ) from e
             logger.error(f"SSH-Fehler: {e}")
             raise ConnectionError(f"SSH-Fehler: {e}") from e
 

@@ -10,7 +10,7 @@
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
-[![Development Status](https://img.shields.io/badge/status-beta%20(v0.2.1)-yellow)](https://github.com/nicolettas-muggelbude/Scrat-Backup)
+[![Development Status](https://img.shields.io/badge/status-beta%20(v0.3.0-beta)-yellow)](https://github.com/nicolettas-muggelbude/Scrat-Backup)
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)](#)
 
 [Features](#-features) •
@@ -100,7 +100,7 @@
 
 ## 🚀 Status
 
-**Aktuell: Beta v0.2.1 - Ready for Testing! 🎉**
+**Aktuell: Beta v0.3.0-beta - Ready for Testing! 🎉**
 
 ### ✅ Abgeschlossen
 - [x] **Phase 1-5:** Core-Module (Backup/Restore-Engine, Verschlüsselung, Komprimierung)
@@ -155,13 +155,13 @@
 #### Windows 10/11
 
 **Variante 1: Portable ZIP (Empfohlen)**
-1. Lade `ScratBackup-v0.2.1-beta-windows.zip` herunter
+1. Lade `ScratBackup-v0.3.0-beta-beta-windows.zip` herunter
 2. Entpacke das ZIP-Archiv
 3. Starte `ScratBackup.exe`
 4. Folge dem Setup-Wizard
 
 **Variante 2: Installer**
-1. Lade `ScratBackup-v0.2.1-beta-Setup.exe` herunter
+1. Lade `ScratBackup-v0.3.0-beta-beta-Setup.exe` herunter
 2. Führe den Installer aus
 3. Starte über Startmenü oder Desktop-Icon
 
@@ -471,7 +471,7 @@ Sende eine E-Mail an: **nicoletta@muggelbude.it**
 ![Python](https://img.shields.io/badge/python-3.12+-blue)
 ![License](https://img.shields.io/badge/license-GPLv3-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-blue)
-![Status](https://img.shields.io/badge/status-beta%20v0.2.1-yellow)
+![Status](https://img.shields.io/badge/status-beta%20v0.3.0-beta-yellow)
 
 ---
 

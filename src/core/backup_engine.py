@@ -303,6 +303,9 @@ class BackupEngine:
             # Versionierungs-Rotation
             self._rotate_old_backups()
 
+            # metadata.db auf Backup-Ziel kopieren (für Restore auf neuem System)
+            self._copy_db_to_destination()
+
             duration = (end_time - start_time).total_seconds()
 
             logger.info(
@@ -505,6 +508,9 @@ class BackupEngine:
                 # Versionierungs-Rotation
                 self._rotate_old_backups()
 
+                # metadata.db auf Backup-Ziel kopieren (für Restore auf neuem System)
+                self._copy_db_to_destination()
+
                 return BackupResult(
                     backup_id=backup_id,
                     success=True,
@@ -567,6 +573,9 @@ class BackupEngine:
 
             # Versionierungs-Rotation
             self._rotate_old_backups()
+
+            # metadata.db auf Backup-Ziel kopieren (für Restore auf neuem System)
+            self._copy_db_to_destination()
 
             duration = (end_time - start_time).total_seconds()
 
@@ -655,9 +664,25 @@ class BackupEngine:
             backup_id = backup["id"]
             logger.info(f"Lösche altes Backup: {backup_id} vom {backup['timestamp']}")
 
-            # Lösche Backup-Verzeichnis auf Disk
-            # (Konstruiere Pfad aus destination_path)
-            # TODO: Implementierung abhängig von Storage-Backend (Phase 4)
+            # Backup-Verzeichnis auf Disk löschen
+            # Format: destination_path / YYYYMMDD_HHMMSS_type
+            try:
+                import shutil
+                dest_path = Path(backup["destination_path"])
+                ts_str = backup.get("timestamp", "")
+                backup_type = backup.get("type", "full")
+                if ts_str:
+                    from datetime import datetime as _dt
+                    dt = _dt.fromisoformat(ts_str)
+                    dir_name = dt.strftime("%Y%m%d_%H%M%S") + f"_{backup_type}"
+                    backup_dir = dest_path / dir_name
+                    if backup_dir.exists() and backup_dir.is_dir():
+                        shutil.rmtree(backup_dir)
+                        logger.info(f"Backup-Verzeichnis gelöscht: {backup_dir}")
+                    else:
+                        logger.debug(f"Backup-Verzeichnis nicht gefunden (bereits gelöscht?): {backup_dir}")
+            except Exception as e:
+                logger.warning(f"Fehler beim Löschen des Backup-Verzeichnisses: {e}")
 
             # Lösche aus Datenbank (CASCADE löscht auch Dateien)
             self.metadata_manager.delete_backup(backup_id)
@@ -814,6 +839,26 @@ class BackupEngine:
         """
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         return f"{timestamp}_{backup_type}"
+
+    def _copy_db_to_destination(self) -> None:
+        """
+        Kopiert die metadata.db auf das Backup-Ziel.
+
+        Dadurch kann auf einem neuen System ein Restore durchgeführt werden,
+        ohne die originale metadata.db vom Quellsystem zu benötigen.
+        Die Datei landet als metadata.db direkt im Backup-Zielordner.
+        """
+        import shutil
+
+        src = self.metadata_manager.db_path
+        dst = self.config.destination_path / "metadata.db"
+
+        try:
+            shutil.copy2(src, dst)
+            logger.info(f"metadata.db auf Backup-Ziel kopiert: {dst}")
+        except Exception as e:
+            # Kein fataler Fehler – Backup war erfolgreich, DB-Kopie ist optional
+            logger.warning(f"metadata.db konnte nicht auf Backup-Ziel kopiert werden: {e}")
 
     def _report_progress(self, progress: BackupProgress) -> None:
         """

@@ -97,6 +97,12 @@ def save_wizard_config(wizard_config: dict) -> None:
     try:
         action = wizard_config.get("action", "backup")
 
+        # Restore-Flow: Wizard hat die Wiederherstellung bereits durchgeführt,
+        # Config wird nicht verändert
+        if action == "restore":
+            logger.info("Aktion 'restore': Config wird nicht geändert")
+            return
+
         # Bei Ersteinrichtung oder Änderung: vorherige Quellen/Ziele VOLLSTÄNDIG LÖSCHEN
         # Bei "add_destination": nur neue Destination hinzufügen
         if action in ("backup", "edit"):
@@ -235,21 +241,32 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
     from src.core.metadata_manager import MetadataManager
     from src.gui.password_dialog import get_password
 
-    # Passwort vom User holen
-    password, ok = get_password(
-        None,
-        title="Backup-Passwort",
-        message="Bitte gib das Passwort für dein Backup ein:",
-        show_save_option=True,
-    )
+    # Passwort ermitteln: 1. aus Wizard-Config, 2. aus Keyring, 3. Dialog
+    password = wizard_config.get("password", "")
 
-    if not ok or not password:
-        QMessageBox.warning(
+    if not password:
+        try:
+            from src.utils.credential_manager import get_credential_manager
+            cm = get_credential_manager()
+            if cm.available:
+                password = cm.get_password() or ""
+        except Exception:
+            pass
+
+    if not password:
+        password, ok = get_password(
             None,
-            "Abgebrochen",
-            "Backup wurde abgebrochen – kein Passwort eingegeben.",
+            title="Backup-Passwort",
+            message="Bitte gib das Passwort für dein Backup ein:",
+            show_save_option=True,
         )
-        return
+        if not ok or not password:
+            QMessageBox.warning(
+                None,
+                "Abgebrochen",
+                "Backup wurde abgebrochen – kein Passwort eingegeben.",
+            )
+            return
 
     # Quellen aus gespeicherter Config lesen
     config_manager = ConfigManager()
@@ -619,13 +636,40 @@ def run_gui() -> int:
 
         # Tray oder MainWindow starten (abhängig von Wizard-Config)
         if config.get("start_tray", True):
-            logger.info("Starte Tray im Hintergrund...")
-            # TODO: Tray-Start implementieren
-            # from gui.system_tray import SystemTray
-            # tray = SystemTray()
-            # tray.show()
-            logger.warning("Tray-Start noch nicht implementiert - beende")
-            return 0
+            logger.info("Starte System-Tray …")
+            from gui.system_tray import SystemTray
+
+            tray = SystemTray()
+
+            _main_window_ref = [None]
+
+            def _show_main_window():
+                if _main_window_ref[0] is None:
+                    _main_window_ref[0] = MainWindow()
+                _main_window_ref[0].show()
+                _main_window_ref[0].raise_()
+                _main_window_ref[0].activateWindow()
+
+            def _do_backup():
+                start_backup_after_wizard(config)
+
+            def _open_wizard():
+                from gui.wizard_v2 import PAGE_RESTORE, SetupWizardV2
+                w = SetupWizardV2()
+                w.setStartId(PAGE_RESTORE)
+                w.exec()
+
+            tray.show_main_window.connect(_show_main_window)
+            tray.start_backup.connect(_do_backup)
+            tray.start_restore.connect(_open_wizard)
+            tray.show_settings.connect(_show_main_window)
+            tray.quit_application.connect(app.quit)
+
+            tray.show()
+            tray.show_message(
+                "Scrat-Backup",
+                "Backup läuft im Hintergrund. Klicke auf das Tray-Icon für Optionen.",
+            )
         else:
             logger.info("Öffne Hauptfenster (kein Tray gewünscht)...")
             window = MainWindow()
@@ -649,7 +693,7 @@ def main() -> int:
         int: Exit-Code (0 = Erfolg)
     """
     logger.info("=" * 60)
-    logger.info("Scrat-Backup v0.2.1 - Plattformübergreifendes Backup-Tool")
+    logger.info("Scrat-Backup v0.3.0-beta - Plattformübergreifendes Backup-Tool")
     logger.info("=" * 60)
 
     # GUI starten (Wizard ist IMMER der Einstiegspunkt)
