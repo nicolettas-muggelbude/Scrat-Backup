@@ -120,10 +120,10 @@ Die Konfiguration liegt jetzt dort, wo das System sie erwartet:
 
 ## 💾 Downloads
 
-| Plattform | Datei | Hinweis |
-|-----------|-------|---------|
-| 🪟 **Windows** (x64) | `ScratBackup-v0.3.11-beta-Setup.exe` | Installer starten, kein Admin nötig |
-| 🐧 **Linux** (x86_64) | `ScratBackup-v0.3.11-beta-x86_64.AppImage` | Siehe Installation unten |
+| Plattform | Download |
+|-----------|----------|
+| 🪟 **Windows** (x64) | [⬇ ScratBackup-v0.3.11-beta-Setup.exe](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.11-beta/ScratBackup-v0.3.11-beta-Setup.exe) |
+| 🐧 **Linux** (x86_64) | [⬇ ScratBackup-v0.3.11-beta-x86_64.AppImage](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.11-beta/ScratBackup-v0.3.11-beta-x86_64.AppImage) |
 
 ### 🪟 Windows
 1. `ScratBackup-v0.3.11-beta-Setup.exe` herunterladen
