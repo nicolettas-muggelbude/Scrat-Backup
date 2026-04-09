@@ -30,14 +30,32 @@ from src.gui.wizard_v2 import SetupWizardV2  # noqa: E402
 try:
     from src import __version__ as APP_VERSION  # noqa: E402
 except ImportError:
-    APP_VERSION = "0.3.16-beta"
+    APP_VERSION = "0.3.17-beta"
 
-# Logging konfigurieren
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
+# Logging konfigurieren – immer in Datei schreiben (auch bei console=False)
+def _setup_logging() -> None:
+    import os
+    log_dir = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "Scrat-Backup"
+    if sys.platform != "win32":
+        log_dir = Path.home() / ".scrat-backup"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    log_file = log_dir / "scrat-backup.log"
 
+    fmt = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
+    file_handler = logging.FileHandler(log_file, encoding="utf-8")
+    file_handler.setFormatter(fmt)
+
+    stream_handler = logging.StreamHandler()
+    stream_handler.setFormatter(fmt)
+
+    root = logging.getLogger()
+    root.setLevel(logging.INFO)
+    root.addHandler(file_handler)
+    root.addHandler(stream_handler)
+
+
+_setup_logging()
 logger = logging.getLogger(__name__)
 
 
