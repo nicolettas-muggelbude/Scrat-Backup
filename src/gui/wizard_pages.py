@@ -32,7 +32,14 @@ from PySide6.QtWidgets import (
 )
 
 from core.config_manager import ConfigManager
-from gui.theme import get_color
+from gui.theme import (
+    get_color,
+    style_excludes_label,
+    style_infobox_hint,
+    style_label_hint,
+    style_label_secondary,
+    style_list_widget,
+)
 from utils.paths import get_app_data_dir
 
 logger = logging.getLogger(__name__)
@@ -229,7 +236,7 @@ class StartPage(QWizardPage):
         # Beschreibung (eingerückt, wie ModePage)
         desc_label = QLabel(f"    {description}")
         desc_label.setWordWrap(True)
-        desc_label.setStyleSheet("color: #666; font-size: 13px; margin-left: 30px;")
+        desc_label.setStyleSheet(style_label_secondary() + " margin-left: 30px;")
         layout.addWidget(desc_label)
 
         return container
@@ -239,7 +246,7 @@ class StartPage(QWizardPage):
         line = QFrame()
         line.setFrameShape(QFrame.Shape.HLine)
         line.setFrameShadow(QFrame.Shadow.Sunken)
-        line.setStyleSheet("color: #e0e0e0;")
+        line.setStyleSheet(f"color: {get_color('border_medium')};")
         return line
 
     def _on_radio_toggled(self, radio: QRadioButton, checked: bool):
@@ -683,7 +690,7 @@ class SourceSelectionPage(QWizardPage):
         # Schnellauswahl-Buttons OBEN
         quick_layout = QHBoxLayout()
         quick_label = QLabel("Schnellauswahl:")
-        quick_label.setStyleSheet("color: #666; font-size: 11px; font-weight: normal;")
+        quick_label.setStyleSheet(style_label_hint() + " font-weight: normal;")
         quick_layout.addWidget(quick_label)
 
         # Nur Home als Schnellauswahl (Desktop & Dokumente sind bereits Checkboxen)
@@ -710,13 +717,13 @@ class SourceSelectionPage(QWizardPage):
 
         if not self.standard_libraries:
             no_libs = QLabel("⚠️ Keine Standard-Bibliotheken gefunden")
-            no_libs.setStyleSheet("color: #666;")
+            no_libs.setStyleSheet(style_label_hint())
             layout.addWidget(no_libs)
         else:
             # Info
             info = QLabel("Oder wähle einzelne Ordner aus:")
             info.setWordWrap(True)
-            info.setStyleSheet("color: #666; font-size: 12px; font-weight: normal;")
+            info.setStyleSheet(style_label_hint() + " font-weight: normal;")
             layout.addWidget(info)
 
             # Checkboxen für jede Bibliothek
@@ -728,7 +735,7 @@ class SourceSelectionPage(QWizardPage):
 
                 # Sublabel mit Pfad (grau, klein)
                 path_label = QLabel(f"    {path}")
-                path_label.setStyleSheet("margin-left: 25px; color: #666; font-size: 11px;")
+                path_label.setStyleSheet(style_label_hint() + " margin-left: 25px;")
 
                 # Standard: Dokumente, Bilder, Videos ausgewählt
                 if name in ["Dokumente", "Bilder", "Videos"]:
@@ -816,17 +823,13 @@ class SourceSelectionPage(QWizardPage):
 
         excludes_label = QLabel(excludes_text)
         excludes_label.setWordWrap(True)
-        excl_bg = "#252525" if _is_dark_mode() else "#f5f5f5"
-        excludes_label.setStyleSheet(
-            f"color: #999; font-size: 11px; font-weight: normal; "
-            f"background-color: {excl_bg}; padding: 8px; border-radius: 4px;"
-        )
+        excludes_label.setStyleSheet(style_excludes_label())
         layout.addWidget(excludes_label)
 
         # Hinweis
         hint = QLabel("💡 Tipp: Temporäre Dateien, Caches und System-Dateien werden übersprungen.")
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: #666; font-size: 11px; font-weight: normal;")
+        hint.setStyleSheet(style_label_hint() + " font-weight: normal;")
         layout.addWidget(hint)
 
         return group
@@ -882,7 +885,7 @@ class SourceSelectionPage(QWizardPage):
                 for checkbox in self.library_checkboxes.values():
                     checkbox.setEnabled(False)
                     checkbox.setChecked(False)
-                    checkbox.setStyleSheet("font-size: 13px; color: #999;")
+                    checkbox.setStyleSheet(f"font-size: 13px; color: {get_color('text_disabled')};")
 
                 # Desktop & Dokumente-Buttons deaktivieren (redundant)
                 for btn_label, btn in self.quick_buttons.items():
@@ -944,7 +947,8 @@ class SourceSelectionPage(QWizardPage):
         # Custom Widget für schöne Darstellung
         widget = ClickableFrame(self.custom_list, item)
         widget.setMinimumHeight(40)
-        hover_bg = "#3a3a3a" if _is_dark_mode() else "#e8e8e8"
+        from gui.theme import colors as _tc
+        hover_bg = _tc()['bg_hover']
         widget.setStyleSheet(f"""
             QFrame {{
                 background-color: transparent;
@@ -970,7 +974,7 @@ class SourceSelectionPage(QWizardPage):
 
         # Pfad (klein, grau)
         path_label = QLabel(parent_path)
-        path_label.setStyleSheet("font-size: 11px; color: #666; background: transparent;")
+        path_label.setStyleSheet(style_label_hint() + " background: transparent;")
         widget_layout.addWidget(path_label)
 
         # Füge hinzu
@@ -1005,14 +1009,14 @@ class SourceSelectionPage(QWizardPage):
 
     def _update_custom_list_style(self):
         """Setzt custom_list Stylesheet theme-aware."""
-        dark = _is_dark_mode()
-        bg = "#2d2d2d" if dark else "white"
-        border = "#555555" if dark else "#ccc"
+        from gui.theme import colors
+        c = colors()
         self.custom_list.setStyleSheet(f"""
             QListWidget {{
-                border: 1px solid {border};
+                border: 1px solid {c['border_medium']};
                 border-radius: 4px;
-                background-color: {bg};
+                background-color: {c['list_bg']};
+                color: {c['text_primary']};
             }}
             QListWidget::item {{
                 border: none;
@@ -1033,9 +1037,8 @@ class SourceSelectionPage(QWizardPage):
 
     def _on_selection_changed(self):
         """Wird aufgerufen wenn Selection sich ändert"""
-        dark = _is_dark_mode()
-        hover_bg = "#3a3a3a" if dark else "#e8e8e8"
-        # Setze alle Widgets auf normalen Hintergrund
+        from gui.theme import colors as _tc
+        c = _tc()
         for item, widget in self.custom_widgets.values():
             widget.setStyleSheet(f"""
                 QFrame {{
@@ -1044,26 +1047,24 @@ class SourceSelectionPage(QWizardPage):
                     padding: 2px;
                 }}
                 QFrame:hover {{
-                    background-color: {hover_bg};
+                    background-color: {c['bg_hover']};
                 }}
             """)
 
-        # Setze selected Widget auf grauen Hintergrund
         selected_items = self.custom_list.selectedItems()
         for selected_item in selected_items:
-            # Finde das Widget für dieses Item
             folder_path = selected_item.data(Qt.ItemDataRole.UserRole)
             if folder_path in self.custom_widgets:
                 item, widget = self.custom_widgets[folder_path]
-                widget.setStyleSheet("""
-                    QFrame {
-                        background-color: #d0d0d0;
+                widget.setStyleSheet(f"""
+                    QFrame {{
+                        background-color: {c['bg_pressed']};
                         border-radius: 3px;
                         padding: 2px;
-                    }
-                    QFrame:hover {
-                        background-color: #c0c0c0;
-                    }
+                    }}
+                    QFrame:hover {{
+                        background-color: {c['bg_hover']};
+                    }}
                 """)
 
     def _on_library_changed(self):

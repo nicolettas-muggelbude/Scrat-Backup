@@ -47,6 +47,18 @@ from gui.theme import get_color  # noqa: E402
 from gui.wizard_pages import SourceSelectionPage, StartPage  # noqa: E402
 from templates.handlers.base import TemplateHandler  # noqa: E402
 from utils.paths import get_app_data_dir  # noqa: E402
+from gui.theme import (  # noqa: E402
+    get_color,
+    style_infobox_hint,
+    style_infobox_info,
+    style_infobox_success,
+    style_infobox_error,
+    style_label_hint,
+    style_label_secondary,
+    style_label_error,
+    style_label_success,
+    style_list_widget,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -146,7 +158,7 @@ class ModePage(QWizardPage):
 
         expert_desc = QLabel("    Volle Kontrolle & Anpassungen - für fortgeschrittene Nutzer")
         expert_desc.setWordWrap(True)
-        expert_desc.setStyleSheet("color: #666; font-size: 13px; margin-left: 30px;")
+        expert_desc.setStyleSheet(style_label_secondary() + " margin-left: 30px;")
         layout.addWidget(expert_desc)
 
         layout.addSpacing(30)
@@ -157,7 +169,7 @@ class ModePage(QWizardPage):
             "gängige Backup-Ziele (USB, OneDrive, Synology, etc.)."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("background-color: #e3f2fd; padding: 15px; border-radius: 5px;")
+        info.setStyleSheet(style_infobox_info())
         layout.addWidget(info)
 
         layout.addStretch()
@@ -197,7 +209,7 @@ class ModePage(QWizardPage):
 
         desc_label = QLabel(description)
         desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        desc_label.setStyleSheet("font-size: 14px; color: #666;")
+        desc_label.setStyleSheet(style_label_secondary())
         desc_label.setWordWrap(True)
         layout.addWidget(desc_label)
 
@@ -205,7 +217,7 @@ class ModePage(QWizardPage):
 
         subtitle_label = QLabel(subtitle)
         subtitle_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        subtitle_label.setStyleSheet("font-size: 11px; color: #999;")
+        subtitle_label.setStyleSheet(style_label_hint())
         subtitle_label.setWordWrap(True)
         layout.addWidget(subtitle_label)
 
@@ -301,18 +313,17 @@ class TemplateCard(QFrame):
 
     def enterEvent(self, event):
         if not self._checked:
-            dark = _is_dark_mode()
+            from gui.theme import colors as _tc
+            c = _tc()
             if self._is_available:
-                bg = "#1e3a4a" if dark else "#e3f2fd"
                 self.setStyleSheet(
-                    f"TemplateCard {{ background-color: {bg}; "
+                    f"TemplateCard {{ background-color: {c['bg_hover']}; "
                     f"border: 2px solid {self._accent_color}; "
                     "border-radius: 6px; }"
                 )
             else:
-                bg = "#3a2a1a" if dark else "#fff3e0"
                 self.setStyleSheet(
-                    f"TemplateCard {{ background-color: {bg}; "
+                    f"TemplateCard {{ background-color: {c['warning_bg']}; "
                     "border: 2px solid #ff9800; border-radius: 6px; }"
                 )
         super().enterEvent(event)
@@ -324,7 +335,8 @@ class TemplateCard(QFrame):
 
     # --- Style-Update basierend auf Zustand ---
     def _update_style(self):
-        dark = _is_dark_mode()
+        from gui.theme import colors as _tc
+        c = _tc()
         if self._checked:
             self.setStyleSheet(
                 f"TemplateCard {{ background-color: {self._accent_color}; "
@@ -338,31 +350,26 @@ class TemplateCard(QFrame):
                 "border: none; background: transparent; font-size: 13px; color: white;"
             )
         elif self._is_available:
-            bg = "#2d2d2d" if dark else "white"
-            border = "#555555" if dark else "#cccccc"
-            text_color = "#ffffff" if dark else "#000000"
             self.setStyleSheet(
-                f"TemplateCard {{ background-color: {bg}; "
-                f"border: 2px solid {border}; border-radius: 6px; }}"
+                f"TemplateCard {{ background-color: {c['card_bg']}; "
+                f"border: 2px solid {c['border_medium']}; border-radius: 6px; }}"
             )
             self.icon_label.setStyleSheet(
-                f"border: none; background: transparent; font-size: 24px; color: {text_color};"
+                f"border: none; background: transparent; font-size: 24px; color: {c['text_primary']};"
             )
             self.name_label.setStyleSheet(
-                f"border: none; background: transparent; font-size: 13px; color: {text_color};"
+                f"border: none; background: transparent; font-size: 13px; color: {c['text_primary']};"
             )
         else:
-            bg = "#252525" if dark else "#f5f5f5"
-            border = "#3f3f3f" if dark else "#e0e0e0"
             self.setStyleSheet(
-                f"TemplateCard {{ background-color: {bg}; "
-                f"border: 2px solid {border}; border-radius: 6px; }}"
+                f"TemplateCard {{ background-color: {c['bg_disabled']}; "
+                f"border: 2px solid {c['border_light']}; border-radius: 6px; }}"
             )
             self.icon_label.setStyleSheet(
-                "border: none; background: transparent; font-size: 24px; color: #999;"
+                f"border: none; background: transparent; font-size: 24px; color: {c['text_disabled']};"
             )
             self.name_label.setStyleSheet(
-                "border: none; background: transparent; font-size: 13px; color: #999;"
+                f"border: none; background: transparent; font-size: 13px; color: {c['text_disabled']};"
             )
 
 
@@ -404,7 +411,7 @@ class TemplateDestinationPage(QWizardPage):
             "für dein gewähltes Ziel optimiert."
         )
         info.setWordWrap(True)
-        info.setStyleSheet("color: #666; font-size: 12px; margin-bottom: 4px;")
+        info.setStyleSheet(style_label_hint() + " margin-bottom: 4px;")
         self.scroll_layout.addWidget(info)
 
         # Lade Templates
@@ -458,7 +465,7 @@ class TemplateDestinationPage(QWizardPage):
             logger.error(f"Fehler beim Laden der Templates: {e}")
             # Fehler-Anzeige
             error_label = QLabel(f"⚠️ Fehler beim Laden der Templates:\n{e}")
-            error_label.setStyleSheet("color: red; padding: 10px;")
+            error_label.setStyleSheet(style_infobox_error())
             self.scroll_layout.addWidget(error_label)
 
     def _create_template_category(self, category_label: str, templates: list):
@@ -586,7 +593,7 @@ class TemplateDestinationPage(QWizardPage):
         # Beschreibung
         desc = QLabel(self.selected_template.description)
         desc.setWordWrap(True)
-        desc.setStyleSheet("color: #666; margin-bottom: 10px;")
+        desc.setStyleSheet(style_label_secondary() + " margin-bottom: 10px;")
         self.form_layout.addWidget(desc)
 
         # Handler-spezifisches Formular
@@ -744,7 +751,7 @@ class SchedulePage(QWizardPage):
         # ── Hinweis ────────────────────────────────────────────────────────
         hint = QLabel("💡 Der Zeitplan kann später in den Einstellungen beliebig geändert werden.")
         hint.setWordWrap(True)
-        hint.setStyleSheet("color: #666; font-size: 11px; margin-top: 8px;")
+        hint.setStyleSheet(style_label_hint() + " margin-top: 8px;")
         layout.addWidget(hint)
 
         self.setLayout(layout)
@@ -864,22 +871,14 @@ class NewFinishPage(QWizardPage):
 
     def initializePage(self):
         """Wird aufgerufen wenn Seite angezeigt wird - erstellt Zusammenfassung"""
-        dark = _is_dark_mode()
-        border_color = "#3f3f3f" if dark else "#e0e0e0"
-        text_color = "#999" if dark else "#666"
-        group_style = f"QGroupBox {{ border: 2px solid {border_color}; border-radius: 5px; }}"
+        from gui.theme import colors, style_infobox_success, style_label_hint
+        c = colors()
+        group_style = f"QGroupBox {{ border: 2px solid {c['group_border']}; border-radius: 5px; }}"
         self.backup_group.setStyleSheet(group_style)
         self.tray_group.setStyleSheet(group_style)
-        self.backup_info.setStyleSheet(f"color: {text_color}; font-size: 11px;")
-        self.tray_info.setStyleSheet(f"color: {text_color}; font-size: 11px;")
-        if dark:
-            self.success_label.setStyleSheet(
-                "background-color: #1a3a1a; color: #81c784; padding: 15px; border-radius: 5px;"
-            )
-        else:
-            self.success_label.setStyleSheet(
-                "background-color: #e8f5e9; color: #2e7d32; padding: 15px; border-radius: 5px;"
-            )
+        self.backup_info.setStyleSheet(style_label_hint())
+        self.tray_info.setStyleSheet(style_label_hint())
+        self.success_label.setStyleSheet(style_infobox_success() + " padding: 15px;")
 
         wizard = self.wizard()
 
@@ -1080,13 +1079,13 @@ class EncryptionPage(QWizardPage):
             self._pw_match_label.setText("")
         elif len(pw1) < 8:
             self._pw_match_label.setText("❌ Mindestens 8 Zeichen")
-            self._pw_match_label.setStyleSheet("color: #d32f2f; font-size: 12px;")
+            self._pw_match_label.setStyleSheet(style_label_error())
         elif pw2 and pw1 != pw2:
             self._pw_match_label.setText("❌ Passwörter stimmen nicht überein")
-            self._pw_match_label.setStyleSheet("color: #d32f2f; font-size: 12px;")
+            self._pw_match_label.setStyleSheet(style_label_error())
         elif pw2 and pw1 == pw2:
             self._pw_match_label.setText("✅ Passwörter stimmen überein")
-            self._pw_match_label.setStyleSheet("color: #2e7d32; font-size: 12px;")
+            self._pw_match_label.setStyleSheet(style_label_success())
         else:
             self._pw_match_label.setText("")
 
@@ -1164,7 +1163,7 @@ class RestoreWizardPage(QWizardPage):
         self._db_radio.setStyleSheet("font-weight: bold;")
         self._db_radio.setChecked(True)
         self._db_info_label = QLabel()
-        self._db_info_label.setStyleSheet("color: #666; font-size: 12px; margin-left: 22px;")
+        self._db_info_label.setStyleSheet(style_label_hint() + " margin-left: 22px;")
         self._db_info_label.setWordWrap(True)
 
         self._dir_radio = QRadioButton("Aus Backup-Verzeichnis auswählen (neues System)")
@@ -1203,8 +1202,7 @@ class RestoreWizardPage(QWizardPage):
             f"{get_app_data_dir() / 'metadata.db'}."
         )
         db_hint.setWordWrap(True)
-        db_hint.setStyleSheet("color: #856404; background-color: #fff3cd; "
-                              "padding: 8px; border-radius: 4px; font-size: 11px;")
+        db_hint.setStyleSheet(style_infobox_hint())
         dir_layout.addWidget(db_hint)
 
         self._dir_load_btn = QPushButton("🔍 Backups suchen")
@@ -1306,7 +1304,7 @@ class RestoreWizardPage(QWizardPage):
         prog_layout.addWidget(self._progress_bar)
 
         self._file_label = QLabel("--")
-        self._file_label.setStyleSheet("color: #666; font-size: 11px;")
+        self._file_label.setStyleSheet(style_label_hint())
         prog_layout.addWidget(self._file_label)
 
         self._progress_group.hide()

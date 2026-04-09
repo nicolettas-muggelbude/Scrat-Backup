@@ -138,8 +138,8 @@ class ThemeManager(QObject):
         logger.info(f"Theme angewendet: {theme_name}")
 
     def _apply_dark_theme(self):
-        """Aktiviert Dark Theme (Windows 11 Dark Style)"""
-        # Fusion Style mit dunkler Palette
+        """Aktiviert Dark Theme"""
+        from gui.theme import DARK, get_dark_stylesheet
         self.app.setStyle("Fusion")
 
         dark_palette = QPalette()
@@ -152,14 +152,15 @@ class ThemeManager(QObject):
         dark_palette.setColor(QPalette.ColorRole.WindowText, QColor(255, 255, 255))
         dark_palette.setColor(QPalette.ColorRole.Base, QColor(25, 25, 25))
         dark_palette.setColor(QPalette.ColorRole.AlternateBase, dark_color)
-        dark_palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(45, 45, 45))
-        dark_palette.setColor(QPalette.ColorRole.ToolTipText, QColor(255, 255, 255))
+        # Tooltip-Palette: dunkles Gelb damit Text lesbar
+        dark_palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(58, 42, 0))
+        dark_palette.setColor(QPalette.ColorRole.ToolTipText, QColor(255, 255, 153))
         dark_palette.setColor(QPalette.ColorRole.Text, QColor(255, 255, 255))
         dark_palette.setColor(QPalette.ColorRole.Button, dark_color)
         dark_palette.setColor(QPalette.ColorRole.ButtonText, QColor(255, 255, 255))
         dark_palette.setColor(QPalette.ColorRole.BrightText, QColor(255, 0, 0))
-        dark_palette.setColor(QPalette.ColorRole.Link, QColor(42, 130, 218))
-        dark_palette.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
+        dark_palette.setColor(QPalette.ColorRole.Link, QColor(212, 160, 23))
+        dark_palette.setColor(QPalette.ColorRole.Highlight, QColor(212, 160, 23))
         dark_palette.setColor(QPalette.ColorRole.HighlightedText, QColor(255, 255, 255))
 
         # Disabled-Farben
@@ -179,7 +180,10 @@ class ThemeManager(QObject):
 
         self.app.setPalette(dark_palette)
 
-        # Windows 11 Dark Theme Stylesheet
+        # Dark Stylesheet aus theme.py
+        self.app.setStyleSheet(get_dark_stylesheet())
+
+    def _apply_dark_theme_UNUSED(self):
         stylesheet = """
 /* ===== GLOBALE STYLES ===== */
 QWidget {
@@ -563,8 +567,6 @@ QSpinBox:focus, QDoubleSpinBox:focus {
     border: 2px solid #B8860B;
 }
 """
-
-        self.app.setStyleSheet(stylesheet)
 
     def _apply_light_theme(self):
         """Aktiviert Light Theme (Windows 11 Style)"""
