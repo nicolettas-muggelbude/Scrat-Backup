@@ -81,6 +81,12 @@ src/
 - **SFTP Host-Key-Sicherheit:** `RejectPolicy` + System-Known-Hosts; klare Fehlermeldung mit `ssh user@host` Anleitung bei unbekanntem Host
 - **GitHub Actions CI:** `.github/workflows/build-release.yml` – baut Windows EXE + Linux AppImage automatisch bei `v*`-Tags
 - **Release v0.3.0-beta:** Verfügbar auf GitHub mit Windows ZIP, Linux AppImage, Source ZIP
+- **Log-Datei:** `_setup_logging()` in `main.py` schreibt immer in `%LocalAppData%\Scrat-Backup\scrat-backup.log` (Win) / `~/.scrat-backup/scrat-backup.log` (Linux)
+- **Desktop-Benachrichtigungen:** `src/utils/notifications.py` – Linux: notify-send, Windows: PowerShell NotifyIcon, macOS: osascript; Tray-Backup nutzt `QSystemTrayIcon.showMessage`
+- **Tray bleibt aktiv:** `setQuitOnLastWindowClosed(False)` – Wizard schließen beendet nicht die App
+- **Wizard-Änderungen aus Tray gespeichert:** `_open_settings_wizard()` speichert Config + aktualisiert OS-Zeitplan
+- **Restore-Seite scrollbar:** `QScrollArea` in `RestoreWizardPage` verhindert Quetschen beim Fortschrittsbalken
+- **StartPage zeigt Version:** `version`-Parameter in `wizard_pages.py:StartPage.__init__`
 
 ---
 
@@ -119,6 +125,7 @@ src/
 - [x] Encryption-Page (Verschlüsselung im Wizard, PAGE_ENCRYPTION=7) ✅
 - [ ] Tray-Icon mit Theme-Toggle
 - [ ] Template-Manager-Tab im MainWindow
+- [ ] WinRT AppId im Inno-Setup registrieren → „Scrat-Backup" statt „PowerShell" in Windows-Notifications
 
 ### Templates & Handler
 - [ ] Weitere Templates: iCloud, AWS S3, FTP, ownCloud, pCloud, **SFTP** (Community-Wunsch)
@@ -444,6 +451,75 @@ pip install secretstorage python-notify2 pyxdg
 - 7 Templates geladen ✅
 - Inno Setup Installer (kein Admin nötig) ✅
 - Auto-Updater aktiv ✅
+
+---
+
+## Session 2026-04-09: Bugfixes, Desktop-Notifications, Tray-Verbesserungen (v0.3.16–v0.3.24)
+
+### Hauptprobleme gelöst:
+
+#### 1. **App startet nicht (TypeError beim Start)** ✅
+- **Root Cause:** `wizard_v2.py` übergibt `version=version` an `StartPage`, aber `StartPage.__init__` in `wizard_pages.py` akzeptierte keinen `version`-Parameter
+- **Fix:** `StartPage.__init__(self, parent=None, version: str = "")` in `wizard_pages.py`; Version erscheint jetzt im Untertitel der ersten Wizard-Seite
+
+#### 2. **Log-Datei für Fehlerdiagnose** ✅
+- `console=False` in PyInstaller schluckt alle Exceptions lautlos
+- **Fix:** `_setup_logging()` in `main.py` schreibt immer in Datei:
+  - Windows: `%LocalAppData%\Scrat-Backup\scrat-backup.log`
+  - Linux: `~/.scrat-backup/scrat-backup.log`
+
+#### 3. **Desktop-Benachrichtigungen für automatische Backups** ✅
+- Neu: `src/utils/notifications.py` – plattformübergreifend
+  - **Linux:** `notify-send`
+  - **Windows (Headless):** PowerShell `NotifyIcon` (zeigt „PowerShell" im Header – WinRT-Ansatz nicht zuverlässig, zurückgestellt)
+  - **macOS:** `osascript`
+- Tray-Backup: `tray.show_backup_started()` / `show_backup_completed()` / `show_backup_failed()` via `QSystemTrayIcon.showMessage`
+- `start_backup_after_wizard()` gibt jetzt `bool` zurück (True=Erfolg)
+
+#### 4. **Tray beendet sich beim Schließen von Wizard-Fenstern** ✅
+- **Root Cause:** Qt beendet App wenn letztes Fenster geschlossen wird
+- **Fix:** `app.setQuitOnLastWindowClosed(False)` in `run_gui()`
+
+#### 5. **Wizard-Änderungen aus Tray werden nicht gespeichert** ✅
+- **Root Cause:** `_open_settings_wizard()` öffnete Wizard, wertete Ergebnis nie aus
+- **Fix:** `if w.exec(): save_wizard_config(new_config); _activate_os_schedule(...)` in `_open_settings_wizard()`
+
+#### 6. **Restore-Seite: Einstellungen werden gequetscht** ✅
+- **Root Cause:** `QVBoxLayout` presst alle Widgets in die feste Wizard-Höhe wenn Fortschrittsbereich eingeblendet wird
+- **Fix:** `QScrollArea` als äußerer Container in `RestoreWizardPage._setup_ui()`
+
+#### 7. **„Vorhandene Dateien überschreiben" nur bei Original-Ordner wählbar** ✅
+- **Root Cause:** Checkbox war per `stateChanged` an „In Original-Verzeichnisse"-Checkbox gekoppelt
+- **Fix:** Kopplung entfernt – Option ist immer frei wählbar
+
+#### 8. **WinRT Toast-Notifications (nicht umgesetzt)** ⚠️
+- Versuch: `ToastNotificationManager::CreateToastNotifier('Scrat-Backup')` – hätte „Scrat-Backup" statt „PowerShell" im Header gezeigt
+- Problem: Benachrichtigungen blieben komplett aus (AppId nicht in Windows-Registry registriert)
+- **Zurückgestellt** – Lösung wäre AppId-Registrierung im Inno-Setup-Installer
+
+### Neue Dateien:
+- `src/utils/notifications.py` – plattformübergreifende Desktop-Notifications (Headless-Modus)
+
+### Geänderte Dateien:
+- `src/main.py` – `_setup_logging()`, `setQuitOnLastWindowClosed(False)`, `_open_settings_wizard()` speichert, `start_backup_after_wizard()` returns bool
+- `src/gui/wizard_pages.py` – `StartPage.__init__` akzeptiert `version`-Parameter
+- `src/gui/wizard_v2.py` – `RestoreWizardPage`: QScrollArea, `_overwrite_checkbox` entkoppelt
+
+### Releases dieser Session:
+- v0.3.16 – Desktop-Notifications
+- v0.3.17 – Log-Datei (Hotfix für Debugging)
+- v0.3.18 – StartPage TypeError Fix (App startet wieder)
+- v0.3.19 – WinRT Toast (zurückgezogen)
+- v0.3.20 – `setQuitOnLastWindowClosed(False)` + Popup-Fallback
+- v0.3.21 – Wizard-Änderungen aus Tray werden gespeichert
+- v0.3.22 – Revert auf PowerShell NotifyIcon
+- v0.3.23 – Restore-Seite scrollbar
+- v0.3.24 – „Überschreiben" unabhängig wählbar
+
+### Offene Punkte nach dieser Session:
+- [ ] Linux-Test: AppImage, Tray, notify-send, crontab (geplant 2026-04-10)
+- [ ] WinRT AppId im Inno-Setup registrieren → saubere Toast-Notifications
+- [ ] Dark Mode: weitere hardcodierte Farben in anderen Tabs/Dialogen prüfen
 
 ---
 
