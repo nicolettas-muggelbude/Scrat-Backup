@@ -30,7 +30,7 @@ from src.gui.wizard_v2 import SetupWizardV2  # noqa: E402
 try:
     from src import __version__ as APP_VERSION  # noqa: E402
 except ImportError:
-    APP_VERSION = "0.3.19-beta"
+    APP_VERSION = "0.3.20-beta"
 
 # Logging konfigurieren – immer in Datei schreiben (auch bei console=False)
 def _setup_logging() -> None:
@@ -744,6 +744,8 @@ def run_gui() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName("Scrat-Backup")
     app.setOrganizationName("Scrat")
+    # Verhindert dass Qt die App beendet wenn ein Wizard/Fenster geschlossen wird
+    app.setQuitOnLastWindowClosed(False)
 
     # App-Icon setzen (wird von allen Fenstern geerbt)
     icon_path = Path(__file__).parent.parent / "assets" / "icons" / "scrat.ico"
