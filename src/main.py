@@ -30,7 +30,7 @@ from src.gui.wizard_v2 import SetupWizardV2  # noqa: E402
 try:
     from src import __version__ as APP_VERSION  # noqa: E402
 except ImportError:
-    APP_VERSION = "0.3.6-beta"
+    APP_VERSION = "0.3.13-beta"
 
 # Logging konfigurieren
 logging.basicConfig(
@@ -610,6 +610,20 @@ def run_gui() -> int:
     theme_manager = ThemeManager(app)
     logger.info(f"Theme Manager initialisiert: {theme_manager.get_theme_display_name()}")
 
+    # Update-Check im Hintergrund starten (vor dem Wizard, damit Ergebnis
+    # während der Wizard-Laufzeit ankommen kann)
+    _update_checker = UpdateChecker(current_version=APP_VERSION, parent=app)
+    _update_checker.update_available.connect(
+        lambda ver, notes, dl_url, rel_url: show_update_dialog(
+            latest_version=ver,
+            release_notes=notes,
+            download_url=dl_url,
+            release_url=rel_url,
+            current_version=APP_VERSION,
+        )
+    )
+    _update_checker.start()
+
     # WIZARD IST IMMER DER EINSTIEGSPUNKT
     # (Im Wizard wird dann zwischen Normal-Modus und Experten-Modus gewählt)
     logger.info(">>> WIZARD V2 WIRD GESTARTET <<<")
@@ -688,19 +702,6 @@ def run_gui() -> int:
         return 1
 
     logger.info("GUI gestartet - Event-Loop läuft")
-
-    # Update-Check im Hintergrund starten
-    _update_checker = UpdateChecker(current_version=APP_VERSION, parent=app)
-    _update_checker.update_available.connect(
-        lambda ver, notes, dl_url, rel_url: show_update_dialog(
-            latest_version=ver,
-            release_notes=notes,
-            download_url=dl_url,
-            release_url=rel_url,
-            current_version=APP_VERSION,
-        )
-    )
-    _update_checker.start()
 
     # Event-Loop starten
     return app.exec()
