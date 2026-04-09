@@ -85,7 +85,7 @@ class StartPage(QWizardPage):
     # Signals
     action_selected = Signal(str)  # "backup", "restore", "edit", "expert"
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, version: str = ""):
         super().__init__(parent)
 
         # Prüfe ob Config existiert
@@ -93,10 +93,14 @@ class StartPage(QWizardPage):
 
         # Setup UI
         self.setTitle("Willkommen bei Scrat-Backup! 🐿️")
+        subtitle = ""
+        if version:
+            subtitle = f"Version {version}  –  "
         if self.has_config:
-            self.setSubTitle("Dein Backup-System ist bereits eingerichtet. Was möchtest du tun?")
+            subtitle += "Dein Backup-System ist bereits eingerichtet. Was möchtest du tun?"
         else:
-            self.setSubTitle("Richte dein Backup-System ein oder stelle Dateien wieder her.")
+            subtitle += "Richte dein Backup-System ein oder stelle Dateien wieder her."
+        self.setSubTitle(subtitle)
 
         # Layout
         layout = QVBoxLayout(self)

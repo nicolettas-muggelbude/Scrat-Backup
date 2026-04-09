@@ -30,7 +30,7 @@ from src.gui.wizard_v2 import SetupWizardV2  # noqa: E402
 try:
     from src import __version__ as APP_VERSION  # noqa: E402
 except ImportError:
-    APP_VERSION = "0.3.17-beta"
+    APP_VERSION = "0.3.18-beta"
 
 # Logging konfigurieren – immer in Datei schreiben (auch bei console=False)
 def _setup_logging() -> None:
