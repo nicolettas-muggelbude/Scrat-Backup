@@ -7,6 +7,12 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.3.14-beta] - 2026-04-09
+
+### Fixed
+- **UpdateChecker startet jetzt vor dem Wizard** – Benachrichtigung erscheint während der Wizard offen ist, nicht erst danach
+- **`__version__`** war noch `0.3.0-beta` (Fallback `0.3.6-beta`) – beide auf `0.3.13-beta` aktualisiert
+
 ## [0.3.13-beta] - 2026-04-09
 
 ### Added

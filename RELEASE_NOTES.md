@@ -1,19 +1,19 @@
-# 🎉 Scrat-Backup v0.3.13-beta Release Notes
+# 🎉 Scrat-Backup v0.3.14-beta Release Notes
 
 ## 💾 Downloads
 
 | Plattform | Download |
 |-----------|----------|
-| 🪟 **Windows** (x64) | [⬇ ScratBackup-v0.3.13-beta-Setup.exe](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.13-beta/ScratBackup-v0.3.13-beta-Setup.exe) |
-| 🐧 **Linux** (x86_64, versioniert) | [⬇ ScratBackup-v0.3.13-beta-x86_64.AppImage](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.13-beta/ScratBackup-v0.3.13-beta-x86_64.AppImage) |
-| 🐧 **Linux** (x86_64, neutral) | [⬇ ScratBackup-x86_64.AppImage](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.13-beta/ScratBackup-x86_64.AppImage) |
-| 🐧 **Linux** Desktop-Integration | [⬇ install.sh](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.13-beta/install.sh) |
+| 🪟 **Windows** (x64) | [⬇ ScratBackup-v0.3.14-beta-Setup.exe](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.14-beta/ScratBackup-v0.3.14-beta-Setup.exe) |
+| 🐧 **Linux** (x86_64, versioniert) | [⬇ ScratBackup-v0.3.14-beta-x86_64.AppImage](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.14-beta/ScratBackup-v0.3.14-beta-x86_64.AppImage) |
+| 🐧 **Linux** (x86_64, neutral) | [⬇ ScratBackup-x86_64.AppImage](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.14-beta/ScratBackup-x86_64.AppImage) |
+| 🐧 **Linux** Desktop-Integration | [⬇ install.sh](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.14-beta/install.sh) |
 
 ---
 
-## 🐿️ Neutrales AppImage + USB-Backup funktioniert jetzt wirklich!
+## 🐿️ Update-Benachrichtigung + USB-Backup + neutrales AppImage
 
-**Scrat-Backup v0.3.13-beta** behebt den Bug, der dazu führte, dass USB-Backup zwar konfigurierbar aussah, aber nichts gespeichert hat. Außerdem gibt es jetzt ein versionsloses AppImage für stabile Download-Links.
+**Scrat-Backup v0.3.14-beta** behebt drei Bugs: Die Update-Benachrichtigung erscheint jetzt während der Wizard offen ist, USB-Backup übergibt Laufwerk und Pfad korrekt, und es gibt ein versionsloses AppImage für stabile Download-Links.
 
 ---
 
@@ -111,7 +111,7 @@ Siehe [LICENSE](LICENSE) für Details.
 
 **Wie ein Eichhörnchen seine Eicheln bewahrt, so bewahren wir deine Daten.** 🐿️🌰
 
-[📥 Download](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/tag/v0.3.13-beta) • [⭐ Star auf GitHub](https://github.com/nicolettas-muggelbude/Scrat-Backup) • [🐛 Bug melden](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues)
+[📥 Download](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/tag/v0.3.14-beta) • [⭐ Star auf GitHub](https://github.com/nicolettas-muggelbude/Scrat-Backup) • [🐛 Bug melden](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues)
 
 </div>
 
