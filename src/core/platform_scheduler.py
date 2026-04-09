@@ -1,6 +1,6 @@
 """
 Plattform-abstrahierte Scheduler-Integration
-Unterstützt Windows Task Scheduler und Linux Cron
+Unterstuetzt Windows Task Scheduler und Linux Cron
 """
 
 import logging
@@ -14,11 +14,25 @@ logger = logging.getLogger(__name__)
 
 
 class PlatformScheduler(ABC):
-    """Basis-Klasse für plattformspezifische Scheduler"""
+    """Basis-Klasse fuer plattformspezifische Scheduler"""
 
     @abstractmethod
-    def register_task(self, task_name: str, frequency: str, command: str, args: list[str]) -> bool:
-        """Registriert einen geplanten Task"""
+    def register_task(self, task_name: str, schedule: dict, command: str, args: list) -> bool:
+        """
+        Registriert einen geplanten Task.
+
+        Args:
+            task_name: Eindeutiger Name des Tasks
+            schedule: Dict mit Zeitplan-Konfiguration:
+                {
+                    "frequency": "daily" | "weekly" | "monthly" | "startup",
+                    "time": "HH:MM",          # fuer daily/weekly/monthly
+                    "weekdays": [1..7],        # fuer weekly (1=Mo, 7=So)
+                    "day_of_month": 1..28      # fuer monthly
+                }
+            command: Auszufuehrender Befehl (Pfad zur EXE / Python-Skript)
+            args: Argumente fuer den Befehl
+        """
         pass
 
     @abstractmethod
@@ -28,42 +42,54 @@ class PlatformScheduler(ABC):
 
     @abstractmethod
     def is_available(self) -> bool:
-        """Prüft ob Scheduler verfügbar ist"""
+        """Prueft ob Scheduler verfuegbar ist"""
         pass
 
 
 class WindowsTaskScheduler(PlatformScheduler):
-    """Windows Task Scheduler Integration"""
+    """Windows Task Scheduler Integration via schtasks"""
 
-    def register_task(self, task_name: str, frequency: str, command: str, args: list[str]) -> bool:
+    _WEEKDAY_MAP = {1: "MON", 2: "TUE", 3: "WED", 4: "THU", 5: "FRI", 6: "SAT", 7: "SUN"}
+
+    def register_task(self, task_name: str, schedule: dict, command: str, args: list) -> bool:
         """Registriert Windows Task mit schtasks"""
         try:
-            # Trigger mapping
-            trigger_map = {"startup": "ONSTART", "shutdown": "ONLOGOFF"}
+            frequency = schedule.get("frequency", "daily")
+            time_str = schedule.get("time", "03:00")
+            weekdays = schedule.get("weekdays", [1, 2, 3, 4, 5])
+            day_of_month = schedule.get("day_of_month", 1)
 
-            trigger = trigger_map.get(frequency)
-            if not trigger:
-                logger.error(f"Ungültige Frequenz für Windows Task: {frequency}")
-                return False
+            full_command = f'"{command}" {" ".join(args)}' if args else f'"{command}"'
+            task_path = f"ScratBackup\\{task_name}"
 
-            # Baue Command
-            full_command = f"{command} {' '.join(args)}"
-
-            # schtasks /create
             cmd = [
-                "schtasks",
-                "/create",
-                "/tn",
-                f"ScratBackup\\{task_name}",
-                "/tr",
-                full_command,
-                "/sc",
-                trigger,
-                "/f",  # Force (überschreibe falls existiert)
+                "schtasks", "/create",
+                "/tn", task_path,
+                "/tr", full_command,
+                "/f",  # Ueberschreiben falls schon vorhanden
             ]
 
+            if frequency == "startup":
+                cmd += ["/sc", "ONSTART"]
+
+            elif frequency == "daily":
+                cmd += ["/sc", "DAILY", "/st", time_str]
+
+            elif frequency == "weekly":
+                days_str = ",".join(
+                    self._WEEKDAY_MAP[d] for d in sorted(weekdays) if d in self._WEEKDAY_MAP
+                ) or "MON"
+                cmd += ["/sc", "WEEKLY", "/d", days_str, "/st", time_str]
+
+            elif frequency == "monthly":
+                cmd += ["/sc", "MONTHLY", "/d", str(day_of_month), "/st", time_str]
+
+            else:
+                logger.error(f"Unbekannte Frequenz: {frequency}")
+                return False
+
             subprocess.run(cmd, check=True, capture_output=True, text=True)
-            logger.info(f"Windows Task '{task_name}' erfolgreich registriert")
+            logger.info(f"Windows Task '{task_name}' registriert ({frequency})")
             return True
 
         except subprocess.CalledProcessError as e:
@@ -77,14 +103,11 @@ class WindowsTaskScheduler(PlatformScheduler):
         """Entfernt Windows Task"""
         try:
             cmd = ["schtasks", "/delete", "/tn", f"ScratBackup\\{task_name}", "/f"]
-
             subprocess.run(cmd, check=True, capture_output=True, text=True)
-            logger.info(f"Windows Task '{task_name}' erfolgreich entfernt")
+            logger.info(f"Windows Task '{task_name}' entfernt")
             return True
-
         except subprocess.CalledProcessError as e:
-            if "ERROR: The system cannot find the file specified" in e.stderr:
-                logger.warning(f"Windows Task '{task_name}' existiert nicht")
+            if "cannot find" in e.stderr.lower() or "nicht gefunden" in e.stderr.lower():
                 return True
             logger.warning(f"Fehler beim Entfernen von Windows Task: {e.stderr}")
             return False
@@ -93,7 +116,6 @@ class WindowsTaskScheduler(PlatformScheduler):
             return False
 
     def is_available(self) -> bool:
-        """Prüft ob Windows Task Scheduler verfügbar ist"""
         return sys.platform == "win32"
 
 
@@ -103,55 +125,57 @@ class LinuxCronScheduler(PlatformScheduler):
     def __init__(self):
         self.cron_comment = "# Scrat-Backup:"
 
-    def register_task(self, task_name: str, frequency: str, command: str, args: list[str]) -> bool:
+    def register_task(self, task_name: str, schedule: dict, command: str, args: list) -> bool:
         """Registriert Cron-Job"""
         try:
-            # Trigger mapping
+            frequency = schedule.get("frequency", "daily")
+            time_str = schedule.get("time", "03:00")
+            weekdays = schedule.get("weekdays", [1, 2, 3, 4, 5])
+            day_of_month = schedule.get("day_of_month", 1)
+
+            full_command = f"{command} {' '.join(args)}" if args else command
+
+            # Cron-Zeitausdruck aufbauen
             if frequency == "startup":
-                # @reboot in crontab
                 cron_time = "@reboot"
-            elif frequency == "shutdown":
-                # Linux hat kein natives Shutdown-Event in cron
-                # Workaround: systemd service
-                logger.warning(
-                    "Shutdown-Events benötigen systemd service unter Linux. "
-                    "Cron unterstützt nur @reboot."
-                )
-                return False
+
+            elif frequency == "daily":
+                hour, minute = time_str.split(":")
+                cron_time = f"{minute} {hour} * * *"
+
+            elif frequency == "weekly":
+                hour, minute = time_str.split(":")
+                # cron: 0=So, 1=Mo ... 6=Sa; unsere: 1=Mo ... 7=So
+                dow_map = {1: "1", 2: "2", 3: "3", 4: "4", 5: "5", 6: "6", 7: "0"}
+                dow_str = ",".join(dow_map[d] for d in sorted(weekdays) if d in dow_map) or "1"
+                cron_time = f"{minute} {hour} * * {dow_str}"
+
+            elif frequency == "monthly":
+                hour, minute = time_str.split(":")
+                cron_time = f"{minute} {hour} {day_of_month} * *"
+
             else:
-                logger.error(f"Ungültige Frequenz für Cron: {frequency}")
+                logger.error(f"Unbekannte Frequenz fuer Cron: {frequency}")
                 return False
 
-            # Baue Cron-Zeile
-            full_command = f"{command} {' '.join(args)}"
             cron_line = f"{cron_time} {full_command} {self.cron_comment} {task_name}"
 
-            # Hole aktuelle crontab
-            try:
-                result = subprocess.run(
-                    ["crontab", "-l"], capture_output=True, text=True, check=False
-                )
-                current_crontab = result.stdout if result.returncode == 0 else ""
-            except Exception:
-                current_crontab = ""
-
-            # Entferne alte Version falls vorhanden
+            # Aktuelle crontab laden, alten Eintrag entfernen, neu schreiben
+            result = subprocess.run(
+                ["crontab", "-l"], capture_output=True, text=True, check=False
+            )
+            current = result.stdout if result.returncode == 0 else ""
             lines = [
-                line
-                for line in current_crontab.split("\n")
+                line for line in current.split("\n")
                 if f"{self.cron_comment} {task_name}" not in line
             ]
-
-            # Füge neue Zeile hinzu
             lines.append(cron_line)
 
-            # Schreibe crontab
-            new_crontab = "\n".join(lines)
             process = subprocess.Popen(["crontab", "-"], stdin=subprocess.PIPE, text=True)
-            process.communicate(input=new_crontab)
+            process.communicate(input="\n".join(lines) + "\n")
 
             if process.returncode == 0:
-                logger.info(f"Cron-Job '{task_name}' erfolgreich registriert")
+                logger.info(f"Cron-Job '{task_name}' registriert ({frequency}): {cron_time}")
                 return True
             else:
                 logger.error("Fehler beim Schreiben der crontab")
@@ -164,40 +188,25 @@ class LinuxCronScheduler(PlatformScheduler):
     def unregister_task(self, task_name: str) -> bool:
         """Entfernt Cron-Job"""
         try:
-            # Hole aktuelle crontab
             result = subprocess.run(["crontab", "-l"], capture_output=True, text=True, check=False)
             if result.returncode != 0:
-                logger.warning("Keine crontab gefunden")
                 return True
 
-            # Filtere Zeile raus
             lines = [
-                line
-                for line in result.stdout.split("\n")
+                line for line in result.stdout.split("\n")
                 if f"{self.cron_comment} {task_name}" not in line
             ]
-
-            # Schreibe crontab
-            new_crontab = "\n".join(lines)
             process = subprocess.Popen(["crontab", "-"], stdin=subprocess.PIPE, text=True)
-            process.communicate(input=new_crontab)
-
-            if process.returncode == 0:
-                logger.info(f"Cron-Job '{task_name}' erfolgreich entfernt")
-                return True
-            else:
-                logger.error("Fehler beim Schreiben der crontab")
-                return False
-
+            process.communicate(input="\n".join(lines) + "\n")
+            logger.info(f"Cron-Job '{task_name}' entfernt")
+            return True
         except Exception as e:
             logger.error(f"Fehler beim Entfernen von Cron-Job: {e}")
             return False
 
     def is_available(self) -> bool:
-        """Prüft ob crontab verfügbar ist"""
         if sys.platform != "linux":
             return False
-
         try:
             subprocess.run(["which", "crontab"], check=True, capture_output=True, text=True)
             return True
@@ -208,12 +217,11 @@ class LinuxCronScheduler(PlatformScheduler):
 class MacOSLaunchdScheduler(PlatformScheduler):
     """macOS launchd Integration (Placeholder)"""
 
-    def register_task(self, task_name: str, frequency: str, command: str, args: list[str]) -> bool:
-        logger.warning("macOS launchd-Integration noch nicht implementiert")
+    def register_task(self, task_name: str, schedule: dict, command: str, args: list) -> bool:
+        logger.warning("macOS-Scheduler noch nicht implementiert")
         return False
 
     def unregister_task(self, task_name: str) -> bool:
-        logger.warning("macOS launchd-Integration noch nicht implementiert")
         return False
 
     def is_available(self) -> bool:
@@ -222,7 +230,7 @@ class MacOSLaunchdScheduler(PlatformScheduler):
 
 def get_platform_scheduler() -> Optional[PlatformScheduler]:
     """
-    Factory-Funktion: Gibt passenden Scheduler für aktuelle Plattform zurück
+    Factory-Funktion: Gibt passenden Scheduler fuer aktuelle Plattform zurueck
 
     Returns:
         PlatformScheduler-Instanz oder None
@@ -241,6 +249,6 @@ def get_platform_scheduler() -> Optional[PlatformScheduler]:
 
     if scheduler.is_available():
         return scheduler
-    else:
-        logger.warning(f"Scheduler für {system} nicht verfügbar")
-        return None
+
+    logger.warning(f"Scheduler fuer {system} nicht verfuegbar")
+    return None

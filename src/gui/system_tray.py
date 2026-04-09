@@ -95,9 +95,9 @@ class SystemTray(QObject):
         """
         menu = QMenu()
 
-        # Hauptfenster anzeigen
-        show_action = QAction("Hauptfenster anzeigen", menu)
-        show_action.triggered.connect(self.show_main_window.emit)
+        # Einstellungen via Wizard
+        show_action = QAction("Einstellungen", menu)
+        show_action.triggered.connect(self.show_settings.emit)
         menu.addAction(show_action)
 
         menu.addSeparator()
@@ -114,10 +114,10 @@ class SystemTray(QObject):
 
         menu.addSeparator()
 
-        # Einstellungen
-        settings_action = QAction("Einstellungen", menu)
-        settings_action.triggered.connect(self.show_settings.emit)
-        menu.addAction(settings_action)
+        # Expertenansicht (MainWindow)
+        expert_action = QAction("Expertenansicht", menu)
+        expert_action.triggered.connect(self.show_main_window.emit)
+        menu.addAction(expert_action)
 
         menu.addSeparator()
 

@@ -571,6 +571,134 @@ def _upload_to_remote(backup_result, dest_type: str, dest_config: dict, local_de
         return False
 
 
+def _activate_os_schedule(schedule: dict | None) -> None:
+    """
+    Aktiviert den konfigurierten Zeitplan im Betriebssystem.
+    Wird nach dem Wizard aufgerufen wenn ein Zeitplan eingerichtet wurde.
+    """
+    if not schedule or not schedule.get("enabled"):
+        logger.info("Kein Zeitplan aktiviert – OS-Scheduler bleibt unverändert")
+        return
+
+    try:
+        from src.core.platform_scheduler import get_platform_scheduler
+
+        scheduler = get_platform_scheduler()
+        if not scheduler:
+            logger.warning("Kein OS-Scheduler verfügbar")
+            return
+
+        # Eigenen Prozess als Kommando verwenden
+        if getattr(sys, "frozen", False):
+            # PyInstaller-Bundle: argv[0] ist die EXE/AppImage
+            command = sys.argv[0]
+        else:
+            # Entwicklungsumgebung: python main.py
+            command = sys.executable
+            # args enthält dann den Pfad zum Skript
+
+        args = ["--backup"]
+        if not getattr(sys, "frozen", False):
+            args = [str(Path(__file__).resolve())] + args
+
+        ok = scheduler.register_task(
+            task_name="AutoBackup",
+            schedule=schedule,
+            command=command,
+            args=args,
+        )
+        if ok:
+            logger.info(f"OS-Zeitplan aktiviert: {schedule.get('frequency')} um {schedule.get('time', '')}")
+        else:
+            logger.warning("OS-Zeitplan konnte nicht aktiviert werden")
+
+    except Exception as e:
+        logger.error(f"Fehler beim Aktivieren des OS-Zeitplans: {e}", exc_info=True)
+
+
+def run_backup_headless() -> int:
+    """
+    Führt ein Backup ohne GUI aus (für OS-Scheduler-Aufrufe via --backup).
+    Liest Konfiguration aus config.json und startet BackupEngine direkt.
+    """
+    import threading
+
+    from src.core.backup_engine import BackupConfig, BackupEngine
+    from src.core.metadata_manager import MetadataManager
+
+    logger.info("=== Headless-Backup gestartet (--backup) ===")
+
+    config_manager = ConfigManager()
+
+    # Quellen
+    seen: set = set()
+    sources = []
+    for s in config_manager.config.get("sources", []):
+        if not s.get("enabled", True):
+            continue
+        p = Path(s["path"]).resolve()
+        if p not in seen:
+            seen.add(p)
+            sources.append(p)
+
+    if not sources:
+        logger.error("Headless-Backup: Keine Quellen konfiguriert")
+        return 1
+
+    # Ziel
+    destinations = config_manager.config.get("destinations", [])
+    if not destinations:
+        logger.error("Headless-Backup: Kein Ziel konfiguriert")
+        return 1
+
+    destination = destinations[-1]
+    dest_config = destination.get("config", {})
+    dest_type = destination.get("type", "local")
+
+    if dest_type in ("local", "usb"):
+        drive = dest_config.get("drive", "")
+        sub_path = dest_config.get("path", "")
+        dest_path = Path(drive) / sub_path if drive and sub_path else (
+            Path(drive) if drive else Path(dest_config.get("path", str(Path.home() / "scrat-backups")))
+        )
+    else:
+        dest_path = Path.home() / "scrat-backup" / "Backup"
+
+    # Passwort aus Keyring
+    password = ""
+    try:
+        from src.utils.credential_manager import get_credential_manager
+        cm = get_credential_manager()
+        if cm.available:
+            password = cm.get_password() or ""
+    except Exception:
+        pass
+
+    if not password:
+        logger.error("Headless-Backup: Kein Passwort im Keyring – Backup abgebrochen")
+        return 1
+
+    db_path = get_app_data_dir() / "metadata.db"
+    backup_config = BackupConfig(
+        sources=sources,
+        destination_path=dest_path,
+        destination_type=dest_type,
+        password=password,
+        compression_level=1,
+    )
+
+    try:
+        metadata_manager = MetadataManager(db_path)
+        engine = BackupEngine(metadata_manager=metadata_manager, config=backup_config)
+        result = engine.create_full_backup()
+        logger.info(f"Headless-Backup erfolgreich: {result}")
+        metadata_manager.disconnect()
+        return 0
+    except Exception as e:
+        logger.error(f"Headless-Backup fehlgeschlagen: {e}", exc_info=True)
+        return 1
+
+
 def run_gui() -> int:
     """
     Startet GUI-Anwendung
@@ -651,6 +779,9 @@ def run_gui() -> int:
                 f"Das Hauptfenster wird trotzdem geöffnet.",
             )
 
+        # Zeitplan im OS aktivieren (falls konfiguriert)
+        _activate_os_schedule(config.get("schedule"))
+
         # Backup starten wenn gewünscht
         if config.get("start_backup_now"):
             logger.info("Backup wird nach Wizard gestartet...")
@@ -675,16 +806,21 @@ def run_gui() -> int:
             def _do_backup():
                 start_backup_after_wizard(config)
 
-            def _open_wizard():
+            def _open_settings_wizard():
+                from gui.wizard_v2 import SetupWizardV2
+                w = SetupWizardV2()
+                w.exec()
+
+            def _open_restore_wizard():
                 from gui.wizard_v2 import PAGE_RESTORE, SetupWizardV2
                 w = SetupWizardV2()
                 w.setStartId(PAGE_RESTORE)
                 w.exec()
 
-            tray.show_main_window.connect(_show_main_window)
+            tray.show_main_window.connect(_open_settings_wizard)
             tray.start_backup.connect(_do_backup)
-            tray.start_restore.connect(_open_wizard)
-            tray.show_settings.connect(_show_main_window)
+            tray.start_restore.connect(_open_restore_wizard)
+            tray.show_settings.connect(_open_settings_wizard)
             tray.quit_application.connect(app.quit)
 
             tray.show()
@@ -715,8 +851,16 @@ def main() -> int:
         int: Exit-Code (0 = Erfolg)
     """
     logger.info("=" * 60)
-    logger.info("Scrat-Backup v0.3.0-beta - Plattformübergreifendes Backup-Tool")
+    logger.info(f"Scrat-Backup {APP_VERSION} - Plattformübergreifendes Backup-Tool")
     logger.info("=" * 60)
+
+    # --backup: Headless-Modus für OS-Scheduler (kein GUI)
+    if "--backup" in sys.argv:
+        try:
+            return run_backup_headless()
+        except Exception as e:
+            logger.error(f"Headless-Backup fehlgeschlagen: {e}", exc_info=True)
+            return 1
 
     # GUI starten (Wizard ist IMMER der Einstiegspunkt)
     try:
