@@ -102,13 +102,13 @@ class ModePage(QWizardPage):
 
     expert_mode_requested = Signal()
 
-    def __init__(self):
+    def __init__(self, version: str = ""):
         super().__init__()
         self.setTitle("Willkommen bei Scrat-Backup!")
-        self.setSubTitle(
-            "Wähle, wie du Scrat-Backup einrichten möchtest.\n"
-            "Du kannst den Modus später jederzeit ändern."
-        )
+        subtitle = "Wähle, wie du Scrat-Backup einrichten möchtest.\n"
+        subtitle += f"Version {version}  –  " if version else ""
+        subtitle += "Du kannst den Modus später jederzeit ändern."
+        self.setSubTitle(subtitle)
 
         layout = QVBoxLayout()
 
@@ -1691,7 +1691,7 @@ class SetupWizardV2(QWizard):
 
         # Seiten in richtiger Reihenfolge
         # Page 0: Start - Was tun?
-        self.start_page = StartPage()
+        self.start_page = StartPage(version=version)
         self.setPage(PAGE_START, self.start_page)
 
         # Page 1: Source - Was sichern?

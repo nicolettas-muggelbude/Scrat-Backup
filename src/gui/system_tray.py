@@ -31,6 +31,7 @@ class SystemTray(QObject):
     start_backup = Signal()
     start_restore = Signal()
     show_settings = Signal()
+    show_about = Signal()
     quit_application = Signal()
 
     def __init__(self, parent=None):
@@ -118,6 +119,13 @@ class SystemTray(QObject):
         expert_action = QAction("Expertenansicht", menu)
         expert_action.triggered.connect(self.show_main_window.emit)
         menu.addAction(expert_action)
+
+        menu.addSeparator()
+
+        # Über
+        about_action = QAction("Über Scrat-Backup", menu)
+        about_action.triggered.connect(self.show_about.emit)
+        menu.addAction(about_action)
 
         menu.addSeparator()
 

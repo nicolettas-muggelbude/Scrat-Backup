@@ -757,7 +757,7 @@ def run_gui() -> int:
     logger.info(">>> WIZARD V2 WIRD GESTARTET <<<")
 
     # Setup-Wizard V2 anzeigen (mit neuen Pages)
-    wizard = SetupWizardV2()
+    wizard = SetupWizardV2(version=APP_VERSION)
     if wizard.exec():
         # Wizard abgeschlossen
         config = wizard.get_config()
@@ -808,19 +808,37 @@ def run_gui() -> int:
 
             def _open_settings_wizard():
                 from gui.wizard_v2 import SetupWizardV2
-                w = SetupWizardV2()
+                w = SetupWizardV2(version=APP_VERSION)
                 w.exec()
 
             def _open_restore_wizard():
                 from gui.wizard_v2 import PAGE_RESTORE, SetupWizardV2
-                w = SetupWizardV2()
+                w = SetupWizardV2(version=APP_VERSION)
                 w.setStartId(PAGE_RESTORE)
                 w.exec()
+
+            def _show_about():
+                from PySide6.QtWidgets import QMessageBox
+                msg = QMessageBox()
+                msg.setWindowTitle("Über Scrat-Backup")
+                msg.setText(f"<b>Scrat-Backup</b> v{APP_VERSION}")
+                msg.setInformativeText(
+                    "Verschlüsseltes, plattformübergreifendes Backup-Tool.\n\n"
+                    "© 2024–2026 Scrat-Backup Contributors\n"
+                    "Lizenz: GNU General Public License v3.0\n\n"
+                    "github.com/nicolettas-muggelbude/Scrat-Backup"
+                )
+                icon_path = Path(__file__).parent.parent / "assets" / "icons" / "scrat-128.png"
+                if icon_path.exists():
+                    from PySide6.QtGui import QPixmap
+                    msg.setIconPixmap(QPixmap(str(icon_path)).scaled(64, 64))
+                msg.exec()
 
             tray.show_main_window.connect(_open_settings_wizard)
             tray.start_backup.connect(_do_backup)
             tray.start_restore.connect(_open_restore_wizard)
             tray.show_settings.connect(_open_settings_wizard)
+            tray.show_about.connect(_show_about)
             tray.quit_application.connect(app.quit)
 
             tray.show()
