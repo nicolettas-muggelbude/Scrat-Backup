@@ -6,6 +6,7 @@ Prüft GitHub Releases API auf neue Versionen.
 import json
 import logging
 import re
+import ssl
 import sys
 from datetime import date, datetime
 from pathlib import Path
@@ -107,11 +108,29 @@ class UpdateChecker(QThread):
             return
 
         try:
+            # SSL-Kontext: certifi bevorzugen (PyInstaller-Bundle), sonst System-Certs
+            ssl_context = None
+            try:
+                import certifi
+                ca_file = certifi.where()
+                # Im PyInstaller-Bundle liegt certifi in _MEIPASS/certifi/cacert.pem
+                if getattr(sys, "frozen", False):
+                    import os
+                    bundle_ca = os.path.join(sys._MEIPASS, "certifi", "cacert.pem")
+                    if os.path.exists(bundle_ca):
+                        ca_file = bundle_ca
+                ssl_context = ssl.create_default_context(cafile=ca_file)
+            except ImportError:
+                try:
+                    ssl_context = ssl.create_default_context()
+                except Exception:
+                    ssl_context = ssl._create_unverified_context()
+
             req = Request(
                 GITHUB_API,
                 headers={"User-Agent": f"Scrat-Backup/{self.current_version}"},
             )
-            with urlopen(req, timeout=10) as resp:
+            with urlopen(req, timeout=10, context=ssl_context) as resp:
                 data = json.loads(resp.read())
 
             _save_check_date()

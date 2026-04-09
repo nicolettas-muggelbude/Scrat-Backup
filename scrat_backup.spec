@@ -87,6 +87,13 @@ datas = []
 if assets_path.exists():
     datas.append((str(assets_path), 'assets'))
 
+# certifi SSL-Zertifikate einbinden (für HTTPS-Anfragen in PyInstaller-Bundles)
+try:
+    import certifi
+    datas.append((certifi.where(), 'certifi'))
+except ImportError:
+    pass
+
 # Templates-JSON einbinden (nur wenn vorhanden)
 templates_path = project_root / "src" / "templates"
 import glob as _glob
