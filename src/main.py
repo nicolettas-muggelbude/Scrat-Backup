@@ -30,7 +30,7 @@ from src.gui.wizard_v2 import SetupWizardV2  # noqa: E402
 try:
     from src import __version__ as APP_VERSION  # noqa: E402
 except ImportError:
-    APP_VERSION = "0.3.20-beta"
+    APP_VERSION = "0.3.21-beta"
 
 # Logging konfigurieren – immer in Datei schreiben (auch bei console=False)
 def _setup_logging() -> None:
@@ -843,7 +843,14 @@ def run_gui() -> int:
             def _open_settings_wizard():
                 from gui.wizard_v2 import SetupWizardV2
                 w = SetupWizardV2(version=APP_VERSION)
-                w.exec()
+                if w.exec():
+                    new_config = w.get_config()
+                    try:
+                        save_wizard_config(new_config)
+                        logger.info("Einstellungen aus Tray-Wizard gespeichert")
+                    except Exception as e:
+                        logger.error(f"Fehler beim Speichern der Tray-Wizard-Config: {e}")
+                    _activate_os_schedule(new_config.get("schedule"))
 
             def _open_restore_wizard():
                 from gui.wizard_v2 import PAGE_RESTORE, SetupWizardV2
