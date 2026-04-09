@@ -7,6 +7,11 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.3.13-beta] - 2026-04-09
+
+### Added
+- **Neutrales AppImage** – CI baut zusätzlich `ScratBackup-x86_64.AppImage` (ohne Versionsnummer) für stabile Download-Links (`releases/latest/download/ScratBackup-x86_64.AppImage`)
+
 ## [0.3.12-beta] - 2026-04-09
 
 ### Fixed

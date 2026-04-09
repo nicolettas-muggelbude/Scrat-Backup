@@ -122,9 +122,12 @@ jobs:
           version="${{ github.ref_name }}"
           appimage_name="ScratBackup-${version}-x86_64.AppImage"
           ARCH=x86_64 /tmp/appimagetool AppDir "$appimage_name"
+          cp "$appimage_name" ScratBackup-x86_64.AppImage
           echo "APPIMAGE_NAME=$appimage_name" >> $GITHUB_ENV
 
       - name: Zum Release hochladen
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ env.APPIMAGE_NAME }}
+          files: |
+            ${{ env.APPIMAGE_NAME }}
+            ScratBackup-x86_64.AppImage

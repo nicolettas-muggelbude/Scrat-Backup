@@ -1,18 +1,19 @@
-# 🎉 Scrat-Backup v0.3.12-beta Release Notes
+# 🎉 Scrat-Backup v0.3.13-beta Release Notes
 
 ## 💾 Downloads
 
 | Plattform | Download |
 |-----------|----------|
-| 🪟 **Windows** (x64) | [⬇ ScratBackup-v0.3.12-beta-Setup.exe](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.12-beta/ScratBackup-v0.3.12-beta-Setup.exe) |
-| 🐧 **Linux** (x86_64) | [⬇ ScratBackup-v0.3.12-beta-x86_64.AppImage](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.12-beta/ScratBackup-v0.3.12-beta-x86_64.AppImage) |
-| 🐧 **Linux** Desktop-Integration | [⬇ install.sh](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.12-beta/install.sh) |
+| 🪟 **Windows** (x64) | [⬇ ScratBackup-v0.3.13-beta-Setup.exe](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.13-beta/ScratBackup-v0.3.13-beta-Setup.exe) |
+| 🐧 **Linux** (x86_64, versioniert) | [⬇ ScratBackup-v0.3.13-beta-x86_64.AppImage](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.13-beta/ScratBackup-v0.3.13-beta-x86_64.AppImage) |
+| 🐧 **Linux** (x86_64, neutral) | [⬇ ScratBackup-x86_64.AppImage](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.13-beta/ScratBackup-x86_64.AppImage) |
+| 🐧 **Linux** Desktop-Integration | [⬇ install.sh](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.13-beta/install.sh) |
 
 ---
 
-## 🐿️ USB-Backup funktioniert jetzt wirklich!
+## 🐿️ Neutrales AppImage + USB-Backup funktioniert jetzt wirklich!
 
-**Scrat-Backup v0.3.12-beta** behebt den Bug, der dazu führte, dass USB-Backup zwar konfigurierbar aussah, aber nichts gespeichert hat.
+**Scrat-Backup v0.3.13-beta** behebt den Bug, der dazu führte, dass USB-Backup zwar konfigurierbar aussah, aber nichts gespeichert hat. Außerdem gibt es jetzt ein versionsloses AppImage für stabile Download-Links.
 
 ---
 
@@ -110,7 +111,7 @@ Siehe [LICENSE](LICENSE) für Details.
 
 **Wie ein Eichhörnchen seine Eicheln bewahrt, so bewahren wir deine Daten.** 🐿️🌰
 
-[📥 Download](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/tag/v0.3.12-beta) • [⭐ Star auf GitHub](https://github.com/nicolettas-muggelbude/Scrat-Backup) • [🐛 Bug melden](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues)
+[📥 Download](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/tag/v0.3.13-beta) • [⭐ Star auf GitHub](https://github.com/nicolettas-muggelbude/Scrat-Backup) • [🐛 Bug melden](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues)
 
 </div>
 
