@@ -8,6 +8,7 @@
   "storage_type": "webdav",
   "handler": "src.templates.handlers.nextcloud_handler.NextcloudHandler",
   "platforms": ["windows", "linux", "darwin"],
+  "implemented": false,
   "availability_check": {
     "type": "network"
   },

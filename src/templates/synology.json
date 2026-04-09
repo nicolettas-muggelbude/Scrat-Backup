@@ -7,7 +7,11 @@
   "category": "nas",
   "storage_type": "smb",
   "handler": "src.templates.handlers.synology_handler.SynologyHandler",
-  "platforms": ["windows", "linux", "darwin"],
+  "platforms": [
+    "windows",
+    "linux",
+    "darwin"
+  ],
   "availability_check": {
     "type": "command",
     "command": "smbclient",
@@ -68,5 +72,6 @@
     "user": "username",
     "password": "password",
     "path": "path"
-  }
+  },
+  "implemented": false
 }

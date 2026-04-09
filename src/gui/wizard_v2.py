@@ -501,7 +501,18 @@ class TemplateDestinationPage(QWizardPage):
 
     def _create_template_button(self, template: Template) -> TemplateCard:
         """Erstellt Template-Kachel"""
-        # Prüfe Verfügbarkeit
+        # Noch nicht implementierte Templates immer ausgegraut
+        if not template.raw_data.get("implemented", True):
+            card = TemplateCard(
+                icon=template.icon,
+                name=template.display_name,
+                is_available=False,
+                accent_color=ACCENT_COLOR,
+            )
+            card.setToolTip(f"{template.description}\n\n🚧 Noch nicht verfügbar – kommt in einer der nächsten Versionen.")
+            return card
+
+        # Prüfe Verfügbarkeit (nur für implementierte Templates)
         handler = self._get_handler_for_template(template)
         is_available = True
         availability_msg = ""

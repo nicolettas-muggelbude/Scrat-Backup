@@ -7,7 +7,11 @@
   "category": "cloud",
   "storage_type": "rclone",
   "handler": "src.templates.handlers.dropbox_handler.DropboxHandler",
-  "platforms": ["windows", "linux", "darwin"],
+  "platforms": [
+    "windows",
+    "linux",
+    "darwin"
+  ],
   "availability_check": {
     "type": "command",
     "command": "rclone"
@@ -44,5 +48,6 @@
   "config_mapping": {
     "remote_name": "remote",
     "path": "path"
-  }
+  },
+  "implemented": false
 }
