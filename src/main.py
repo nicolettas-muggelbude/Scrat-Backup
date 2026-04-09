@@ -30,7 +30,7 @@ from src.gui.wizard_v2 import SetupWizardV2  # noqa: E402
 try:
     from src import __version__ as APP_VERSION  # noqa: E402
 except ImportError:
-    APP_VERSION = "0.3.15-beta"
+    APP_VERSION = "0.3.16-beta"
 
 # Logging konfigurieren
 logging.basicConfig(
@@ -235,7 +235,7 @@ def save_wizard_config(wizard_config: dict) -> None:
         raise
 
 
-def start_backup_after_wizard(wizard_config: dict) -> None:
+def start_backup_after_wizard(wizard_config: dict) -> bool:
     """
     Startet erstes Backup nach Wizard-Abschluss.
     Muster aus backup_tab.py: Password-Dialog → BackupConfig → Thread.
@@ -274,7 +274,7 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
                 "Abgebrochen",
                 "Backup wurde abgebrochen – kein Passwort eingegeben.",
             )
-            return
+            return False
 
     # Quellen aus gespeicherter Config lesen
     config_manager = ConfigManager()
@@ -290,13 +290,13 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
 
     if not sources:
         QMessageBox.warning(None, "Fehler", "Keine Backup-Quellen konfiguriert.")
-        return
+        return False
 
     # Ziel aus gespeicherter Config (letztes = soeben vom Wizard gespeichertes)
     destinations = config_manager.config.get("destinations", [])
     if not destinations:
         QMessageBox.warning(None, "Fehler", "Kein Backup-Ziel konfiguriert.")
-        return
+        return False
 
     destination = destinations[-1]
     dest_config = destination.get("config", {})
@@ -419,7 +419,7 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
             "Backup fehlgeschlagen",
             f"Das Backup konnte nicht erstellt werden:\n\n{shared['error']}",
         )
-        return
+        return False
 
     result = shared.get("result")
 
@@ -457,6 +457,7 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
                 f"Ziel: {dest_type.upper()}\n"
                 f"Pfad: {remote_display}",
             )
+            return True
         else:
             QMessageBox.warning(
                 None,
@@ -466,6 +467,7 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
                 f"Lokaler Pfad: {local_backup_path}\n"
                 f"Bitte Upload manuell durchführen oder Einstellungen prüfen.",
             )
+            return False
     else:
         # Lokales Backup: Fortschrittsfenster schließen
         progress_dialog.close()
@@ -477,6 +479,7 @@ def start_backup_after_wizard(wizard_config: dict) -> None:
             f"Quellen: {len(sources)}\n"
             f"Ziel: {dest_path}",
         )
+        return True
 
 
 def _upload_to_remote(backup_result, dest_type: str, dest_config: dict, local_dest_path: Path) -> bool:
@@ -687,15 +690,21 @@ def run_backup_headless() -> int:
         compression_level=1,
     )
 
+    from src.utils.notifications import send_notification
+
+    send_notification("Scrat-Backup", "Automatisches Backup wird gestartet…")
+
     try:
         metadata_manager = MetadataManager(db_path)
         engine = BackupEngine(metadata_manager=metadata_manager, config=backup_config)
         result = engine.create_full_backup()
         logger.info(f"Headless-Backup erfolgreich: {result}")
         metadata_manager.disconnect()
+        send_notification("Scrat-Backup – Erfolgreich", "Das automatische Backup wurde abgeschlossen.")
         return 0
     except Exception as e:
         logger.error(f"Headless-Backup fehlgeschlagen: {e}", exc_info=True)
+        send_notification("Scrat-Backup – Fehler", f"Backup fehlgeschlagen: {e}", urgent=True)
         return 1
 
 
@@ -804,7 +813,12 @@ def run_gui() -> int:
                 _main_window_ref[0].activateWindow()
 
             def _do_backup():
-                start_backup_after_wizard(config)
+                tray.show_backup_started("Automatisches Backup")
+                success = start_backup_after_wizard(config)
+                if success:
+                    tray.show_backup_completed("Backup")
+                else:
+                    tray.show_backup_failed("Backup")
 
             def _open_settings_wizard():
                 from gui.wizard_v2 import SetupWizardV2
