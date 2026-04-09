@@ -1,19 +1,19 @@
-# 🎉 Scrat-Backup v0.3.14-beta Release Notes
+# 🎉 Scrat-Backup v0.3.15-beta Release Notes
 
 ## 💾 Downloads
 
 | Plattform | Download |
 |-----------|----------|
-| 🪟 **Windows** (x64) | [⬇ ScratBackup-v0.3.14-beta-Setup.exe](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.14-beta/ScratBackup-v0.3.14-beta-Setup.exe) |
-| 🐧 **Linux** (x86_64, versioniert) | [⬇ ScratBackup-v0.3.14-beta-x86_64.AppImage](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.14-beta/ScratBackup-v0.3.14-beta-x86_64.AppImage) |
-| 🐧 **Linux** (x86_64, neutral) | [⬇ ScratBackup-x86_64.AppImage](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.14-beta/ScratBackup-x86_64.AppImage) |
-| 🐧 **Linux** Desktop-Integration | [⬇ install.sh](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.14-beta/install.sh) |
+| 🪟 **Windows** (x64) | [⬇ ScratBackup-v0.3.15-beta-Setup.exe](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.15-beta/ScratBackup-v0.3.15-beta-Setup.exe) |
+| 🐧 **Linux** (x86_64, versioniert) | [⬇ ScratBackup-v0.3.15-beta-x86_64.AppImage](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.15-beta/ScratBackup-v0.3.15-beta-x86_64.AppImage) |
+| 🐧 **Linux** (x86_64, neutral) | [⬇ ScratBackup-x86_64.AppImage](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.15-beta/ScratBackup-x86_64.AppImage) |
+| 🐧 **Linux** Desktop-Integration | [⬇ install.sh](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.15-beta/install.sh) |
 
 ---
 
-## 🐿️ USB funktioniert, Update-Benachrichtigung aktiv!
+## 🐿️ Tray-Menü und automatische Backups repariert!
 
-**Scrat-Backup v0.3.14-beta** behebt mehrere kritische Bugs: USB-Backup übergibt Laufwerk und Pfad jetzt korrekt, die Update-Benachrichtigung erscheint während der Wizard offen ist, und es gibt ein versionsloses AppImage für stabile Download-Links.
+**Scrat-Backup v0.3.15-beta** behebt zwei kritische Bugs: Das Tray-Menü öffnet jetzt korrekt den Wizard, und automatisch geplante Backups werden nach dem Wizard im Betriebssystem registriert.
 
 **Wie ein Eichhörnchen seine Eicheln immer wiederfindet, so findest du deine Daten jetzt auf jedem Gerät.** 🌰
 
@@ -21,57 +21,30 @@
 
 ## ✨ Highlights dieser Version
 
-### 🔌 USB-Backup funktioniert jetzt wirklich
+### ⚙️ Tray-Menü öffnet Wizard
 
-- Laufwerksauswahl und Unterordner werden korrekt übergeben
-- Handler-Ladepfad war falsch konstruiert – behoben
-- Formularfelder wurden übersprungen (JSON `"id"` vs. Code `"name"`) – behoben
+Das Tray-Menü war falsch verdrahtet – alle Optionen öffneten das MainWindow (Expertenansicht). Jetzt:
 
-### 🔔 Update-Benachrichtigung während Wizard läuft
+- **Einstellungen** → öffnet den Wizard (Backup einrichten / ändern)
+- **Backup starten** → startet Backup direkt
+- **Wiederherstellen** → öffnet Wizard auf der Restore-Seite
+- **Expertenansicht** (neu) → öffnet das MainWindow für Power-User
+- **Beenden** → beendet die App
 
-- UpdateChecker startet jetzt im Hintergrund bevor der Wizard erscheint
-- Dialog erscheint während der Wizard offen ist, nicht erst danach
+### 🕐 Automatische Backups funktionieren jetzt
 
-### 🐧 Neutrales AppImage für stabile Links
+Nach dem Wizard-Abschluss wird der konfigurierte Zeitplan im Betriebssystem registriert:
 
-- `ScratBackup-x86_64.AppImage` ohne Versionsnummer
-- Stabiler Link: `releases/latest/download/ScratBackup-x86_64.AppImage`
+- **Windows:** Windows Task Scheduler (`schtasks`) – täglich, wöchentlich, monatlich oder beim Start
+- **Linux:** crontab – mit korrekt generiertem Cron-Ausdruck
 
-### 🪟 Windows-Installer (kein Admin nötig)
+### 🖥️ Headless-Modus (`--backup`)
 
-Statt eines ZIP-Archivs gibt es einen echten Inno Setup Installer:
+Für den OS-Scheduler: `ScratBackup.exe --backup` (oder AppImage) startet das Backup ohne GUI:
 
-- Installiert nach `%LocalAppData%\Scrat-Backup` – **kein Administratorrecht erforderlich**
-- Erstellt Startmenü-Eintrag und optionalen Desktop-Shortcut
-- Deinstallation über Windows Einstellungen
-
-### 🔔 Auto-Updater
-
-Scrat-Backup prüft automatisch einmal täglich auf neue Versionen:
-
-- Vergleich mit GitHub Releases API
-- Dialog mit Release-Notes und direktem Download-Link
-- Plattformspezifischer Download (Setup.exe / AppImage)
-
-### 🐧 Linux Desktop-Integration
-
-Mit dem mitgelieferten `install.sh` wird Scrat-Backup vollständig ins System integriert:
-
-- AppImage nach `~/.local/bin/` kopieren
-- Icons in allen Größen (16–256px) installieren
-- Menü-Eintrag in `~/.local/share/applications/` erstellen
-- **Kein sudo nötig** – alles im Home-Verzeichnis
-
-```bash
-./install.sh ScratBackup-vX.X.X-x86_64.AppImage
-```
-
-### 📁 Plattformspezifische Config-Pfade
-
-Die Konfiguration liegt jetzt dort, wo das System sie erwartet:
-
-- **Windows:** `%LocalAppData%\Scrat-Backup\`
-- **Linux/macOS:** `~/.scrat-backup/`
+- Liest Quellen und Ziel aus `config.json`
+- Passwort aus Keyring (kein Dialog nötig)
+- Vollständiges Backup im Hintergrund
 
 ---
 
@@ -95,20 +68,27 @@ Die Konfiguration liegt jetzt dort, wo das System sie erwartet:
 ### Wizard
 - ✅ **StartPage** – Aktionsauswahl (Backup einrichten / ändern / Restore / Experten-Modus)
 - ✅ **SourceSelectionPage** – Quellen mit Bibliotheks-Checkboxen, eigene Ordner, Ausschlüsse
-- ✅ **TemplateDestinationPage** – Template-Kacheln, nicht verfügbare Backends gesperrt
+- ✅ **TemplateDestinationPage** – Template-Kacheln, USB-Backup funktioniert
 - ✅ **SchedulePage** – Täglich/Wöchentlich/Monatlich/beim Start, Zeitangabe, Wochentag
 - ✅ **EncryptionPage** – Passwort + Keyring
 - ✅ **RestoreWizardPage** – DB- und Verzeichnis-Modus
 - ✅ **FinishPage** – Tray-Start oder Experten-Modus
 
+### System Tray
+- ✅ **Einstellungen** → Wizard
+- ✅ **Backup starten** → direktes Backup
+- ✅ **Wiederherstellen** → Restore-Wizard
+- ✅ **Expertenansicht** → MainWindow
+- ✅ **Auto-Updater** – tägliche Prüfung, Dialog mit Release Notes
+
+### Zeitplanung
+- ✅ **Windows Task Scheduler** – daily/weekly/monthly/startup via schtasks
+- ✅ **Linux crontab** – korrekte Cron-Ausdrücke für alle Frequenzen
+- ✅ **`--backup` Headless-Modus** – für OS-Scheduler-Aufrufe ohne GUI
+
 ### Dark Mode
 - ✅ Auto-Detection + manuelles Umschalten
-- ✅ Alle Wizard-Seiten theme-aware (TemplateCards, Ordner-Liste, Ausschlüsse, FinishPage)
-
-### Sonstiges
-- ✅ **Auto-Updater** – tägliche Prüfung, Dialog mit Release Notes
-- ✅ **System Tray** – vollständig verdrahtet
-- ✅ **Linux Desktop-Integration** – install.sh, .desktop-Datei, Icons
+- ✅ Alle Wizard-Seiten theme-aware
 
 ---
 
@@ -154,10 +134,6 @@ Die Konfiguration liegt jetzt dort, wo das System sie erwartet:
 
 Scrat-Backup ist **Open Source** unter der **GNU General Public License v3.0**.
 
-- ✅ Kostenlos für alle Zwecke
-- ✅ Quellcode einsehbar und modifizierbar
-- ✅ Weitergabe unter gleicher Lizenz
-
 Siehe [LICENSE](LICENSE) für Details.
 
 ---
@@ -166,7 +142,7 @@ Siehe [LICENSE](LICENSE) für Details.
 
 **Wie ein Eichhörnchen seine Eicheln bewahrt, so bewahren wir deine Daten.** 🐿️🌰
 
-[📥 Download](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/tag/v0.3.14-beta) • [⭐ Star auf GitHub](https://github.com/nicolettas-muggelbude/Scrat-Backup) • [🐛 Bug melden](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues)
+[📥 Download](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/tag/v0.3.15-beta) • [⭐ Star auf GitHub](https://github.com/nicolettas-muggelbude/Scrat-Backup) • [🐛 Bug melden](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues)
 
 </div>
 

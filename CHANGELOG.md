@@ -7,6 +7,16 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.3.15-beta] - 2026-04-09
+
+### Fixed
+- **Tray "Einstellungen" öffnete MainWindow** – öffnet jetzt den Wizard; "Expertenansicht" (neu) öffnet das MainWindow
+- **Automatisches Backup startete nie** – OS-Scheduler wurde nach Wizard nie aktiviert; `_activate_os_schedule()` registriert Zeitplan jetzt in Windows Task Scheduler / Linux crontab
+- **PlatformScheduler unterstützte nur startup/shutdown** – Windows (`schtasks`) und Linux (`crontab`) unterstützen jetzt `daily`, `weekly`, `monthly`, `startup` mit korrekter Zeitangabe
+
+### Added
+- **`--backup` Headless-Modus** – startet Backup ohne GUI (für OS-Scheduler-Aufrufe); liest Config + Keyring-Passwort und führt Backup direkt aus
+
 ## [0.3.14-beta] - 2026-04-09
 
 ### Fixed
