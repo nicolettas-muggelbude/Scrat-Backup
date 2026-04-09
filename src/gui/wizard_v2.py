@@ -235,8 +235,18 @@ class ModePage(QWizardPage):
 
     def validatePage(self) -> bool:
         if self.expert_radio.isChecked():
-            self.expert_mode_requested.emit()
-            return False  # Wizard nicht weitergehen bei Experten-Modus
+            from PySide6.QtWidgets import QMessageBox
+            msg = QMessageBox(self)
+            msg.setWindowTitle("Experten-Modus")
+            msg.setIcon(QMessageBox.Icon.Information)
+            msg.setText("Der Experten-Modus ist noch nicht verfügbar.")
+            msg.setInformativeText(
+                "Dieses Feature ist in Arbeit und wird in einer der nächsten Versionen freigeschaltet.\n\n"
+                "Bitte wähle eine andere Option."
+            )
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.exec()
+            return False
         return True
 
     def nextId(self) -> int:
