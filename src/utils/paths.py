@@ -1,7 +1,7 @@
 """
-Plattformspezifische App-Pfade für Scrat-Backup.
+Plattformspezifische App-Pfade fuer Scrat-Backup.
 
-Windows : %LOCALAPPDATA%\Scrat-Backup\
+Windows : %LOCALAPPDATA%/Scrat-Backup/
 Linux   : ~/.scrat-backup/
 macOS   : ~/.scrat-backup/
 """

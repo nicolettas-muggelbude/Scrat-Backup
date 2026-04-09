@@ -74,7 +74,7 @@ class DynamicTemplateForm(QWidget):
 
         for field_config in self.template.ui_fields:
             field_type = field_config.get("type")
-            field_name = field_config.get("name")
+            field_name = field_config.get("id") or field_config.get("name")
 
             if not field_name:
                 logger.warning(f"Feld ohne Namen übersprungen: {field_config}")
@@ -107,7 +107,7 @@ class DynamicTemplateForm(QWidget):
 
     def _add_text_field(self, config: dict):
         """Fügt Text-Eingabefeld hinzu"""
-        name = config["name"]
+        name = config.get("id") or config["name"]
         label = config.get("label", name)
         required = config.get("required", False)
         placeholder = config.get("placeholder", "")
@@ -135,7 +135,7 @@ class DynamicTemplateForm(QWidget):
 
     def _add_password_field(self, config: dict):
         """Fügt Passwort-Feld hinzu"""
-        name = config["name"]
+        name = config.get("id") or config["name"]
         label = config.get("label", name)
         required = config.get("required", False)
         help_text = config.get("help", "")
@@ -155,7 +155,7 @@ class DynamicTemplateForm(QWidget):
 
     def _add_combo_field(self, config: dict):
         """Fügt ComboBox hinzu"""
-        name = config["name"]
+        name = config.get("id") or config["name"]
         label = config.get("label", name)
         required = config.get("required", False)
         editable = config.get("editable", False)
@@ -180,7 +180,7 @@ class DynamicTemplateForm(QWidget):
 
     def _add_drive_selector_field(self, config: dict):
         """Fügt USB-Laufwerk-Auswahl hinzu"""
-        name = config["name"]
+        name = config.get("id") or config["name"]
         label = config.get("label", name)
         required = config.get("required", False)
         auto_refresh = config.get("auto_refresh", True)
@@ -218,7 +218,7 @@ class DynamicTemplateForm(QWidget):
 
     def _add_checkbox_field(self, config: dict):
         """Fügt Checkbox hinzu"""
-        name = config["name"]
+        name = config.get("id") or config["name"]
         label = config.get("label", name)
         default = config.get("default", False)
         help_text = config.get("help", "")
@@ -237,7 +237,7 @@ class DynamicTemplateForm(QWidget):
 
     def _add_button_field(self, config: dict):
         """Fügt Button hinzu"""
-        name = config["name"]
+        name = config.get("id") or config["name"]
         label = config.get("label", "Button")
         icon = config.get("icon", "")
         action = config.get("action")
@@ -266,7 +266,7 @@ class DynamicTemplateForm(QWidget):
 
     def _add_status_field(self, config: dict):
         """Fügt Status-Anzeige hinzu"""
-        name = config["name"]
+        name = config.get("id") or config["name"]
         label = config.get("label", name)
         dynamic = config.get("dynamic", False)
         check_method = config.get("check_method")

@@ -573,10 +573,9 @@ class TemplateDestinationPage(QWizardPage):
     def _load_handler(self, template: Template):
         """Lädt Handler für Template"""
         try:
-            # Dynamisch Handler laden
-            handler_name = template.handler_class
-            module_name = f"templates.handlers.{handler_name}"
-            class_name = "".join(word.capitalize() for word in handler_name.split("_"))
+            # Vollständigen Pfad parsen: "src.templates.handlers.usb_handler.UsbHandler"
+            handler_path = template.handler_class
+            module_name, class_name = handler_path.rsplit(".", 1)
 
             module = __import__(module_name, fromlist=[class_name])
             handler_class = getattr(module, class_name)
