@@ -29,21 +29,28 @@ def _notify_linux(title: str, message: str, urgent: bool = False) -> bool:
 
 
 def _notify_windows(title: str, message: str, urgent: bool = False) -> bool:
-    """Sendet Desktop-Toast-Notification via PowerShell (Windows)."""
+    """Sendet Windows-10/11 Toast-Notification via WinRT – zeigt 'Scrat-Backup' als App-Name."""
     try:
-        # PowerShell-Skript: Windows Forms NotifyIcon (kein Admin, kein WinRT nötig)
-        ps_script = (
-            "Add-Type -AssemblyName System.Windows.Forms; "
-            "$n = New-Object System.Windows.Forms.NotifyIcon; "
-            "$n.Icon = [System.Drawing.SystemIcons]::Information; "
-            "$n.Visible = $true; "
-            f"$n.ShowBalloonTip(5000, '{title}', '{message}', "
-            f"[System.Windows.Forms.ToolTipIcon]::{'Warning' if urgent else 'Info'}); "
-            "Start-Sleep -Seconds 6; "
-            "$n.Dispose()"
-        )
+        import base64
+
+        # Sonderzeichen für XML escapen
+        def _xml(s: str) -> str:
+            return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+        t = _xml(title)
+        m = _xml(message)
+
+        ps_script = f"""
+[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null
+[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null
+$xml = New-Object Windows.Data.Xml.Dom.XmlDocument
+$xml.LoadXml('<toast><visual><binding template="ToastGeneric"><text>{t}</text><text>{m}</text></binding></visual></toast>')
+[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('Scrat-Backup').Show(
+    [Windows.UI.Notifications.ToastNotification]::new($xml))
+"""
+        encoded = base64.b64encode(ps_script.encode("utf-16-le")).decode("ascii")
         subprocess.Popen(
-            ["powershell", "-NoProfile", "-WindowStyle", "Hidden", "-Command", ps_script],
+            ["powershell", "-NoProfile", "-WindowStyle", "Hidden", "-EncodedCommand", encoded],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
