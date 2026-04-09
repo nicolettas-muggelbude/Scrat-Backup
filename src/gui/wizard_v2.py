@@ -1172,7 +1172,21 @@ class RestoreWizardPage(QWizardPage):
     # ── UI-Aufbau ─────────────────────────────────────────────────────────
 
     def _setup_ui(self):
-        outer = QVBoxLayout()
+        # Scroll-Area als äußerer Container – verhindert Quetschen wenn
+        # der Fortschrittsbereich eingeblendet wird
+        from PySide6.QtWidgets import QScrollArea
+        page_layout = QVBoxLayout()
+        page_layout.setContentsMargins(0, 0, 0, 0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QScrollArea.Shape.NoFrame)
+        content_widget = QWidget()
+        scroll.setWidget(content_widget)
+        page_layout.addWidget(scroll)
+        self.setLayout(page_layout)
+
+        outer = QVBoxLayout(content_widget)
         outer.setSpacing(12)
 
         # ── Modus-Auswahl ──────────────────────────────────────────────
@@ -1329,8 +1343,6 @@ class RestoreWizardPage(QWizardPage):
 
         self._progress_group.hide()
         outer.addWidget(self._progress_group)
-
-        self.setLayout(outer)
 
     # ── Modus-Umschaltung ─────────────────────────────────────────────
 
