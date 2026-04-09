@@ -7,6 +7,13 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+## [0.3.12-beta] - 2026-04-09
+
+### Fixed
+- **USB-Backup: Formular komplett leer** – `DynamicTemplateForm` suchte nach `"name"` in ui_fields, Templates verwenden aber `"id"` – alle Felder wurden übersprungen
+- **Handler-Ladepfad falsch** – Code konstruierte `templates.handlers.src.templates.handlers.usb_handler...` statt den vollständigen Pfad per `rsplit(".", 1)` zu parsen; betraf `wizard_v2.py` und `template_manager.py`
+- **SyntaxWarning in `paths.py`** – Backslash im Docstring entfernt
+
 ## [0.3.11-beta] - 2026-04-08
 
 ### Fixed

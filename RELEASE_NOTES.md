@@ -1,92 +1,30 @@
-# 🎉 Scrat-Backup v0.3.11-beta Release Notes
+# 🎉 Scrat-Backup v0.3.12-beta Release Notes
 
 ## 💾 Downloads
 
 | Plattform | Download |
 |-----------|----------|
-| 🪟 **Windows** (x64) | [⬇ ScratBackup-v0.3.11-beta-Setup.exe](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.11-beta/ScratBackup-v0.3.11-beta-Setup.exe) |
-| 🐧 **Linux** (x86_64) | [⬇ ScratBackup-v0.3.11-beta-x86_64.AppImage](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.11-beta/ScratBackup-v0.3.11-beta-x86_64.AppImage) |
-| 🐧 **Linux** Desktop-Integration | [⬇ install.sh](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.11-beta/install.sh) |
+| 🪟 **Windows** (x64) | [⬇ ScratBackup-v0.3.12-beta-Setup.exe](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.12-beta/ScratBackup-v0.3.12-beta-Setup.exe) |
+| 🐧 **Linux** (x86_64) | [⬇ ScratBackup-v0.3.12-beta-x86_64.AppImage](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.12-beta/ScratBackup-v0.3.12-beta-x86_64.AppImage) |
+| 🐧 **Linux** Desktop-Integration | [⬇ install.sh](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/download/v0.3.12-beta/install.sh) |
 
 ---
 
-## 🐿️ Installer, Auto-Updater & Linux Desktop-Integration!
+## 🐿️ USB-Backup funktioniert jetzt wirklich!
 
-**Scrat-Backup v0.3.11-beta** bringt einen echten Windows-Installer, tägliche Update-Prüfung, alle 7 Templates und eine vollständige Linux Desktop-Integration – plus zahlreiche Packaging-Fixes damit die App auf beiden Plattformen zuverlässig startet.
-
-**Wie ein Eichhörnchen seine Eicheln immer wiederfindet, so findest du deine Daten jetzt auf jedem Gerät.** 🌰
+**Scrat-Backup v0.3.12-beta** behebt den Bug, der dazu führte, dass USB-Backup zwar konfigurierbar aussah, aber nichts gespeichert hat.
 
 ---
 
-## ✨ Highlights dieser Version
+## 🔧 Bugfixes
 
-### 🪟 Windows-Installer (kein Admin nötig)
+### USB-Backup: Laufwerksauswahl wurde ignoriert
+Das Formular auf der Ziel-Seite zeigte Felder an, speicherte aber keine Werte – weil alle ui_fields übersprungen wurden. Der Code suchte nach dem Schlüssel `"name"`, die Template-JSONs verwenden aber `"id"`. Dadurch wurde kein Laufwerk, kein Unterordner übergeben.
 
-Statt eines ZIP-Archivs gibt es jetzt einen echten Inno Setup Installer:
-
-- Installiert nach `%LocalAppData%\Scrat-Backup` – **kein Administratorrecht erforderlich**
-- Erstellt Startmenü-Eintrag und optionalen Desktop-Shortcut
-- Deinstallation über Windows Einstellungen
-
-### 🔔 Auto-Updater
-
-Scrat-Backup prüft automatisch einmal täglich auf neue Versionen:
-
-- Vergleich mit GitHub Releases API
-- Dialog mit Release-Notes und direktem Download-Link
-- Plattformspezifischer Download (Setup.exe / AppImage)
-
-### 🐧 Linux Desktop-Integration
-
-Mit dem mitgelieferten `install.sh` wird Scrat-Backup vollständig ins System integriert:
-
-- AppImage nach `~/.local/bin/` kopieren
-- Icons in allen Größen (16–256px) installieren
-- Menü-Eintrag in `~/.local/share/applications/` erstellen
-- **Kein sudo nötig** – alles im Home-Verzeichnis
-
-```bash
-./install.sh ScratBackup-vX.X.X-x86_64.AppImage
-```
-
-### 📁 Plattformspezifische Config-Pfade
-
-Die Konfiguration liegt jetzt dort, wo das System sie erwartet:
-
-- **Windows:** `%LocalAppData%\Scrat-Backup\`
-- **Linux/macOS:** `~/.scrat-backup/`
-
----
-
-## 🚀 Neue Features
-
-### Linux Desktop-Integration
-- ✅ **`install.sh`** – installiert AppImage, Icons und Menü-Eintrag ohne sudo
-- ✅ **`scrat-backup.desktop`** – für manuelle Installation
-- ✅ Icons in allen Größen (16, 32, 48, 64, 128, 256px) + SVG
-
-### Auto-Updater
-- ✅ **`UpdateChecker`** (QThread) – prüft GitHub Releases API einmal täglich
-- ✅ **`UpdateDialog`** – zeigt Release-Notes, Download-Button, Release-Seite
-- ✅ Plattformspezifischer Download-Link aus Release-Assets
-
-### Windows Installer
-- ✅ **Inno Setup** statt ZIP – `ScratBackup-vX.X.X-Setup.exe`
-- ✅ Installation nach `%LocalAppData%\Scrat-Backup` (kein Admin)
-- ✅ CI übergibt Version automatisch per `/DMyAppVersion=`
-
-### Plattformspezifische Pfade
-- ✅ **`src/utils/paths.py`** – zentrale `get_app_data_dir()` Funktion
-- ✅ Windows: `%LocalAppData%\Scrat-Backup\`, Linux: `~/.scrat-backup\`
-- ✅ Alle 10 betroffenen Dateien umgestellt
-
-### Templates
-- ✅ Alle **7 Template-JSON-Dateien** angelegt: USB, Nextcloud, OneDrive, Google Drive, Dropbox, Synology, QNAP
-
-### Wizard Start-Screen
-- ✅ **Immer** sichtbar: "Backup einrichten" + "Backup wiederherstellen"
-- ✅ **Zusätzlich** wenn Config vorhanden: "Einstellungen ändern" + "Neues Ziel"
-- ✅ Korrekte Subtitles je nach Status ("erste Verwendung" vs. "bereits eingerichtet")
+### Handler-Laden schlug lautlos fehl
+Der Ladepfad für Template-Handler wurde falsch zusammengebaut:  
+`templates.handlers.src.templates.handlers.usb_handler.UsbHandler` statt dem richtigen Modul.  
+Ohne Handler kein Formular, ohne Formular kein Ziel, ohne Ziel kein Backup.
 
 ---
 
@@ -112,8 +50,8 @@ Die Konfiguration liegt jetzt dort, wo das System sie erwartet:
 - ✅ **SourceSelectionPage** – Quellen mit Bibliotheks-Checkboxen, eigene Ordner, Ausschlüsse
 - ✅ **TemplateDestinationPage** – Template-Kacheln, nicht verfügbare Backends gesperrt
 - ✅ **SchedulePage** – Täglich/Wöchentlich/Monatlich/beim Start, Zeitangabe, Wochentag
-- ✅ **EncryptionPage** – Passwort + Keyring (NEU)
-- ✅ **RestoreWizardPage** – DB- und Verzeichnis-Modus (NEU)
+- ✅ **EncryptionPage** – Passwort + Keyring
+- ✅ **RestoreWizardPage** – DB- und Verzeichnis-Modus
 - ✅ **FinishPage** – Tray-Start oder Experten-Modus
 
 ### Dark Mode
@@ -144,26 +82,6 @@ Die Konfiguration liegt jetzt dort, wo das System sie erwartet:
 
 ---
 
-## 📊 Statistiken
-
-- **Commits seit v0.3.0-beta:** 11
-- **Neue Dateien:** `install.sh`, `scrat-backup.desktop`, `src/utils/paths.py`, `src/core/update_checker.py`, `src/gui/update_dialog.py`, 7× Template-JSON
-- **CI-Jobs:** 2 (Windows Installer, Linux AppImage)
-- **AppImage-Größe:** ~70 MB
-
----
-
-## 🗺️ Was kommt als Nächstes
-
-- [ ] Weitere Templates: SFTP, FTP, iCloud, AWS S3
-- [ ] macOS-Build (GitHub Actions)
-- [ ] Dark Mode: restliche Dialoge und Tabs
-- [ ] Template-Manager-Tab im MainWindow
-- [ ] XDG User Directories (Linux)
-- [ ] `.deb`-Paket für Debian/Ubuntu
-
----
-
 ## 📖 Weitere Informationen
 
 - **Changelog:** [CHANGELOG.md](CHANGELOG.md)
@@ -184,21 +102,15 @@ Die Konfiguration liegt jetzt dort, wo das System sie erwartet:
 
 Scrat-Backup ist **Open Source** unter der **GNU General Public License v3.0**.
 
-- ✅ Kostenlos für alle Zwecke
-- ✅ Quellcode einsehbar und modifizierbar
-- ✅ Weitergabe unter gleicher Lizenz
-
 Siehe [LICENSE](LICENSE) für Details.
 
 ---
 
 <div align="center">
 
-## 🎊 Viel Spaß beim Testen!
-
 **Wie ein Eichhörnchen seine Eicheln bewahrt, so bewahren wir deine Daten.** 🐿️🌰
 
-[📥 Download](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/tag/v0.3.11-beta) • [⭐ Star auf GitHub](https://github.com/nicolettas-muggelbude/Scrat-Backup) • [🐛 Bug melden](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues)
+[📥 Download](https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/tag/v0.3.12-beta) • [⭐ Star auf GitHub](https://github.com/nicolettas-muggelbude/Scrat-Backup) • [🐛 Bug melden](https://github.com/nicolettas-muggelbude/Scrat-Backup/issues)
 
 </div>
 
