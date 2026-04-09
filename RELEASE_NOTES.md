@@ -11,21 +11,67 @@
 
 ---
 
-## 🐿️ Update-Benachrichtigung + USB-Backup + neutrales AppImage
+## 🐿️ USB funktioniert, Update-Benachrichtigung aktiv!
 
-**Scrat-Backup v0.3.14-beta** behebt drei Bugs: Die Update-Benachrichtigung erscheint jetzt während der Wizard offen ist, USB-Backup übergibt Laufwerk und Pfad korrekt, und es gibt ein versionsloses AppImage für stabile Download-Links.
+**Scrat-Backup v0.3.14-beta** behebt mehrere kritische Bugs: USB-Backup übergibt Laufwerk und Pfad jetzt korrekt, die Update-Benachrichtigung erscheint während der Wizard offen ist, und es gibt ein versionsloses AppImage für stabile Download-Links.
+
+**Wie ein Eichhörnchen seine Eicheln immer wiederfindet, so findest du deine Daten jetzt auf jedem Gerät.** 🌰
 
 ---
 
-## 🔧 Bugfixes
+## ✨ Highlights dieser Version
 
-### USB-Backup: Laufwerksauswahl wurde ignoriert
-Das Formular auf der Ziel-Seite zeigte Felder an, speicherte aber keine Werte – weil alle ui_fields übersprungen wurden. Der Code suchte nach dem Schlüssel `"name"`, die Template-JSONs verwenden aber `"id"`. Dadurch wurde kein Laufwerk, kein Unterordner übergeben.
+### 🔌 USB-Backup funktioniert jetzt wirklich
 
-### Handler-Laden schlug lautlos fehl
-Der Ladepfad für Template-Handler wurde falsch zusammengebaut:  
-`templates.handlers.src.templates.handlers.usb_handler.UsbHandler` statt dem richtigen Modul.  
-Ohne Handler kein Formular, ohne Formular kein Ziel, ohne Ziel kein Backup.
+- Laufwerksauswahl und Unterordner werden korrekt übergeben
+- Handler-Ladepfad war falsch konstruiert – behoben
+- Formularfelder wurden übersprungen (JSON `"id"` vs. Code `"name"`) – behoben
+
+### 🔔 Update-Benachrichtigung während Wizard läuft
+
+- UpdateChecker startet jetzt im Hintergrund bevor der Wizard erscheint
+- Dialog erscheint während der Wizard offen ist, nicht erst danach
+
+### 🐧 Neutrales AppImage für stabile Links
+
+- `ScratBackup-x86_64.AppImage` ohne Versionsnummer
+- Stabiler Link: `releases/latest/download/ScratBackup-x86_64.AppImage`
+
+### 🪟 Windows-Installer (kein Admin nötig)
+
+Statt eines ZIP-Archivs gibt es einen echten Inno Setup Installer:
+
+- Installiert nach `%LocalAppData%\Scrat-Backup` – **kein Administratorrecht erforderlich**
+- Erstellt Startmenü-Eintrag und optionalen Desktop-Shortcut
+- Deinstallation über Windows Einstellungen
+
+### 🔔 Auto-Updater
+
+Scrat-Backup prüft automatisch einmal täglich auf neue Versionen:
+
+- Vergleich mit GitHub Releases API
+- Dialog mit Release-Notes und direktem Download-Link
+- Plattformspezifischer Download (Setup.exe / AppImage)
+
+### 🐧 Linux Desktop-Integration
+
+Mit dem mitgelieferten `install.sh` wird Scrat-Backup vollständig ins System integriert:
+
+- AppImage nach `~/.local/bin/` kopieren
+- Icons in allen Größen (16–256px) installieren
+- Menü-Eintrag in `~/.local/share/applications/` erstellen
+- **Kein sudo nötig** – alles im Home-Verzeichnis
+
+```bash
+./install.sh ScratBackup-vX.X.X-x86_64.AppImage
+```
+
+### 📁 Plattformspezifische Config-Pfade
+
+Die Konfiguration liegt jetzt dort, wo das System sie erwartet:
+
+- **Windows:** `%LocalAppData%\Scrat-Backup\`
+- **Linux/macOS:** `~/.scrat-backup/`
 
 ---
 
@@ -58,6 +104,11 @@ Ohne Handler kein Formular, ohne Formular kein Ziel, ohne Ziel kein Backup.
 ### Dark Mode
 - ✅ Auto-Detection + manuelles Umschalten
 - ✅ Alle Wizard-Seiten theme-aware (TemplateCards, Ordner-Liste, Ausschlüsse, FinishPage)
+
+### Sonstiges
+- ✅ **Auto-Updater** – tägliche Prüfung, Dialog mit Release Notes
+- ✅ **System Tray** – vollständig verdrahtet
+- ✅ **Linux Desktop-Integration** – install.sh, .desktop-Datei, Icons
 
 ---
 
@@ -102,6 +153,10 @@ Ohne Handler kein Formular, ohne Formular kein Ziel, ohne Ziel kein Backup.
 ## ⚖️ Lizenz
 
 Scrat-Backup ist **Open Source** unter der **GNU General Public License v3.0**.
+
+- ✅ Kostenlos für alle Zwecke
+- ✅ Quellcode einsehbar und modifizierbar
+- ✅ Weitergabe unter gleicher Lizenz
 
 Siehe [LICENSE](LICENSE) für Details.
 
