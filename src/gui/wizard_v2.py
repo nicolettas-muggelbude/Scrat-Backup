@@ -1303,10 +1303,6 @@ class RestoreWizardPage(QWizardPage):
             "Nur sinnvoll auf demselben oder identisch eingerichteten System."
         )
         self._overwrite_checkbox = QCheckBox("Vorhandene Dateien überschreiben")
-        self._overwrite_checkbox.setEnabled(False)
-        self._orig_checkbox.stateChanged.connect(
-            lambda s: self._overwrite_checkbox.setEnabled(bool(s))
-        )
         settings_layout.addWidget(self._orig_checkbox)
         settings_layout.addWidget(self._overwrite_checkbox)
 
