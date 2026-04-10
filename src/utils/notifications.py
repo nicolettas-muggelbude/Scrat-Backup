@@ -13,12 +13,32 @@ logger = logging.getLogger(__name__)
 def _notify_linux(title: str, message: str, urgent: bool = False) -> bool:
     """Sendet Desktop-Notification via notify-send (Linux/Freedesktop)."""
     try:
+        import os
+        env = os.environ.copy()
+        uid = os.getuid()
+
+        # Cron hat kein DISPLAY/WAYLAND_DISPLAY – Standardpfade setzen
+        if "DISPLAY" not in env and "WAYLAND_DISPLAY" not in env:
+            wayland_sock = f"/run/user/{uid}/wayland-0"
+            if os.path.exists(wayland_sock):
+                env["WAYLAND_DISPLAY"] = "wayland-0"
+                env.setdefault("XDG_RUNTIME_DIR", f"/run/user/{uid}")
+            else:
+                env["DISPLAY"] = ":0"
+
+        # D-Bus-Session für Notification-Daemon
+        if "DBUS_SESSION_BUS_ADDRESS" not in env:
+            dbus_sock = f"/run/user/{uid}/bus"
+            if os.path.exists(dbus_sock):
+                env["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={dbus_sock}"
+
         urgency = "critical" if urgent else "normal"
         icon = "dialog-error" if urgent else "dialog-information"
         subprocess.Popen(
             ["notify-send", "-u", urgency, "-i", icon, "-a", "Scrat-Backup", title, message],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
+            env=env,
         )
         return True
     except FileNotFoundError:
