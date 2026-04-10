@@ -15,22 +15,16 @@ _project_root = str(Path(__file__).resolve().parent.parent)
 if _project_root not in sys.path:
     sys.path.insert(0, _project_root)
 
-from PySide6.QtCore import QLibraryInfo, QTranslator  # noqa: E402
-from PySide6.QtGui import QIcon  # noqa: E402
-from PySide6.QtWidgets import QApplication  # noqa: E402
-
 from src.core.config_manager import ConfigManager  # noqa: E402
-from src.core.update_checker import UpdateChecker  # noqa: E402
 from src.utils.paths import get_app_data_dir  # noqa: E402
-from src.gui.main_window import MainWindow  # noqa: E402
-from src.gui.theme_manager import ThemeManager  # noqa: E402
-from src.gui.update_dialog import show_update_dialog  # noqa: E402
-from src.gui.wizard_v2 import SetupWizardV2  # noqa: E402
+
+# Qt und GUI-Module werden lazy importiert – nur wenn kein --backup-Modus.
+# Headless-Backup (cron) läuft ohne DISPLAY, Qt-Imports würden dort abstürzen.
 
 try:
     from src import __version__ as APP_VERSION  # noqa: E402
 except ImportError:
-    APP_VERSION = "0.3.27-beta"
+    APP_VERSION = "0.3.28-beta"
 
 # Logging konfigurieren – immer in Datei schreiben (auch bei console=False)
 def _setup_logging() -> None:
@@ -754,6 +748,16 @@ def run_gui() -> int:
     logger.info("=" * 60)
     logger.info("Scrat-Backup GUI wird gestartet")
     logger.info("=" * 60)
+
+    # GUI-Imports – erst hier, damit --backup ohne DISPLAY nicht abstürzt
+    from PySide6.QtCore import QLibraryInfo, QTranslator
+    from PySide6.QtGui import QIcon
+    from PySide6.QtWidgets import QApplication
+    from src.core.update_checker import UpdateChecker
+    from src.gui.main_window import MainWindow
+    from src.gui.theme_manager import ThemeManager
+    from src.gui.update_dialog import show_update_dialog
+    from src.gui.wizard_v2 import SetupWizardV2
 
     # QApplication erstellen
     app = QApplication(sys.argv)

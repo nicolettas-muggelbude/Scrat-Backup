@@ -133,7 +133,10 @@ class LinuxCronScheduler(PlatformScheduler):
             weekdays = schedule.get("weekdays", [1, 2, 3, 4, 5])
             day_of_month = schedule.get("day_of_month", 1)
 
-            full_command = f"{command} {' '.join(args)}" if args else command
+            import os as _os
+            log_file = _os.path.expanduser("~/.scrat-backup/cron-backup.log")
+            redirect = f">> {log_file} 2>&1"
+            full_command = f"{command} {' '.join(args)} {redirect}" if args else f"{command} {redirect}"
 
             # Cron-Zeitausdruck aufbauen
             if frequency == "startup":
