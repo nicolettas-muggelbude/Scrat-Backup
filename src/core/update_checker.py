@@ -130,7 +130,7 @@ class UpdateChecker(QThread):
                 GITHUB_API,
                 headers={"User-Agent": f"Scrat-Backup/{self.current_version}"},
             )
-            with urlopen(req, timeout=10, context=ssl_context) as resp:
+            with urlopen(req, timeout=5, context=ssl_context) as resp:
                 data = json.loads(resp.read())
 
             _save_check_date()

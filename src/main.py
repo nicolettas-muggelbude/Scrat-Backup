@@ -40,13 +40,15 @@ def _setup_logging() -> None:
     file_handler = logging.FileHandler(log_file, encoding="utf-8")
     file_handler.setFormatter(fmt)
 
-    stream_handler = logging.StreamHandler()
-    stream_handler.setFormatter(fmt)
-
     root = logging.getLogger()
     root.setLevel(logging.INFO)
     root.addHandler(file_handler)
-    root.addHandler(stream_handler)
+
+    # Konsolen-Ausgabe nur im Entwicklungsmodus (nicht im AppImage/EXE-Bundle)
+    if not getattr(sys, "frozen", False):
+        stream_handler = logging.StreamHandler()
+        stream_handler.setFormatter(fmt)
+        root.addHandler(stream_handler)
 
 
 _setup_logging()
@@ -788,7 +790,7 @@ def run_gui() -> int:
 
     # Update-Check im Hintergrund starten (vor dem Wizard, damit Ergebnis
     # während der Wizard-Laufzeit ankommen kann)
-    _update_checker = UpdateChecker(current_version=APP_VERSION, parent=app)
+    _update_checker = UpdateChecker(current_version=APP_VERSION)
     _update_checker.update_available.connect(
         lambda ver, notes, dl_url, rel_url: show_update_dialog(
             latest_version=ver,
@@ -798,6 +800,7 @@ def run_gui() -> int:
             current_version=APP_VERSION,
         )
     )
+    app.aboutToQuit.connect(_update_checker.terminate)
     _update_checker.start()
 
     # WIZARD IST IMMER DER EINSTIEGSPUNKT
