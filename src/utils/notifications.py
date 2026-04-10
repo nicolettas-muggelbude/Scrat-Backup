@@ -13,38 +13,53 @@ logger = logging.getLogger(__name__)
 def _notify_linux(title: str, message: str, urgent: bool = False) -> bool:
     """Sendet Desktop-Notification via notify-send (Linux/Freedesktop)."""
     try:
+        import glob as _glob
         import os
         env = os.environ.copy()
         uid = os.getuid()
 
-        # Cron hat kein DISPLAY/WAYLAND_DISPLAY – Standardpfade setzen
-        if "DISPLAY" not in env and "WAYLAND_DISPLAY" not in env:
-            wayland_sock = f"/run/user/{uid}/wayland-0"
-            if os.path.exists(wayland_sock):
-                env["WAYLAND_DISPLAY"] = "wayland-0"
-                env.setdefault("XDG_RUNTIME_DIR", f"/run/user/{uid}")
-            else:
-                env["DISPLAY"] = ":0"
-
-        # D-Bus-Session für Notification-Daemon
+        # D-Bus-Session für Notification-Daemon (wichtigste Voraussetzung)
         if "DBUS_SESSION_BUS_ADDRESS" not in env:
             dbus_sock = f"/run/user/{uid}/bus"
             if os.path.exists(dbus_sock):
                 env["DBUS_SESSION_BUS_ADDRESS"] = f"unix:path={dbus_sock}"
 
+        # XDG_RUNTIME_DIR für Wayland/D-Bus
+        env.setdefault("XDG_RUNTIME_DIR", f"/run/user/{uid}")
+
+        # DISPLAY/WAYLAND_DISPLAY – wird von modernem notify-send nicht
+        # zwingend benötigt, ältere Versionen brauchen es aber
+        if "DISPLAY" not in env and "WAYLAND_DISPLAY" not in env:
+            wayland_socks = _glob.glob(f"/run/user/{uid}/wayland-*")
+            if wayland_socks:
+                env["WAYLAND_DISPLAY"] = os.path.basename(wayland_socks[0])
+            else:
+                env["DISPLAY"] = ":0"
+
         urgency = "critical" if urgent else "normal"
         icon = "dialog-error" if urgent else "dialog-information"
-        subprocess.Popen(
-            ["notify-send", "-u", urgency, "-i", icon, "-a", "Scrat-Backup", title, message],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            env=env,
+
+        logger.info(
+            f"notify-send: DISPLAY={env.get('DISPLAY','–')} "
+            f"WAYLAND={env.get('WAYLAND_DISPLAY','–')} "
+            f"DBUS={'gesetzt' if 'DBUS_SESSION_BUS_ADDRESS' in env else 'fehlt'}"
         )
+
+        result = subprocess.run(
+            ["notify-send", "-u", urgency, "-i", icon, "-a", "Scrat-Backup", title, message],
+            env=env,
+            capture_output=True,
+            timeout=5,
+        )
+        if result.returncode != 0:
+            logger.warning(f"notify-send Fehler (rc={result.returncode}): {result.stderr.decode().strip()}")
+            return False
         return True
     except FileNotFoundError:
+        logger.warning("notify-send nicht gefunden – keine Desktop-Benachrichtigung")
         return False
     except Exception as e:
-        logger.debug(f"notify-send fehlgeschlagen: {e}")
+        logger.warning(f"notify-send fehlgeschlagen: {e}")
         return False
 
 

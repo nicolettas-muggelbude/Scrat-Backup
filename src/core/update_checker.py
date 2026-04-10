@@ -8,12 +8,13 @@ import logging
 import re
 import ssl
 import sys
+import threading
 from datetime import date, datetime
 from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import URLError
 
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import QObject, Signal
 
 from utils.paths import get_app_data_dir
 
@@ -89,10 +90,10 @@ def _download_url_for_platform(assets: list) -> str:
     return RELEASES_URL
 
 
-class UpdateChecker(QThread):
+class UpdateChecker(QObject):
     """
-    Hintergrund-Thread der GitHub Releases API prüft.
-    Sendet update_available wenn eine neue Version gefunden wurde.
+    Hintergrund-Check für neue Versionen via GitHub Releases API.
+    Läuft in einem Daemon-Thread – blockiert den App-Exit nicht.
     """
 
     update_available = Signal(str, str, str, str)
@@ -102,7 +103,14 @@ class UpdateChecker(QThread):
         super().__init__(parent)
         self.current_version = current_version
 
-    def run(self) -> None:
+    def start(self) -> None:
+        t = threading.Thread(target=self._run, daemon=True, name="UpdateChecker")
+        t.start()
+
+    def terminate(self) -> None:
+        pass  # Daemon-Thread wird automatisch beim App-Exit beendet
+
+    def _run(self) -> None:
         if not _should_check():
             logger.debug("Update-Check übersprungen (heute bereits geprüft)")
             return

@@ -140,6 +140,6 @@ echo "  Starter  : $INSTALL_DIR/scrat-backup"
 echo "  Menü     : $DESKTOP_DIR/${DESKTOP_NAME}.desktop"
 echo ""
 
-# Scrat-Backup direkt starten
+# Scrat-Backup direkt starten (stderr nach /dev/null – unterdrückt GLib-Warnungen)
 echo "Scrat-Backup wird gestartet ..."
-"$INSTALL_DIR/$APP_NAME.AppImage" &
+"$INSTALL_DIR/$APP_NAME.AppImage" >/dev/null 2>&1 &
