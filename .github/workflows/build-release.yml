@@ -131,3 +131,4 @@ jobs:
           files: |
             ${{ env.APPIMAGE_NAME }}
             ScratBackup-x86_64.AppImage
+            install.sh
