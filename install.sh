@@ -19,6 +19,9 @@ if [ -n "$1" ]; then
     APPIMAGE="$1"
 else
     APPIMAGE=$(ls -1 ScratBackup-*.AppImage 2>/dev/null | head -1)
+    if [ -z "$APPIMAGE" ]; then
+        APPIMAGE=$(ls -1 ScratBackup*.AppImage 2>/dev/null | head -1)
+    fi
 fi
 
 if [ -z "$APPIMAGE" ] || [ ! -f "$APPIMAGE" ]; then
@@ -27,15 +30,12 @@ if [ -z "$APPIMAGE" ] || [ ! -f "$APPIMAGE" ]; then
     exit 1
 fi
 
+# Absoluten Pfad sicherstellen
+APPIMAGE="$(cd "$(dirname "$APPIMAGE")" && pwd)/$(basename "$APPIMAGE")"
 echo "Installiere $APPIMAGE ..."
 
 # Verzeichnisse erstellen
 mkdir -p "$INSTALL_DIR"
-mkdir -p "$ICON_DIR/16x16/apps"
-mkdir -p "$ICON_DIR/32x32/apps"
-mkdir -p "$ICON_DIR/48x48/apps"
-mkdir -p "$ICON_DIR/64x64/apps"
-mkdir -p "$ICON_DIR/128x128/apps"
 mkdir -p "$ICON_DIR/256x256/apps"
 mkdir -p "$ICON_DIR/scalable/apps"
 mkdir -p "$DESKTOP_DIR"
@@ -51,23 +51,42 @@ exec "$INSTALL_DIR/$APP_NAME.AppImage" "\$@"
 EOF
 chmod +x "$INSTALL_DIR/scrat-backup"
 
-# Icons installieren (aus AppImage extrahieren oder aus Quellverzeichnis)
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-ICONS_SRC="$SCRIPT_DIR/assets/icons"
+# Icons aus dem AppImage extrahieren
+echo "Extrahiere Icons aus AppImage ..."
+TMPDIR_ICONS=$(mktemp -d)
+cd "$TMPDIR_ICONS"
 
-if [ -d "$ICONS_SRC" ]; then
-    for SIZE in 16 32 48 64 128 256; do
-        ICON_FILE="$ICONS_SRC/scrat-${SIZE}.png"
-        if [ -f "$ICON_FILE" ]; then
-            cp "$ICON_FILE" "$ICON_DIR/${SIZE}x${SIZE}/apps/${DESKTOP_NAME}.png"
-        fi
+# AppImage unterstützt --appimage-extract [pattern]
+"$INSTALL_DIR/$APP_NAME.AppImage" --appimage-extract 'scrat-backup.png' 2>/dev/null || true
+"$INSTALL_DIR/$APP_NAME.AppImage" --appimage-extract 'usr/share/icons' 2>/dev/null || true
+
+ICON_INSTALLED=false
+
+# Primär: eingebettetes Root-Icon (256x256)
+if [ -f "$TMPDIR_ICONS/squashfs-root/scrat-backup.png" ]; then
+    cp "$TMPDIR_ICONS/squashfs-root/scrat-backup.png" \
+       "$ICON_DIR/256x256/apps/${DESKTOP_NAME}.png"
+    ICON_INSTALLED=true
+fi
+
+# Sekundär: Icons aus usr/share/icons
+if [ -d "$TMPDIR_ICONS/squashfs-root/usr/share/icons" ]; then
+    find "$TMPDIR_ICONS/squashfs-root/usr/share/icons" -name "*.png" | while read -r f; do
+        rel="${f#$TMPDIR_ICONS/squashfs-root/usr/share/icons/hicolor/}"
+        size=$(echo "$rel" | cut -d'/' -f1)
+        mkdir -p "$ICON_DIR/$size/apps"
+        cp "$f" "$ICON_DIR/$size/apps/${DESKTOP_NAME}.png" 2>/dev/null || true
+        ICON_INSTALLED=true
     done
-    if [ -f "$ICONS_SRC/scrat.svg" ]; then
-        cp "$ICONS_SRC/scrat.svg" "$ICON_DIR/scalable/apps/${DESKTOP_NAME}.svg"
-    fi
+fi
+
+rm -rf "$TMPDIR_ICONS"
+cd - > /dev/null
+
+if [ "$ICON_INSTALLED" = true ]; then
     echo "Icons installiert."
 else
-    echo "Hinweis: Icon-Verzeichnis nicht gefunden, Icons werden übersprungen."
+    echo "Hinweis: Icons konnten nicht extrahiert werden – Menü-Eintrag ohne Icon."
 fi
 
 # Icon-Cache aktualisieren
@@ -96,19 +115,33 @@ if command -v update-desktop-database &>/dev/null; then
     update-desktop-database "$DESKTOP_DIR" 2>/dev/null || true
 fi
 
+# PATH automatisch setzen wenn ~/.local/bin fehlt
+PATH_LINE='export PATH="$HOME/.local/bin:$PATH"'
+PATH_ADDED=false
+if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+    for RC in "$HOME/.bashrc" "$HOME/.profile"; do
+        if [ -f "$RC" ] && ! grep -q '.local/bin' "$RC"; then
+            echo "" >> "$RC"
+            echo "# Scrat-Backup: lokale Programme" >> "$RC"
+            echo "$PATH_LINE" >> "$RC"
+            PATH_ADDED=true
+            echo "PATH wurde zu $RC hinzugefügt."
+            break
+        fi
+    done
+    # Für aktuelle Shell-Session sofort übernehmen
+    export PATH="$HOME/.local/bin:$PATH"
+fi
+
 echo ""
 echo "Scrat-Backup wurde installiert!"
 echo "  Programm : $INSTALL_DIR/$APP_NAME.AppImage"
 echo "  Starter  : $INSTALL_DIR/scrat-backup"
 echo "  Menü     : $DESKTOP_DIR/${DESKTOP_NAME}.desktop"
 echo ""
-echo "Starten: scrat-backup"
-echo "(Falls der Befehl nicht gefunden wird: 'source ~/.profile' oder neu einloggen)"
 
-# Prüfen ob ~/.local/bin im PATH ist
-if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
-    echo ""
-    echo "Hinweis: $HOME/.local/bin ist nicht im PATH."
-    echo "Füge folgende Zeile zu deiner ~/.bashrc oder ~/.profile hinzu:"
-    echo "  export PATH=\"\$HOME/.local/bin:\$PATH\""
+if [ "$PATH_ADDED" = true ]; then
+    echo "Starten: source ~/.bashrc && scrat-backup"
+else
+    echo "Starten: scrat-backup"
 fi
