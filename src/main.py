@@ -30,7 +30,7 @@ from src.gui.wizard_v2 import SetupWizardV2  # noqa: E402
 try:
     from src import __version__ as APP_VERSION  # noqa: E402
 except ImportError:
-    APP_VERSION = "0.3.26-beta"
+    APP_VERSION = "0.3.27-beta"
 
 # Logging konfigurieren – immer in Datei schreiben (auch bei console=False)
 def _setup_logging() -> None:
@@ -610,17 +610,32 @@ def _activate_os_schedule(schedule: dict | None) -> None:
             return
 
         # Eigenen Prozess als Kommando verwenden
+        import os as _os
         if getattr(sys, "frozen", False):
-            # PyInstaller-Bundle: argv[0] ist die EXE/AppImage
-            command = sys.argv[0]
+            if sys.platform == "linux":
+                # AppImage setzt $APPIMAGE auf den echten Dateipfad.
+                # sys.argv[0] zeigt auf den internen temp-Pfad (/tmp/.mount_XXX/...)
+                # der nach dem Beenden des AppImage nicht mehr existiert!
+                command = _os.environ.get("APPIMAGE", sys.argv[0])
+            else:
+                command = sys.argv[0]
         else:
             # Entwicklungsumgebung: python main.py
             command = sys.executable
-            # args enthält dann den Pfad zum Skript
 
         args = ["--backup"]
         if not getattr(sys, "frozen", False):
             args = [str(Path(__file__).resolve())] + args
+
+        # Linux: D-Bus-Session für Keyring-Zugriff in Cron mitgeben.
+        # Cron hat keine D-Bus-Session → keyring schlägt fehl → kein Passwort.
+        # Lösung: env-Wrapper mit DBUS_SESSION_BUS_ADDRESS um den Befehl wrappen.
+        if sys.platform == "linux":
+            uid = _os.getuid()
+            dbus_path = f"/run/user/{uid}/bus"
+            if _os.path.exists(dbus_path):
+                dbus_addr = f"unix:path={dbus_path}"
+                command = f"env DBUS_SESSION_BUS_ADDRESS={dbus_addr} {command}"
 
         ok = scheduler.register_task(
             task_name="AutoBackup",

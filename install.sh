@@ -140,8 +140,6 @@ echo "  Starter  : $INSTALL_DIR/scrat-backup"
 echo "  Menü     : $DESKTOP_DIR/${DESKTOP_NAME}.desktop"
 echo ""
 
-if [ "$PATH_ADDED" = true ]; then
-    echo "Starten: source ~/.bashrc && scrat-backup"
-else
-    echo "Starten: scrat-backup"
-fi
+# Scrat-Backup direkt starten
+echo "Scrat-Backup wird gestartet ..."
+"$INSTALL_DIR/$APP_NAME.AppImage" &
