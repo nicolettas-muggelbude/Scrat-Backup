@@ -105,18 +105,13 @@ class ThemeManager(QObject):
         """
         import sys
 
-        # Linux: gsettings zuerst – Qt liefert unter Wayland oft falsch "Light".
-        # LD_LIBRARY_PATH des AppImage entfernen damit gsettings die System-GLib nutzt.
+        # Linux: gsettings zuerst – Qt liefert unter Wayland oft falsch "Light"
         if sys.platform == "linux":
             try:
-                import os
                 import subprocess
-                env = os.environ.copy()
-                env.pop("LD_LIBRARY_PATH", None)
-                env.pop("LD_PRELOAD", None)
                 result = subprocess.run(
                     ["gsettings", "get", "org.gnome.desktop.interface", "color-scheme"],
-                    capture_output=True, text=True, timeout=2, env=env,
+                    capture_output=True, text=True, timeout=2,
                 )
                 if result.returncode == 0 and result.stdout.strip():
                     return "prefer-dark" in result.stdout.lower()

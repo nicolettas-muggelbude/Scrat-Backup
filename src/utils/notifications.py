@@ -10,25 +10,12 @@ import sys
 logger = logging.getLogger(__name__)
 
 
-def _clean_env_for_system_process() -> dict:
-    """
-    Gibt eine bereinigte Umgebung für System-Subprozesse zurück.
-    Entfernt LD_LIBRARY_PATH des AppImage damit System-Libs (libnotify,
-    libglib) nicht durch ältere AppImage-Versionen überschrieben werden.
-    """
-    import os
-    env = os.environ.copy()
-    env.pop("LD_LIBRARY_PATH", None)
-    env.pop("LD_PRELOAD", None)
-    return env
-
-
 def _notify_linux(title: str, message: str, urgent: bool = False) -> bool:
     """Sendet Desktop-Notification via notify-send (Linux/Freedesktop)."""
     try:
         import glob as _glob
         import os
-        env = _clean_env_for_system_process()
+        env = os.environ.copy()
         uid = os.getuid()
 
         # D-Bus-Session für Notification-Daemon (wichtigste Voraussetzung)

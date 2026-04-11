@@ -111,7 +111,6 @@ jobs:
           SELF=$(readlink -f "$0")
           HERE=${SELF%/*}
           export PATH="${HERE}/usr/bin:${PATH}"
-          export LD_LIBRARY_PATH="${HERE}/usr/bin/_internal:${HERE}/usr/bin/_internal/PySide6/Qt/lib:${LD_LIBRARY_PATH}"
           export QT_PLUGIN_PATH="${HERE}/usr/bin/_internal/PySide6/Qt/plugins"
           exec "${HERE}/usr/bin/ScratBackup" "$@"
           APPRUN
