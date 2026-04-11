@@ -517,9 +517,84 @@ pip install secretstorage python-notify2 pyxdg
 - v0.3.24 – „Überschreiben" unabhängig wählbar
 
 ### Offene Punkte nach dieser Session:
-- [ ] Linux-Test: AppImage, Tray, notify-send, crontab (geplant 2026-04-10)
+- [x] Linux-Test: AppImage, Tray, notify-send, crontab ✅ (Session 2026-04-10/11)
 - [ ] WinRT AppId im Inno-Setup registrieren → saubere Toast-Notifications
 - [ ] Dark Mode: weitere hardcodierte Farben in anderen Tabs/Dialogen prüfen
+
+---
+
+## Session 2026-04-10/11: Linux-Tests, Auto-Backup, Dark Mode Wayland
+
+### Hauptprobleme gelöst:
+
+#### 1. **Linux Auto-Backup funktioniert nicht** ✅
+- **Root Cause 1:** `sys.argv[0]` zeigt im AppImage auf `/tmp/.mount_XXX/usr/bin/ScratBackup` (flüchtiger Temp-Pfad)
+- **Fix:** `os.environ.get("APPIMAGE")` liefert den echten Pfad der AppImage-Datei
+- **Root Cause 2:** Cron hat keine D-Bus-Session → Keyring-Zugriff schlägt fehl
+- **Fix:** Cron-Eintrag mit `env DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/UID/bus` wrappen
+- **Root Cause 3:** Qt/GUI-Imports auf Modul-Ebene → Absturz ohne DISPLAY in Cron
+- **Fix:** Alle Qt-Imports lazy in `run_gui()` verschoben; `--backup` läuft ohne Display
+
+#### 2. **Tray beendet sich nicht sauber (Terminal hängt)** ✅
+- **Root Cause:** `UpdateChecker` (QThread) blockiert auf `urlopen` (C-Level) – `terminate()` unterbricht das nicht
+- **Fix:** `aboutToQuit` → `quit()` + `wait(2000)` + `terminate()` als Fallback
+- **Zusatz:** StreamHandler nur im Dev-Modus (nicht frozen) → kein Log-Spam im Terminal
+- **Zusatz:** `install.sh` startet AppImage mit `>/dev/null 2>&1 &` → keine GLib-Warnungen
+
+#### 3. **Desktop-Popup funktioniert nicht (Linux Cron)** ✅
+- **Root Cause:** `notify-send` als Subprocess erbt PyInstaller's `LD_LIBRARY_PATH` auf `_internal/`
+- Die AppImage-GLib (Ubuntu 22.04) überschreibt System-GLib (Ubuntu 24.04)
+- `libnotify.so.4` sucht `g_once_init_leave_pointer` (GLib 2.80) → nicht in AppImage-GLib (2.70)
+- **Fix:** `LD_LIBRARY_PATH` aus Subprocess-Umgebung entfernen wenn `sys.frozen = True`
+- **Erkenntnis:** AppRun-Fix allein reicht nicht – PyInstaller setzt LD_LIBRARY_PATH zur Laufzeit
+- **Debugging:** `subprocess.run()` statt `Popen()` + `logger.info()` für Fehlercode/stderr
+
+#### 4. **Dark Mode unter Wayland nicht erkannt** ✅
+- **Root Cause 1:** Qt gibt unter Wayland `ColorScheme.Light` zurück (nicht Unknown) → gsettings nie erreicht
+- **Root Cause 2:** `gsettings` erbt ebenfalls AppImage-LD_LIBRARY_PATH → scheitert mit GLib-Konflikt
+- **Fix:** gsettings als erste Prüfung auf Linux (vor Qt), LD_LIBRARY_PATH für frozen entfernen
+- Erkennungs-Kette: `gsettings` → GTK_THEME → Qt colorScheme() → Palette-Helligkeit
+
+#### 5. **notify-send: DISPLAY/WAYLAND_DISPLAY in Cron fehlt** ✅
+- Modernes notify-send braucht nur D-Bus (kein DISPLAY) – aber WAYLAND_DISPLAY + XDG_RUNTIME_DIR als Fallback
+- Detektiert automatisch: glob für `wayland-*` Sockets in `/run/user/UID/`
+- Fallback auf `DISPLAY=:0` wenn kein Wayland-Socket gefunden
+
+#### 6. **install.sh: Icons fehlten, App startete nicht** ✅
+- Icons via `--appimage-extract` aus AppImage extrahiert (nicht aus Quell-Verzeichnis)
+- App-Start am Ende mit `>/dev/null 2>&1 &`
+- `install.sh` in CI-Release hochgeladen (war vorher 404)
+- PATH-Eintrag wird automatisch in `~/.bashrc` ergänzt
+
+#### 7. **UpdateChecker: Daemon-Thread-Ansatz gescheitert** ⚠️
+- Versuch: QThread → QObject + `threading.Thread(daemon=True)`
+- Problem: Signals von non-Qt-Threads in PySide6 nicht zuverlässig → Dark Mode und Update-Dialog kaputt
+- **Revert:** Zurück auf QThread, sauberes Shutdown via `quit()+wait(2s)+terminate()`
+
+### Technische Erkenntnisse:
+| Problem | Ursache | Fix |
+|---------|---------|-----|
+| GLib-Konflikt | PyInstaller setzt LD_LIBRARY_PATH zur Laufzeit | `env.pop("LD_LIBRARY_PATH")` für Subprozesse wenn frozen |
+| Wayland Dark Mode | Qt palette() = immer Light | gsettings zuerst prüfen |
+| Cron-Backup | Qt-Imports auf Modul-Ebene | Alle Imports lazy in run_gui() |
+| AppImage-Pfad | sys.argv[0] = flüchtiger Temp-Pfad | $APPIMAGE env-Variable |
+
+### Releases dieser Session:
+- v0.3.28 – Qt lazy imports + Cron-Log-Redirect
+- v0.3.29 – notify-send DISPLAY/WAYLAND Fix
+- v0.3.30 – UpdateChecker terminate() + kein StreamHandler frozen + install.sh stderr
+- v0.3.31 – notify-send subprocess.run() + Logging
+- v0.3.32 – UpdateChecker zurück auf QThread (Daemon-Thread brach Dark Mode)
+- v0.3.33 – Dark Mode: gsettings vor Qt-Check
+- v0.3.34 – Dark Mode: gsettings VOR Qt-Check (Qt gab Light statt Unknown zurück)
+- v0.3.35 – LD_LIBRARY_PATH für Subprozesse (revertiert in .36)
+- v0.3.36 – LD_LIBRARY_PATH aus AppRun (allein nicht ausreichend)
+- v0.3.37 – LD_LIBRARY_PATH für frozen Subprozesse (notify-send + gsettings) ✅
+
+### Offene Punkte nach dieser Session:
+- [ ] WinRT AppId im Inno-Setup registrieren → saubere Toast-Notifications
+- [ ] Dark Mode: weitere hardcodierte Farben prüfen
+- [ ] py7zr multithread-Warnung: Version auf Testsystem unterstützt Parameter nicht
 
 ---
 
