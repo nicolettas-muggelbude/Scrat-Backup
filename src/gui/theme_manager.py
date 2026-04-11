@@ -103,7 +103,28 @@ class ThemeManager(QObject):
         Returns:
             True wenn System im Dark Mode
         """
-        # Qt 6.5+ hat colorScheme()
+        import sys
+
+        # Linux: gsettings zuerst – Qt liefert unter Wayland oft falsch "Light"
+        if sys.platform == "linux":
+            try:
+                import subprocess
+                result = subprocess.run(
+                    ["gsettings", "get", "org.gnome.desktop.interface", "color-scheme"],
+                    capture_output=True, text=True, timeout=2
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    return "prefer-dark" in result.stdout.lower()
+            except Exception:
+                pass
+
+            # Fallback: GTK_THEME Umgebungsvariable
+            import os
+            gtk_theme = os.environ.get("GTK_THEME", "")
+            if ":dark" in gtk_theme.lower():
+                return True
+
+        # Qt 6.5+ colorScheme() – zuverlässig auf Windows/macOS
         try:
             from PySide6.QtCore import Qt
 
@@ -115,27 +136,6 @@ class ThemeManager(QObject):
                     return scheme == Qt.ColorScheme.Dark
         except Exception:
             pass
-
-        # Linux: gsettings (GNOME/KDE) – funktioniert unter Wayland wo
-        # palette() immer Light zurückgibt
-        import sys
-        if sys.platform == "linux":
-            try:
-                import subprocess
-                result = subprocess.run(
-                    ["gsettings", "get", "org.gnome.desktop.interface", "color-scheme"],
-                    capture_output=True, text=True, timeout=2
-                )
-                if result.returncode == 0:
-                    return "prefer-dark" in result.stdout.lower()
-            except Exception:
-                pass
-
-            # Fallback: GTK_THEME Umgebungsvariable
-            import os
-            gtk_theme = os.environ.get("GTK_THEME", "")
-            if ":dark" in gtk_theme.lower():
-                return True
 
         # Letzter Fallback: Palette-Helligkeit
         palette = self.app.palette()
