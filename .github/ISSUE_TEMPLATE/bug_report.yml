@@ -1,0 +1,76 @@
+name: 🐛 Bug melden
+description: Einen Fehler in Scrat-Backup melden
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Danke, dass du dir die Zeit nimmst, diesen Fehler zu melden! Bitte fülle alle relevanten Felder aus.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Was ist passiert?
+      description: Eine klare Beschreibung des Fehlers.
+      placeholder: Beim Klick auf „Backup starten" erscheint eine Fehlermeldung...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Schritte zur Reproduktion
+      description: Wie kann der Fehler nachvollzogen werden?
+      placeholder: |
+        1. Backup-Ziel auf USB konfigurieren
+        2. Auf „Backup starten" klicken
+        3. Fehler erscheint
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Erwartetes Verhalten
+      description: Was sollte eigentlich passieren?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Betriebssystem
+      options:
+        - Windows 11
+        - Windows 10
+        - Ubuntu 24.04
+        - Ubuntu 22.04
+        - Anderes Linux
+        - macOS
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Scrat-Backup Version
+      placeholder: z.B. v0.3.37-beta
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log-Datei (optional)
+      description: |
+        Inhalt der Log-Datei:
+        - Windows: `%LocalAppData%\Scrat-Backup\scrat-backup.log`
+        - Linux: `~/.scrat-backup/scrat-backup.log`
+      render: text
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Weitere Informationen
+      description: Screenshots, Fehlermeldungen, oder sonstige Hinweise.

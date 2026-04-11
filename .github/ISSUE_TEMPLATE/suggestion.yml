@@ -1,0 +1,37 @@
+name: 💡 Vorschlag
+description: Allgemeine Verbesserungsvorschläge, UX-Ideen oder Feedback
+title: "[Vorschlag] "
+labels: ["suggestion"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Hast du einen Verbesserungsvorschlag, der weder ein Bug noch ein konkretes Feature ist? Her damit!
+
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Dein Vorschlag
+      description: Beschreibe deine Idee so konkret wie möglich.
+      placeholder: Die Oberfläche wäre übersichtlicher wenn...
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Kategorie
+      options:
+        - Benutzeroberfläche / UX
+        - Performance
+        - Dokumentation
+        - Installation / Setup
+        - Sonstiges
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Weitere Informationen
+      description: Screenshots, Vergleiche mit anderen Tools, oder sonstige Hinweise.
