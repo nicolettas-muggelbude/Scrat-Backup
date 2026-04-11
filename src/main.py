@@ -800,7 +800,12 @@ def run_gui() -> int:
             current_version=APP_VERSION,
         )
     )
-    app.aboutToQuit.connect(_update_checker.terminate)
+    def _stop_update_checker():
+        _update_checker.quit()
+        if not _update_checker.wait(2000):  # max. 2 Sekunden warten
+            _update_checker.terminate()
+
+    app.aboutToQuit.connect(_stop_update_checker)
     _update_checker.start()
 
     # WIZARD IST IMMER DER EINSTIEGSPUNKT
