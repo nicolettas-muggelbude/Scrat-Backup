@@ -111,15 +111,35 @@ class ThemeManager(QObject):
 
             if hasattr(hints, "colorScheme"):
                 scheme = hints.colorScheme()
-                return scheme == Qt.ColorScheme.Dark
+                if scheme != Qt.ColorScheme.Unknown:
+                    return scheme == Qt.ColorScheme.Dark
         except Exception:
             pass
 
-        # Fallback: Prüfe Palette-Helligkeit
+        # Linux: gsettings (GNOME/KDE) – funktioniert unter Wayland wo
+        # palette() immer Light zurückgibt
+        import sys
+        if sys.platform == "linux":
+            try:
+                import subprocess
+                result = subprocess.run(
+                    ["gsettings", "get", "org.gnome.desktop.interface", "color-scheme"],
+                    capture_output=True, text=True, timeout=2
+                )
+                if result.returncode == 0:
+                    return "prefer-dark" in result.stdout.lower()
+            except Exception:
+                pass
+
+            # Fallback: GTK_THEME Umgebungsvariable
+            import os
+            gtk_theme = os.environ.get("GTK_THEME", "")
+            if ":dark" in gtk_theme.lower():
+                return True
+
+        # Letzter Fallback: Palette-Helligkeit
         palette = self.app.palette()
         window_color = palette.color(QPalette.ColorRole.Window)
-
-        # Wenn Hintergrund dunkel (RGB < 128) → Dark Mode
         brightness = (window_color.red() + window_color.green() + window_color.blue()) / 3
         return brightness < 128
 
