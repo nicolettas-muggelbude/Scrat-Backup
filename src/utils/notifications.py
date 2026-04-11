@@ -15,8 +15,15 @@ def _notify_linux(title: str, message: str, urgent: bool = False) -> bool:
     try:
         import glob as _glob
         import os
+        import sys
         env = os.environ.copy()
         uid = os.getuid()
+
+        # PyInstaller setzt LD_LIBRARY_PATH auf _internal/ – das überschreibt
+        # die System-GLib. System-Utilities wie notify-send brauchen System-Libs.
+        if getattr(sys, "frozen", False):
+            env.pop("LD_LIBRARY_PATH", None)
+            env.pop("LD_PRELOAD", None)
 
         # D-Bus-Session für Notification-Daemon (wichtigste Voraussetzung)
         if "DBUS_SESSION_BUS_ADDRESS" not in env:
