@@ -7,6 +7,12 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 
 ## [Unreleased]
 
+### Fixed
+- **Wizard-Backups erstellten immer Full-Backups** – `start_backup_after_wizard()` und `run_backup_headless()` prüfen jetzt die Metadaten-DB und wählen automatisch inkrementelles oder vollständiges Backup
+- **Ubuntu 26.04: FUSE-Paketnamen** – `install.sh` erkennt dynamisch `libfuse2t64` / `libfuse2to64` / `libfuse2` je nach Distribution
+- **CI: AppImage-Bau ohne FUSE** – `appimagetool --appimage-extract-and-run` macht FUSE auf dem Build-Host überflüssig
+- **Ubuntu 26.04: curl nicht vorinstalliert** – rclone-Installation fällt auf `wget` zurück, installiert notfalls `curl` via Paketmanager
+
 ## [0.3.15-beta] - 2026-04-09
 
 ### Fixed

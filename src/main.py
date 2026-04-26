@@ -370,7 +370,14 @@ def start_backup_after_wizard(wizard_config: dict) -> bool:
                 config=backup_config,
                 progress_callback=_progress_callback,
             )
-            shared["result"] = engine.create_full_backup()
+            existing = metadata_manager.get_all_backups()
+            has_base = any(b["status"] == "completed" for b in existing)
+            if has_base:
+                logger.info("Vorheriges Backup gefunden → Inkrementelles Backup")
+                shared["result"] = engine.create_incremental_backup()
+            else:
+                logger.info("Kein Basis-Backup vorhanden → Vollständiges Backup")
+                shared["result"] = engine.create_full_backup()
             logger.info(f"Backup erfolgreich: {shared['result']}")
         except Exception as e:
             logger.error(f"Backup fehlgeschlagen: {e}", exc_info=True)
@@ -726,7 +733,14 @@ def run_backup_headless() -> int:
     try:
         metadata_manager = MetadataManager(db_path)
         engine = BackupEngine(metadata_manager=metadata_manager, config=backup_config)
-        result = engine.create_full_backup()
+        existing = metadata_manager.get_all_backups()
+        has_base = any(b["status"] == "completed" for b in existing)
+        if has_base:
+            logger.info("Headless: Vorheriges Backup gefunden → Inkrementelles Backup")
+            result = engine.create_incremental_backup()
+        else:
+            logger.info("Headless: Kein Basis-Backup → Vollständiges Backup")
+            result = engine.create_full_backup()
         logger.info(f"Headless-Backup erfolgreich: {result}")
         metadata_manager.disconnect()
         send_notification("Scrat-Backup – Erfolgreich", "Das automatische Backup wurde abgeschlossen.")

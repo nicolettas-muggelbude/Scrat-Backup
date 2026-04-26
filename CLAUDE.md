@@ -598,6 +598,38 @@ pip install secretstorage python-notify2 pyxdg
 
 ---
 
+## Session 2026-04-26: Ubuntu 26.04-Kompatibilität, Inkrementelle Backups
+
+### Hauptprobleme gelöst:
+
+#### 1. **Wizard-Backups erstellten immer Full-Backups** ✅
+- **Root Cause:** `start_backup_after_wizard()` und `run_backup_headless()` riefen hartkodiert `create_full_backup()` auf
+- **Fix:** Beide Funktionen prüfen jetzt die Metadaten-DB – bei vorhandenem abgeschlossenem Backup → `create_incremental_backup()`, sonst `create_full_backup()`
+- **Betroffen:** `src/main.py` – identisches Muster wie `backup_tab.py`
+
+#### 2. **Ubuntu 26.04: FUSE-Paketnamen-Erkennung** ✅
+- **Problem:** Ubuntu benennt `libfuse2` je nach Version um (`libfuse2t64`, `libfuse2to64`, `libfuse2`)
+- **Fix:** `install.sh` erkennt dynamisch den richtigen Paketnamen via `apt-cache show`
+- **Muster übernommen aus:** RechnungsFee-Projekt
+
+#### 3. **CI: AppImage-Bau ohne FUSE auf dem Build-Host** ✅
+- **Fix:** `appimagetool --appimage-extract-and-run` statt direktem Aufruf → kein FUSE auf ubuntu-22.04-Runner nötig
+- `fuse` und `libfuse2` aus apt-Abhängigkeiten entfernt
+- **Muster übernommen aus:** Quark-Projekt
+
+#### 4. **Ubuntu 26.04: curl nicht mehr vorinstalliert** ✅
+- **Root Cause:** `_install_rclone_curl()` rief `curl` direkt auf – schlägt auf Ubuntu 26.04 lautlos fehl
+- **Fix:** Reihenfolge: `curl` → `wget` → `curl` via Paketmanager installieren
+- **Betroffen:** `src/templates/handlers/onedrive_handler.py`
+
+### Geänderte Dateien:
+- `src/main.py` – inkrementelle vs. vollständige Backup-Logik in beiden Backup-Funktionen
+- `src/templates/handlers/onedrive_handler.py` – curl/wget-Fallback mit automatischer curl-Installation
+- `install.sh` – FUSE-Prüfung mit dynamischer Paketnamen-Erkennung
+- `.github/workflows/build-release.yml` – `--appimage-extract-and-run`, FUSE-Deps entfernt
+
+---
+
 ## Repository-Pfade
 
 ### Linux (Test-System):

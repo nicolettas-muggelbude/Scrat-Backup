@@ -352,28 +352,46 @@ class OnedriveHandler(TemplateHandler):
             return (False, f"Installation fehlgeschlagen: {e}")
 
     def _install_rclone_curl(self) -> Tuple[bool, Optional[str]]:
-        """Linux/macOS: rclone via curl-Installationsskript"""
-        try:
-            logger.info("Installiere rclone via curl-Skript...")
+        """Linux/macOS: rclone via curl (Fallback: wget, sonst curl installieren)"""
+        import shutil
 
-            result = subprocess.run(
-                ["curl", "https://rclone.org/install.sh"],
-                capture_output=True,
-                timeout=30,
-            )
+        if shutil.which("curl"):
+            downloader = "curl"
+            cmd = ["curl", "-sSL", "https://rclone.org/install.sh"]
+        elif shutil.which("wget"):
+            downloader = "wget"
+            cmd = ["wget", "-qO-", "https://rclone.org/install.sh"]
+        else:
+            # curl installieren und dann verwenden
+            logger.info("curl und wget nicht gefunden – installiere curl...")
+            try:
+                if shutil.which("apt"):
+                    subprocess.run(["sudo", "apt", "install", "-y", "curl"], timeout=120, check=True)
+                elif shutil.which("dnf"):
+                    subprocess.run(["sudo", "dnf", "install", "-y", "curl"], timeout=120, check=True)
+                elif shutil.which("pacman"):
+                    subprocess.run(["sudo", "pacman", "-S", "--noconfirm", "curl"], timeout=120, check=True)
+                else:
+                    return (False, "Weder curl noch wget gefunden und kein bekannter Paketmanager")
+            except Exception as e:
+                return (False, f"curl-Installation fehlgeschlagen: {e}")
+            downloader = "curl"
+            cmd = ["curl", "-sSL", "https://rclone.org/install.sh"]
+
+        try:
+            logger.info(f"Installiere rclone via {downloader}-Skript...")
+            result = subprocess.run(cmd, capture_output=True, timeout=30)
 
             if result.returncode == 0:
-                # Führe Skript aus
                 install_result = subprocess.run(
                     ["sudo", "bash"],
                     input=result.stdout,
                     timeout=300,
                 )
-
                 if install_result.returncode == 0:
                     return (True, None)
 
-            return (False, "Installation via curl fehlgeschlagen")
+            return (False, f"Installation via {downloader} fehlgeschlagen")
 
         except Exception as e:
             return (False, f"Installation fehlgeschlagen: {e}")

@@ -8,6 +8,60 @@
 
 set -e
 
+# ── FUSE-Abhängigkeit prüfen und ggf. reparieren ──────────────────────────────
+check_fuse() {
+  local pkg_manager="" fuse_pkg=""
+
+  if command -v apt &>/dev/null; then
+    pkg_manager="apt"
+    if apt-cache show libfuse2t64 &>/dev/null 2>&1; then
+      fuse_pkg="libfuse2t64"
+    elif apt-cache show libfuse2to64 &>/dev/null 2>&1; then
+      fuse_pkg="libfuse2to64"
+    else
+      fuse_pkg="libfuse2"
+    fi
+  elif command -v dnf &>/dev/null; then
+    pkg_manager="dnf";    fuse_pkg="fuse-libs"
+  elif command -v zypper &>/dev/null; then
+    pkg_manager="zypper"; fuse_pkg="libfuse2"
+  elif command -v pacman &>/dev/null; then
+    pkg_manager="pacman"; fuse_pkg="fuse2"
+  fi
+
+  if ldconfig -p 2>/dev/null | grep -q "libfuse\.so\.2"; then
+    return 0
+  fi
+
+  echo ""
+  echo "  ✗ libfuse2 fehlt – AppImage kann nicht gestartet werden."
+
+  if [ -z "$pkg_manager" ]; then
+    echo "  Bitte libfuse2 für deine Distribution manuell installieren."
+    echo ""
+    return 0
+  fi
+
+  printf "  Jetzt installieren (%s %s)? [J/n] " "$pkg_manager" "$fuse_pkg"
+  read -r answer
+  answer="${answer:-j}"
+  if [[ "$answer" =~ ^[jJyY]$ ]]; then
+    if [ "$pkg_manager" = "apt" ]; then
+      sudo apt install -y "$fuse_pkg"
+    elif [ "$pkg_manager" = "dnf" ]; then
+      sudo dnf install -y "$fuse_pkg"
+    elif [ "$pkg_manager" = "zypper" ]; then
+      sudo zypper install -y "$fuse_pkg"
+    elif [ "$pkg_manager" = "pacman" ]; then
+      sudo pacman -S --noconfirm "$fuse_pkg"
+    fi
+    echo "  ✓ Erledigt."
+  else
+    echo "  Übersprungen. Scrat-Backup startet möglicherweise nicht ohne libfuse2."
+  fi
+  echo ""
+}
+
 APP_NAME="ScratBackup"
 DESKTOP_NAME="scrat-backup"
 INSTALL_DIR="$HOME/.local/bin"
@@ -132,6 +186,8 @@ if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
     # Für aktuelle Shell-Session sofort übernehmen
     export PATH="$HOME/.local/bin:$PATH"
 fi
+
+check_fuse
 
 echo ""
 echo "Scrat-Backup wurde installiert!"
