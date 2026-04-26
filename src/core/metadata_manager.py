@@ -506,6 +506,43 @@ class MetadataManager:
 
         return [dict(row) for row in cursor.fetchall()]
 
+    def get_cumulative_backup_files(self, backup_id: int) -> List[Dict[str, Any]]:
+        """
+        Baut den kumulativen Dateistand auf, indem die Backup-Kette vom
+        Vollbackup bis zu backup_id chronologisch abgespielt wird.
+
+        Jedes Inkremental überschreibt den Stand des vorherigen – gelöschte
+        Dateien werden entfernt, neue/geänderte übernommen.
+        """
+        cursor = self.connection.cursor()
+
+        # Kette rückwärts durchlaufen (neuestes → ältestes)
+        chain_ids: list = []
+        current_id: int | None = backup_id
+        while current_id is not None:
+            chain_ids.append(current_id)
+            cursor.execute("SELECT base_backup_id FROM backups WHERE id = ?", (current_id,))
+            row = cursor.fetchone()
+            current_id = row[0] if row else None
+
+        # Umkehren: Vollbackup zuerst
+        chain_ids.reverse()
+
+        cumulative: dict = {}
+        for bid in chain_ids:
+            cursor.execute(
+                "SELECT * FROM backup_files WHERE backup_id = ? ORDER BY relative_path",
+                (bid,),
+            )
+            for row in cursor.fetchall():
+                f = dict(row)
+                if f.get("is_deleted"):
+                    cumulative.pop(f["relative_path"], None)
+                else:
+                    cumulative[f["relative_path"]] = f
+
+        return list(cumulative.values())
+
     def search_files(self, pattern: str, limit: int = 100) -> List[Dict[str, Any]]:
         """
         Sucht Dateien über alle Backups

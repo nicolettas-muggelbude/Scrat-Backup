@@ -421,8 +421,8 @@ class BackupEngine:
             for source_path in self.config.sources:
                 logger.info(f"Scanne Quelle: {source_path}")
 
-                # Hole Dateien aus letztem Backup für diesen Pfad
-                all_previous_files = self.metadata_manager.get_backup_files(base_backup_id)
+                # Kumulativen Dateistand über die gesamte Backup-Kette aufbauen
+                all_previous_files = self.metadata_manager.get_cumulative_backup_files(base_backup_id)
 
                 # Filtere nach source_path
                 previous_files_list = [
