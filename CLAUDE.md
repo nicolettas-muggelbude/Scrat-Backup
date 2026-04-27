@@ -598,14 +598,14 @@ pip install secretstorage python-notify2 pyxdg
 
 ---
 
-## Session 2026-04-26: Ubuntu 26.04-Kompatibilität, Inkrementelle Backups
+## Session 2026-04-26/27: Ubuntu 26.04-Kompatibilität, Inkrementelle Backups, Backup-Strategie
 
 ### Hauptprobleme gelöst:
 
 #### 1. **Wizard-Backups erstellten immer Full-Backups** ✅
 - **Root Cause:** `start_backup_after_wizard()` und `run_backup_headless()` riefen hartkodiert `create_full_backup()` auf
-- **Fix:** Beide Funktionen prüfen jetzt die Metadaten-DB – bei vorhandenem abgeschlossenem Backup → `create_incremental_backup()`, sonst `create_full_backup()`
-- **Betroffen:** `src/main.py` – identisches Muster wie `backup_tab.py`
+- **Fix:** `_decide_backup_type(metadata_manager, frequency)` entscheidet frequenzbasiert; beide Funktionen nutzen jetzt diese Hilfsfunktion
+- **Betroffen:** `src/main.py`
 
 #### 2. **Ubuntu 26.04: FUSE-Paketnamen-Erkennung** ✅
 - **Problem:** Ubuntu benennt `libfuse2` je nach Version um (`libfuse2t64`, `libfuse2to64`, `libfuse2`)
@@ -622,8 +622,27 @@ pip install secretstorage python-notify2 pyxdg
 - **Fix:** Reihenfolge: `curl` → `wget` → `curl` via Paketmanager installieren
 - **Betroffen:** `src/templates/handlers/onedrive_handler.py`
 
+#### 5. **Inkrementelle Kette ignorierte Vorgänger-Backups** ✅
+- **Root Cause:** `create_incremental_backup()` verglich nur mit dem direkten Vorgänger; ab 3. Backup fehlten Dateien aus Backup 1 im Vergleich
+- **Fix:** `get_cumulative_backup_files(backup_id)` in `metadata_manager.py` traversiert Kette rückwärts (Full → Inc1 → Inc2 …) und liefert kumulierten Datei-Stand
+
+#### 6. **Frequenzbasierte Full/Inkrementell-Strategie** ✅
+- **Strategie laut `projekt.md`:** "Inkrementelle und Vollbackups mit Versionierung (3 Versionen)"
+- **Implementierung:** `_decide_backup_type(metadata_manager, frequency)` in `src/main.py`
+  - `daily` → 6 Inkrementelle dann neues Full (7-Tage-Zyklus)
+  - `weekly` → 3 Inkrementelle dann neues Full (4-Wochen-Zyklus)
+  - `monthly` → immer Full
+- **Frequenz** wird aus dem Zeitplan-Config gelesen (`config["schedules"][0]["frequency"]`)
+
+#### 7. **Rotation nach Ketten statt nach Einzel-Backups** ✅
+- **Vorher:** `_rotate_old_backups()` zählte einzelne Backups und behielt die letzten N
+- **Nachher:** Rotiert vollständige Ketten (Full + alle zugehörigen Inkrementellen); `max_versions=3` = 3 vollständige Ketten behalten
+- **Betroffen:** `src/core/backup_engine.py`
+
 ### Geänderte Dateien:
-- `src/main.py` – inkrementelle vs. vollständige Backup-Logik in beiden Backup-Funktionen
+- `src/main.py` – `_decide_backup_type()` + Frequenz-Ermittlung aus Schedule-Config
+- `src/core/backup_engine.py` – Kettenbasierte Rotation
+- `src/core/metadata_manager.py` – `get_cumulative_backup_files()`
 - `src/templates/handlers/onedrive_handler.py` – curl/wget-Fallback mit automatischer curl-Installation
 - `install.sh` – FUSE-Prüfung mit dynamischer Paketnamen-Erkennung
 - `.github/workflows/build-release.yml` – `--appimage-extract-and-run`, FUSE-Deps entfernt

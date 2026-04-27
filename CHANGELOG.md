@@ -12,6 +12,9 @@ und dieses Projekt folgt [Semantic Versioning](https://semver.org/lang/de/).
 - **Ubuntu 26.04: FUSE-Paketnamen** – `install.sh` erkennt dynamisch `libfuse2t64` / `libfuse2to64` / `libfuse2` je nach Distribution
 - **CI: AppImage-Bau ohne FUSE** – `appimagetool --appimage-extract-and-run` macht FUSE auf dem Build-Host überflüssig
 - **Ubuntu 26.04: curl nicht vorinstalliert** – rclone-Installation fällt auf `wget` zurück, installiert notfalls `curl` via Paketmanager
+- **Inkrementelle Backup-Kette ignorierte Vorgänger** – `create_incremental_backup()` verglich nur mit dem direkten Vorgänger-Backup statt mit dem kumulierten Stand der gesamten Kette; `get_cumulative_backup_files()` traversiert jetzt die Kette rückwärts (Full → Inc1 → Inc2 …) und liefert den vollständigen Datei-Stand
+- **Frequenzbasierte Full/Inkrementell-Entscheidung** – `_decide_backup_type()` startet nach Abschluss eines Zyklus automatisch ein neues Vollbackup (täglich: alle 7 Tage, wöchentlich: alle 4 Wochen, monatlich: immer Full)
+- **Rotation nach Backup-Ketten** – `_rotate_old_backups()` löscht jetzt vollständige Ketten (Full + zugehörige Inkrementelle) statt einzelner Backups; `max_versions=3` bedeutet die letzten 3 Ketten werden behalten
 
 ## [0.3.15-beta] - 2026-04-09
 

@@ -55,6 +55,52 @@ _setup_logging()
 logger = logging.getLogger(__name__)
 
 
+def _decide_backup_type(metadata_manager, frequency: str = "daily") -> str:
+    """
+    Entscheidet ob Full- oder Inkrementell-Backup.
+
+    Strategie (3 Versionen = max_versions Ketten):
+    - monthly: immer Full
+    - weekly:  Full → 3× Inc → neues Full  (4-Wochen-Zyklus)
+    - daily:   Full → 6× Inc → neues Full  (7-Tage-Zyklus)
+    """
+    max_incrementals = {"monthly": 0, "weekly": 3, "daily": 6}.get(frequency, 2)
+
+    all_backups = metadata_manager.get_all_backups()
+    completed = [b for b in all_backups if b["status"] == "completed"]
+
+    if not completed:
+        return "full"
+
+    if max_incrementals == 0:
+        return "full"
+
+    completed.sort(key=lambda b: b["timestamp"])
+
+    last_full_idx = None
+    for i, b in enumerate(completed):
+        if b.get("type") == "full":
+            last_full_idx = i
+
+    if last_full_idx is None:
+        return "full"
+
+    incrementals_since_full = len(completed) - last_full_idx - 1
+
+    if incrementals_since_full >= max_incrementals:
+        logger.info(
+            f"Backup-Zyklus voll ({incrementals_since_full}/{max_incrementals} Inc., "
+            f"Frequenz: {frequency}) → Vollständiges Backup"
+        )
+        return "full"
+
+    logger.info(
+        f"Inkrementelles Backup ({incrementals_since_full}/{max_incrementals} Inc., "
+        f"Frequenz: {frequency})"
+    )
+    return "incremental"
+
+
 def check_first_run() -> bool:
     """
     Prüft ob erste Ausführung (keine oder ungültige Konfiguration vorhanden)
@@ -337,6 +383,12 @@ def start_backup_after_wizard(wizard_config: dict) -> bool:
     # Ausschluss-Muster
     excludes = set(wizard_config.get("excludes", []))
 
+    # Frequenz aus Zeitplan (bestimmt Full/Inkrementell-Zyklus)
+    sched = wizard_config.get("schedule", {})
+    _freq_raw = sched.get("frequency") or sched.get("interval", "Täglich")
+    _freq_map = {"Täglich": "daily", "Wöchentlich": "weekly", "Monatlich": "monthly"}
+    backup_frequency = _freq_map.get(_freq_raw, _freq_raw if _freq_raw in ("daily", "weekly", "monthly") else "daily")
+
     # Metadaten-DB Pfad
     db_path = get_app_data_dir() / "metadata.db"
 
@@ -370,13 +422,10 @@ def start_backup_after_wizard(wizard_config: dict) -> bool:
                 config=backup_config,
                 progress_callback=_progress_callback,
             )
-            existing = metadata_manager.get_all_backups()
-            has_base = any(b["status"] == "completed" for b in existing)
-            if has_base:
-                logger.info("Vorheriges Backup gefunden → Inkrementelles Backup")
+            backup_type = _decide_backup_type(metadata_manager, backup_frequency)
+            if backup_type == "incremental":
                 shared["result"] = engine.create_incremental_backup()
             else:
-                logger.info("Kein Basis-Backup vorhanden → Vollständiges Backup")
                 shared["result"] = engine.create_full_backup()
             logger.info(f"Backup erfolgreich: {shared['result']}")
         except Exception as e:
@@ -717,6 +766,14 @@ def run_backup_headless() -> int:
         logger.error("Headless-Backup: Kein Passwort im Keyring – Backup abgebrochen")
         return 1
 
+    # Frequenz aus erstem aktivem Zeitplan
+    _schedules = config_manager.config.get("schedules", [])
+    _headless_freq = "daily"
+    for _s in _schedules:
+        if _s.get("enabled", True):
+            _headless_freq = _s.get("frequency", "daily")
+            break
+
     db_path = get_app_data_dir() / "metadata.db"
     backup_config = BackupConfig(
         sources=sources,
@@ -724,6 +781,7 @@ def run_backup_headless() -> int:
         destination_type=dest_type,
         password=password,
         compression_level=1,
+        auto_rotate=True,
     )
 
     from src.utils.notifications import send_notification
@@ -733,13 +791,10 @@ def run_backup_headless() -> int:
     try:
         metadata_manager = MetadataManager(db_path)
         engine = BackupEngine(metadata_manager=metadata_manager, config=backup_config)
-        existing = metadata_manager.get_all_backups()
-        has_base = any(b["status"] == "completed" for b in existing)
-        if has_base:
-            logger.info("Headless: Vorheriges Backup gefunden → Inkrementelles Backup")
+        backup_type = _decide_backup_type(metadata_manager, _headless_freq)
+        if backup_type == "incremental":
             result = engine.create_incremental_backup()
         else:
-            logger.info("Headless: Kein Basis-Backup → Vollständiges Backup")
             result = engine.create_full_backup()
         logger.info(f"Headless-Backup erfolgreich: {result}")
         metadata_manager.disconnect()

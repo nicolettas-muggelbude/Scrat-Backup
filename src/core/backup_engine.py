@@ -634,60 +634,75 @@ class BackupEngine:
 
     def _rotate_old_backups(self) -> None:
         """
-        Rotiert alte Backups (3-Versionen-Rotation)
+        Rotiert alte Backups nach Backup-Ketten (max_versions Ketten behalten).
 
-        Löscht älteste Backups wenn mehr als max_versions vorhanden
+        Eine Kette = 1 Vollbackup + alle Inkrementellen bis zum nächsten Vollbackup.
+        Ältere Ketten werden vollständig gelöscht (Disk + DB).
         """
-        logger.info("Prüfe Versionierungs-Rotation")
-
-        all_backups = self.metadata_manager.get_all_backups()
-        completed_backups = [b for b in all_backups if b["status"] == "completed"]
-
         if not self.config.auto_rotate:
             logger.info("Rotation übersprungen: manuelles Backup")
             return
 
-        if len(completed_backups) <= self.config.max_versions:
-            logger.info(
-                f"Rotation nicht nötig: {len(completed_backups)} von "
-                f"{self.config.max_versions} Versionen"
-            )
+        all_backups = self.metadata_manager.get_all_backups()
+        completed = [b for b in all_backups if b["status"] == "completed"]
+        completed.sort(key=lambda b: b["timestamp"])
+
+        # Ketten aufbauen: jedes Full-Backup beginnt eine neue Kette
+        chains: list = []
+        current_chain: list = []
+        for b in completed:
+            if b.get("type") == "full":
+                if current_chain:
+                    chains.append(current_chain)
+                current_chain = [b]
+            else:
+                current_chain.append(b)
+        if current_chain:
+            chains.append(current_chain)
+
+        logger.info(
+            f"Rotation: {len(chains)} Kette(n), max_versions={self.config.max_versions}"
+        )
+
+        if len(chains) <= self.config.max_versions:
+            logger.info("Rotation nicht nötig")
             return
 
-        # Sortiere nach Timestamp (älteste zuerst)
-        completed_backups.sort(key=lambda b: b["timestamp"])
+        chains_to_delete = chains[: -self.config.max_versions]
 
-        # Lösche älteste Backups
-        backups_to_delete = completed_backups[: -self.config.max_versions]
+        deleted_count = 0
+        for chain in chains_to_delete:
+            for backup in chain:
+                backup_id = backup["id"]
+                logger.info(
+                    f"Lösche Backup {backup_id} ({backup.get('type')}) "
+                    f"vom {backup['timestamp']}"
+                )
+                try:
+                    dest_path = Path(backup["destination_path"])
+                    ts_str = backup.get("timestamp", "")
+                    btype = backup.get("type", "full")
+                    if ts_str:
+                        from datetime import datetime as _dt
+                        dt = _dt.fromisoformat(ts_str)
+                        dir_name = dt.strftime("%Y%m%d_%H%M%S") + f"_{btype}"
+                        backup_dir = dest_path / dir_name
+                        if backup_dir.exists() and backup_dir.is_dir():
+                            shutil.rmtree(backup_dir)
+                            logger.info(f"Backup-Verzeichnis gelöscht: {backup_dir}")
+                        else:
+                            logger.debug(
+                                f"Backup-Verzeichnis nicht gefunden: {backup_dir}"
+                            )
+                except Exception as e:
+                    logger.warning(f"Fehler beim Löschen des Backup-Verzeichnisses: {e}")
+                self.metadata_manager.delete_backup(backup_id)
+                deleted_count += 1
 
-        for backup in backups_to_delete:
-            backup_id = backup["id"]
-            logger.info(f"Lösche altes Backup: {backup_id} vom {backup['timestamp']}")
-
-            # Backup-Verzeichnis auf Disk löschen
-            # Format: destination_path / YYYYMMDD_HHMMSS_type
-            try:
-                import shutil
-                dest_path = Path(backup["destination_path"])
-                ts_str = backup.get("timestamp", "")
-                backup_type = backup.get("type", "full")
-                if ts_str:
-                    from datetime import datetime as _dt
-                    dt = _dt.fromisoformat(ts_str)
-                    dir_name = dt.strftime("%Y%m%d_%H%M%S") + f"_{backup_type}"
-                    backup_dir = dest_path / dir_name
-                    if backup_dir.exists() and backup_dir.is_dir():
-                        shutil.rmtree(backup_dir)
-                        logger.info(f"Backup-Verzeichnis gelöscht: {backup_dir}")
-                    else:
-                        logger.debug(f"Backup-Verzeichnis nicht gefunden (bereits gelöscht?): {backup_dir}")
-            except Exception as e:
-                logger.warning(f"Fehler beim Löschen des Backup-Verzeichnisses: {e}")
-
-            # Lösche aus Datenbank (CASCADE löscht auch Dateien)
-            self.metadata_manager.delete_backup(backup_id)
-
-        logger.info(f"Rotation abgeschlossen: {len(backups_to_delete)} alte Backups gelöscht")
+        logger.info(
+            f"Rotation abgeschlossen: {deleted_count} Backup(s) aus "
+            f"{len(chains_to_delete)} Kette(n) gelöscht"
+        )
 
     def _find_temp_dir(self, required_bytes: int) -> Tuple[Optional[Path], str]:
         """
