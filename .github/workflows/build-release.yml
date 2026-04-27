@@ -17,6 +17,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Version in __init__.py eintragen
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          (Get-Content src/__init__.py) -replace '__version__ = ".*"', "__version__ = `"$version`"" |
+            Set-Content src/__init__.py
+
       - name: Python einrichten
         uses: actions/setup-python@v5
         with:
@@ -53,6 +60,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Version in __init__.py eintragen
+        run: |
+          version="${{ github.ref_name }}"
+          version="${version#v}"
+          sed -i "s/__version__ = \".*\"/__version__ = \"$version\"/" src/__init__.py
 
       - name: Python einrichten
         uses: actions/setup-python@v5
