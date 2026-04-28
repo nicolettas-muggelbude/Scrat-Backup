@@ -830,6 +830,12 @@ def run_gui() -> int:
     from src.gui.update_dialog import show_update_dialog
     from src.gui.wizard_v2 import SetupWizardV2
 
+    # Input-Method auf xim setzen – verhindert Crashes bei Tastatureingabe
+    # wenn kein ibus/fcitx-Daemon läuft (z.B. XFCE, minimale Desktops)
+    import os as _os_im
+    if sys.platform == "linux" and "QT_IM_MODULE" not in _os_im.environ:
+        _os_im.environ["QT_IM_MODULE"] = "xim"
+
     # QApplication erstellen
     app = QApplication(sys.argv)
     app.setApplicationName("Scrat-Backup")
