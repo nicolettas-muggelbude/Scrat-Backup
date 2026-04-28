@@ -125,13 +125,21 @@ jobs:
           HERE=${SELF%/*}
           export PATH="${HERE}/usr/bin:${PATH}"
           export QT_PLUGIN_PATH="${HERE}/usr/bin/_internal/PySide6/Qt/plugins"
-          # AT-SPI: nur deaktivieren wenn kein Daemon läuft (GNOME/KDE haben ihn,
-          # XFCE/Void/CachyOS meist nicht → Segfault bei Tastatureingabe ohne Daemon)
-          if ! dbus-send --session --print-reply --dest=org.freedesktop.DBus \
-              /org/freedesktop/DBus org.freedesktop.DBus.NameHasOwner \
-              string:org.a11y.Bus 2>/dev/null | grep -q "boolean true"; then
-            export NO_AT_BRIDGE=1
-          fi
+
+          # Desktop-Erkennung via XDG_CURRENT_DESKTOP
+          # GNOME/KDE/MATE/Cinnamon haben at-spi2-Daemon und GNOME-Portal → alles normal
+          # XFCE/i3/Openbox/unbekannt → AT-SPI und GNOME-Theme deaktivieren
+          case "${XDG_CURRENT_DESKTOP:-}" in
+            GNOME*|gnome*|Unity|ubuntu|KDE|Plasma|MATE|X-Cinnamon|Cinnamon)
+              ;;
+            *)
+              # AT-SPI-Bridge: segfaultet ohne laufenden at-spi2-Daemon (XFCE, Void, CachyOS)
+              export NO_AT_BRIDGE=1
+              # GNOME-Theme-Plugin: crasht wenn org.freedesktop.portal.Desktop fehlt
+              export QT_QPA_PLATFORMTHEME="${QT_QPA_PLATFORMTHEME:-gtk3}"
+              ;;
+          esac
+
           # IM-Fix: kein ibus/fcitx-Daemon auf minimalen Desktops
           # CJK-Nutzer: QT_IM_MODULE=ibus ./App.AppImage
           if [ -z "$QT_IM_MODULE" ]; then
