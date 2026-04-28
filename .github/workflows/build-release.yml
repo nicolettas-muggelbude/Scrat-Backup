@@ -125,8 +125,10 @@ jobs:
           HERE=${SELF%/*}
           export PATH="${HERE}/usr/bin:${PATH}"
           export QT_PLUGIN_PATH="${HERE}/usr/bin/_internal/PySide6/Qt/plugins"
-          # Qt6-Crash-Fix: XFCE/Openbox/Void ohne IM-Daemon (ibus/fcitx) segfaultet beim Tippen.
-          # XMODIFIERS leeren verhindert dass Qt6 einen nicht laufenden Daemon kontaktiert.
+          # AT-SPI Accessibility-Bridge deaktivieren – segfaultet auf XFCE/Void/CachyOS
+          # wenn kein at-spi2-Daemon läuft (atk-bridge: get_device_events_reply: unknown signature)
+          export NO_AT_BRIDGE=1
+          # IM-Fix: kein ibus/fcitx-Daemon auf minimalen Desktops
           # CJK-Nutzer: QT_IM_MODULE=ibus ./App.AppImage
           if [ -z "$QT_IM_MODULE" ]; then
             export QT_IM_MODULE=none
