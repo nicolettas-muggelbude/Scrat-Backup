@@ -36,31 +36,45 @@ class CredentialManager:
 
     def _check_availability(self) -> bool:
         """
-        Prüft ob Credential Storage verfügbar ist
+        Prüft ob Credential Storage verfügbar ist.
+
+        Prüft Modul-Pfad (nicht nur Klassenname) und testet einen echten
+        Keyring-Zugriff, um native Crashes (z.B. KWallet ohne laufende Session)
+        sicher abzufangen.
 
         Returns:
-            True wenn verfügbar
+            True wenn verfügbar und funktionsfähig
         """
         try:
             import keyring
+            from keyring.errors import NoKeyringError
 
-            # Test ob Backend verfügbar ist
             backend = keyring.get_keyring()
+            backend_module = backend.__class__.__module__
             backend_name = backend.__class__.__name__
+            full_name = f"{backend_module}.{backend_name}"
 
-            # Prüfe ob es ein echtes Backend ist (nicht Fail/ChainerBackend)
-            if "Fail" in backend_name or "Chainer" in backend_name:
-                logger.warning(f"Kein sicheres Keyring-Backend verfügbar: {backend_name}")
+            # Fail-Backend anhand des Modul-Pfads erkennen (Klassenname ist nur "Keyring")
+            if "fail" in backend_module.lower():
+                logger.warning(f"Kein Keyring-Backend verfügbar: {full_name}")
                 return False
 
-            logger.info(f"Keyring-Backend: {backend_name}")
+            logger.info(f"Keyring-Backend: {full_name}")
+
+            # Echten Zugriff testen – schlägt bei fehlender D-Bus-Session fehl
+            try:
+                keyring.get_password("__scrat_test__", "__test__")
+            except NoKeyringError:
+                logger.warning("Keyring-Backend antwortet nicht (NoKeyringError)")
+                return False
+
             return True
 
         except ImportError:
             logger.warning("keyring-Bibliothek nicht installiert")
             return False
         except Exception as e:
-            logger.error(f"Fehler beim Prüfen des Credential Managers: {e}", exc_info=True)
+            logger.warning(f"Keyring nicht nutzbar: {e}")
             return False
 
     def save_password(self, password: str) -> bool:
