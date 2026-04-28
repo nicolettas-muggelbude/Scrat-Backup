@@ -23,6 +23,8 @@ pywin32>=306; platform_system=="Windows"
 python-dateutil>=2.8.2
 pyyaml>=6.0
 keyring>=24.0.0          # Passwort-Speicherung (Credential Manager)
+secretstorage>=3.3.0; platform_system=="Linux"   # keyring-Backend für Linux (freedesktop Secret Service)
+jeepney>=0.8.0; platform_system=="Linux"         # D-Bus-Bibliothek (Abhängigkeit von secretstorage)
 certifi>=2024.0.0        # SSL-Zertifikate (HTTPS in PyInstaller-Bundles)
 
 # Testing
