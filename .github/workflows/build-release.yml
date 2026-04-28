@@ -125,9 +125,13 @@ jobs:
           HERE=${SELF%/*}
           export PATH="${HERE}/usr/bin:${PATH}"
           export QT_PLUGIN_PATH="${HERE}/usr/bin/_internal/PySide6/Qt/plugins"
-          # AT-SPI Accessibility-Bridge deaktivieren – segfaultet auf XFCE/Void/CachyOS
-          # wenn kein at-spi2-Daemon läuft (atk-bridge: get_device_events_reply: unknown signature)
-          export NO_AT_BRIDGE=1
+          # AT-SPI: nur deaktivieren wenn kein Daemon läuft (GNOME/KDE haben ihn,
+          # XFCE/Void/CachyOS meist nicht → Segfault bei Tastatureingabe ohne Daemon)
+          if ! dbus-send --session --print-reply --dest=org.freedesktop.DBus \
+              /org/freedesktop/DBus org.freedesktop.DBus.NameHasOwner \
+              string:org.a11y.Bus 2>/dev/null | grep -q "boolean true"; then
+            export NO_AT_BRIDGE=1
+          fi
           # IM-Fix: kein ibus/fcitx-Daemon auf minimalen Desktops
           # CJK-Nutzer: QT_IM_MODULE=ibus ./App.AppImage
           if [ -z "$QT_IM_MODULE" ]; then

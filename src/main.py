@@ -24,7 +24,7 @@ from src.utils.paths import get_app_data_dir  # noqa: E402
 try:
     from src import __version__ as APP_VERSION  # noqa: E402
 except ImportError:
-    APP_VERSION = "0.3.43-beta"
+    APP_VERSION = "0.3.44-beta"
 
 # Logging konfigurieren – immer in Datei schreiben (auch bei console=False)
 def _setup_logging() -> None:
@@ -830,11 +830,22 @@ def run_gui() -> int:
     from src.gui.update_dialog import show_update_dialog
     from src.gui.wizard_v2 import SetupWizardV2
 
-    # AT-SPI-Bridge deaktivieren: segfaultet auf XFCE/Void/CachyOS ohne laufenden
-    # at-spi2-Daemon (Symptom: "atk-bridge: get_device_events_reply: unknown signature")
+    # AT-SPI: nur deaktivieren wenn kein Daemon läuft (GNOME/KDE haben ihn automatisch,
+    # XFCE/Void/CachyOS meist nicht → Segfault "get_device_events_reply: unknown signature")
     import os as _os_im
-    if sys.platform == "linux":
-        _os_im.environ.setdefault("NO_AT_BRIDGE", "1")
+    import subprocess as _sp
+    if sys.platform == "linux" and "NO_AT_BRIDGE" not in _os_im.environ:
+        try:
+            result = _sp.run(
+                ["dbus-send", "--session", "--print-reply",
+                 "--dest=org.freedesktop.DBus", "/org/freedesktop/DBus",
+                 "org.freedesktop.DBus.NameHasOwner", "string:org.a11y.Bus"],
+                capture_output=True, text=True, timeout=2
+            )
+            if "boolean true" not in result.stdout:
+                _os_im.environ["NO_AT_BRIDGE"] = "1"
+        except Exception:
+            _os_im.environ["NO_AT_BRIDGE"] = "1"  # Im Zweifel deaktivieren
         if "QT_IM_MODULE" not in _os_im.environ:
             _os_im.environ["QT_IM_MODULE"] = "none"
             _os_im.environ.pop("XMODIFIERS", None)
