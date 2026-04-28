@@ -19,7 +19,7 @@ from utils.paths import get_app_data_dir
 
 logger = logging.getLogger(__name__)
 
-GITHUB_API = "https://api.github.com/repos/nicolettas-muggelbude/Scrat-Backup/releases/latest"
+GITHUB_API = "https://api.github.com/repos/nicolettas-muggelbude/Scrat-Backup/releases"
 RELEASES_URL = "https://github.com/nicolettas-muggelbude/Scrat-Backup/releases/latest"
 CHECK_INTERVAL_DAYS = 1
 
@@ -131,9 +131,22 @@ class UpdateChecker(QThread):
                 headers={"User-Agent": f"Scrat-Backup/{self.current_version}"},
             )
             with urlopen(req, timeout=5, context=ssl_context) as resp:
-                data = json.loads(resp.read())
+                releases = json.loads(resp.read())
 
             _save_check_date()
+
+            # Erstes nicht-draft Release nehmen (inkl. Pre-releases / Beta)
+            data = None
+            if isinstance(releases, list):
+                for r in releases:
+                    if not r.get("draft", False):
+                        data = r
+                        break
+            else:
+                data = releases  # Fallback: einzelnes Release-Objekt
+
+            if not data:
+                return
 
             latest_tag: str = data.get("tag_name", "")
             release_notes: str = data.get("body", "")
