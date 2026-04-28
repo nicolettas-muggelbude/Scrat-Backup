@@ -24,7 +24,7 @@ from src.utils.paths import get_app_data_dir  # noqa: E402
 try:
     from src import __version__ as APP_VERSION  # noqa: E402
 except ImportError:
-    APP_VERSION = "0.3.39-beta"
+    APP_VERSION = "0.3.42-beta"
 
 # Logging konfigurieren – immer in Datei schreiben (auch bei console=False)
 def _setup_logging() -> None:
@@ -830,11 +830,13 @@ def run_gui() -> int:
     from src.gui.update_dialog import show_update_dialog
     from src.gui.wizard_v2 import SetupWizardV2
 
-    # Input-Method auf xim setzen – verhindert Crashes bei Tastatureingabe
-    # wenn kein ibus/fcitx-Daemon läuft (z.B. XFCE, minimale Desktops)
+    # Qt6-Crash-Fix: ohne laufenden ibus/fcitx-Daemon segfaultet Qt6 beim Tippen.
+    # XMODIFIERS kann @im=fcitx5 enthalten auch wenn kein Daemon läuft → leeren.
+    # CJK-Nutzer die ibus/fcitx brauchen: QT_IM_MODULE=ibus vor dem Start setzen.
     import os as _os_im
     if sys.platform == "linux" and "QT_IM_MODULE" not in _os_im.environ:
-        _os_im.environ["QT_IM_MODULE"] = "xim"
+        _os_im.environ["QT_IM_MODULE"] = "none"
+        _os_im.environ.pop("XMODIFIERS", None)
 
     # QApplication erstellen
     app = QApplication(sys.argv)

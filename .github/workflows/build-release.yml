@@ -125,8 +125,13 @@ jobs:
           HERE=${SELF%/*}
           export PATH="${HERE}/usr/bin:${PATH}"
           export QT_PLUGIN_PATH="${HERE}/usr/bin/_internal/PySide6/Qt/plugins"
-          # xim verhindert Crashes bei Tastatureingabe wenn kein ibus/fcitx läuft (z.B. XFCE)
-          export QT_IM_MODULE="${QT_IM_MODULE:-xim}"
+          # Qt6-Crash-Fix: XFCE/Openbox/Void ohne IM-Daemon (ibus/fcitx) segfaultet beim Tippen.
+          # XMODIFIERS leeren verhindert dass Qt6 einen nicht laufenden Daemon kontaktiert.
+          # CJK-Nutzer: QT_IM_MODULE=ibus ./App.AppImage
+          if [ -z "$QT_IM_MODULE" ]; then
+            export QT_IM_MODULE=none
+            unset XMODIFIERS
+          fi
           exec "${HERE}/usr/bin/ScratBackup" "$@"
           APPRUN
           chmod +x AppDir/AppRun
