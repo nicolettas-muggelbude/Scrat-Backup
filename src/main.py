@@ -24,7 +24,7 @@ from src.utils.paths import get_app_data_dir  # noqa: E402
 try:
     from src import __version__ as APP_VERSION  # noqa: E402
 except ImportError:
-    APP_VERSION = "0.3.45-beta"
+    APP_VERSION = "0.3.46-beta"
 
 # Logging konfigurieren – immer in Datei schreiben (auch bei console=False)
 def _setup_logging() -> None:
@@ -830,15 +830,17 @@ def run_gui() -> int:
     from src.gui.update_dialog import show_update_dialog
     from src.gui.wizard_v2 import SetupWizardV2
 
-    # AT-SPI + GNOME-Theme: auf XFCE/i3/unbekannten Desktops deaktivieren.
-    # GNOME/KDE/MATE/Cinnamon haben at-spi2-Daemon und Portal → alles normal.
+    # AT-SPI-Bridge nur auf bekannt-guten Desktops aktiv lassen.
+    # XFCE/i3/Openbox etc. haben keinen at-spi2-Daemon → Segfault beim Tippen.
     import os as _os_im
     if sys.platform == "linux":
-        _desktop = _os_im.environ.get("XDG_CURRENT_DESKTOP", "")
-        _gnome_like = any(d in _desktop for d in ("GNOME", "gnome", "Unity", "ubuntu", "KDE", "Plasma", "MATE", "Cinnamon"))
+        _desktop = _os_im.environ.get("XDG_CURRENT_DESKTOP", "(unbekannt)")
+        _gnome_like = any(d in _desktop for d in ("GNOME", "gnome", "Unity", "ubuntu", "KDE", "Plasma", "MATE", "Cinnamon", "COSMIC", "LXQt", "Budgie"))
         if not _gnome_like:
             _os_im.environ.setdefault("NO_AT_BRIDGE", "1")
-            _os_im.environ.setdefault("QT_QPA_PLATFORMTHEME", "gtk3")
+            logger.info(f"Linux-Desktop: {_desktop!r} → NO_AT_BRIDGE=1 gesetzt")
+        else:
+            logger.info(f"Linux-Desktop: {_desktop!r} → AT-SPI aktiv")
         if "QT_IM_MODULE" not in _os_im.environ:
             _os_im.environ["QT_IM_MODULE"] = "none"
             _os_im.environ.pop("XMODIFIERS", None)

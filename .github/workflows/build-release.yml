@@ -130,13 +130,11 @@ jobs:
           # GNOME/KDE/MATE/Cinnamon haben at-spi2-Daemon und GNOME-Portal → alles normal
           # XFCE/i3/Openbox/unbekannt → AT-SPI und GNOME-Theme deaktivieren
           case "${XDG_CURRENT_DESKTOP:-}" in
-            GNOME*|gnome*|Unity|ubuntu|KDE|Plasma|MATE|X-Cinnamon|Cinnamon)
+            GNOME*|gnome*|Unity|ubuntu|KDE|Plasma|MATE|X-Cinnamon|Cinnamon|COSMIC|LXQt|Budgie*)
               ;;
             *)
               # AT-SPI-Bridge: segfaultet ohne laufenden at-spi2-Daemon (XFCE, Void, CachyOS)
               export NO_AT_BRIDGE=1
-              # GNOME-Theme-Plugin: crasht wenn org.freedesktop.portal.Desktop fehlt
-              export QT_QPA_PLATFORMTHEME="${QT_QPA_PLATFORMTHEME:-gtk3}"
               ;;
           esac
 
