@@ -24,7 +24,7 @@ from src.utils.paths import get_app_data_dir  # noqa: E402
 try:
     from src import __version__ as APP_VERSION  # noqa: E402
 except ImportError:
-    APP_VERSION = "0.3.48-beta"
+    APP_VERSION = "0.3.49-beta"
 
 # Logging konfigurieren – immer in Datei schreiben (auch bei console=False)
 def _setup_logging() -> None:
@@ -384,7 +384,7 @@ def start_backup_after_wizard(wizard_config: dict) -> bool:
     excludes = set(wizard_config.get("excludes", []))
 
     # Frequenz aus Zeitplan (bestimmt Full/Inkrementell-Zyklus)
-    sched = wizard_config.get("schedule", {})
+    sched = wizard_config.get("schedule") or {}
     _freq_raw = sched.get("frequency") or sched.get("interval", "Täglich")
     _freq_map = {"Täglich": "daily", "Wöchentlich": "weekly", "Monatlich": "monthly"}
     backup_frequency = _freq_map.get(_freq_raw, _freq_raw if _freq_raw in ("daily", "weekly", "monthly") else "daily")
@@ -927,7 +927,10 @@ def run_gui() -> int:
         # Backup starten wenn gewünscht
         if config.get("start_backup_now"):
             logger.info("Backup wird nach Wizard gestartet...")
-            start_backup_after_wizard(config)
+            try:
+                start_backup_after_wizard(config)
+            except Exception as e:
+                logger.error(f"Backup nach Wizard fehlgeschlagen: {e}", exc_info=True)
 
         # Tray oder MainWindow starten (abhängig von Wizard-Config)
         if config.get("start_tray", True):
