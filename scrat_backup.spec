@@ -220,7 +220,14 @@ unused_qt_libs = [
     r'Qt6Designer',
 ]
 
-a.binaries = remove_qt_libs(a.binaries, unused_qt_libs)
+# System-Bibliotheken die NICHT gebundelt werden dürfen:
+# libxkbcommon liest XKB-Keyboard-Daten vom System – die Ubuntu-22.04-Version
+# ist inkompatibel mit neueren Distros (CachyOS, Void) → Segfault bei Tastendruck.
+system_libs_to_exclude = [
+    r'libxkbcommon',   # Tastatur-Mapping – muss System-Version sein
+]
+
+a.binaries = remove_qt_libs(a.binaries, unused_qt_libs + system_libs_to_exclude)
 
 pyz = PYZ(a.pure, optimize=1)
 
