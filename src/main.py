@@ -24,7 +24,7 @@ from src.utils.paths import get_app_data_dir  # noqa: E402
 try:
     from src import __version__ as APP_VERSION  # noqa: E402
 except ImportError:
-    APP_VERSION = "0.3.46-beta"
+    APP_VERSION = "0.3.47-beta"
 
 # Logging konfigurieren – immer in Datei schreiben (auch bei console=False)
 def _setup_logging() -> None:
@@ -838,7 +838,9 @@ def run_gui() -> int:
         _gnome_like = any(d in _desktop for d in ("GNOME", "gnome", "Unity", "ubuntu", "KDE", "Plasma", "MATE", "Cinnamon", "COSMIC", "LXQt", "Budgie"))
         if not _gnome_like:
             _os_im.environ.setdefault("NO_AT_BRIDGE", "1")
-            logger.info(f"Linux-Desktop: {_desktop!r} → NO_AT_BRIDGE=1 gesetzt")
+            _os_im.environ.setdefault("GTK_THEME", "Adwaita")
+            _os_im.environ.setdefault("GTK_MODULES", "")
+            logger.info(f"Linux-Desktop: {_desktop!r} → NO_AT_BRIDGE=1, GTK_THEME=Adwaita gesetzt")
         else:
             logger.info(f"Linux-Desktop: {_desktop!r} → AT-SPI aktiv")
         if "QT_IM_MODULE" not in _os_im.environ:

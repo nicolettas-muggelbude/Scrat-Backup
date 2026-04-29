@@ -135,6 +135,10 @@ jobs:
             *)
               # AT-SPI-Bridge: segfaultet ohne laufenden at-spi2-Daemon (XFCE, Void, CachyOS)
               export NO_AT_BRIDGE=1
+              # Sicheres GTK-Theme erzwingen: kaputtes System-gtk.css crasht Qt6 beim Rendern
+              export GTK_THEME="${GTK_THEME:-Adwaita}"
+              # Verhindern dass GTK nicht-verfügbare Module lädt (xapp-gtk3, canberra)
+              export GTK_MODULES=""
               ;;
           esac
 
