@@ -120,12 +120,16 @@ def check_first_run() -> bool:
     try:
         config_manager = ConfigManager(config_file)
 
-        # Prüfe ob Quellen und Ziele/Profile konfiguriert sind
-        has_sources = bool(config_manager.config.get("sources"))
+        # Prüfe ob mindestens ein Ziel/Profil konfiguriert ist
+        profiles = config_manager.config.get("profiles") or []
         has_destinations = bool(
-            config_manager.config.get("destinations")
-            or config_manager.config.get("profiles")
+            profiles or config_manager.config.get("destinations")
         )
+
+        # Quellen: entweder in Profilen (v0.3.51+) oder global (Legacy)
+        has_sources = any(bool(p.get("sources")) for p in profiles)
+        if not has_sources:
+            has_sources = bool(config_manager.config.get("sources"))
 
         if not has_sources or not has_destinations:
             logger.info(
@@ -208,40 +212,13 @@ def save_wizard_config(wizard_config: dict) -> None:
 
         sources = wizard_config.get("sources", [])
         excludes = wizard_config.get("excludes", [])
-
-        # "edit_sources": nur Quellen aktualisieren, Profile unberührt lassen
-        if action == "edit_sources":
-            config_manager.config["sources"] = [
-                {
-                    "path": p,
-                    "name": Path(p).name or "Quelle",
-                    "enabled": True,
-                    "exclude_patterns": excludes,
-                }
-                for p in sources
-            ]
-            config_manager.save()
-            logger.info(f"Backup-Quellen aktualisiert: {len(sources)} Einträge")
-            return
+        profile_name_input = wizard_config.get("profile_name", "").strip()
 
         # "backup" (Ersteinrichtung): alles zurücksetzen
         if action == "backup":
             config_manager.config["sources"] = []
             config_manager.config["profiles"] = []
             config_manager.save()
-
-        # Quellen speichern – nur wenn SourceSelectionPage durchlaufen wurde
-        if sources:
-            if "sources" not in config_manager.config:
-                config_manager.config["sources"] = []
-            for p in sources:
-                config_manager.config["sources"].append({
-                    "path": p,
-                    "name": Path(p).name or "Quelle",
-                    "enabled": True,
-                    "exclude_patterns": excludes,
-                })
-                logger.info(f"Quelle hinzugefügt: {p}")
 
         # Profil erstellen oder aktualisieren
         template_id = wizard_config.get("template_id")
@@ -252,7 +229,7 @@ def save_wizard_config(wizard_config: dict) -> None:
                 template_id, template_id.replace("_", " ").title()
             )
 
-            # Schedule aus Wizard-SchedulePage (gibt "frequency" in Englisch zurück)
+            # Schedule aus Wizard-SchedulePage
             schedule_raw = wizard_config.get("schedule") or {}
             profile_schedule = None
             if schedule_raw.get("enabled"):
@@ -264,9 +241,9 @@ def save_wizard_config(wizard_config: dict) -> None:
                     "day_of_month": schedule_raw.get("day_of_month", 1),
                 }
 
-            # Profil-ID: bestehend (edit) oder neu (backup/add_destination)
+            # Profil-ID: bei "edit" bestehende ID beibehalten, sonst neu
             selected_profile_id = wizard_config.get("selected_profile_id", "")
-            if selected_profile_id:
+            if action == "edit" and selected_profile_id:
                 profile_id = selected_profile_id
             elif action == "backup":
                 profile_id = "profile_1"
@@ -274,9 +251,23 @@ def save_wizard_config(wizard_config: dict) -> None:
                 import time as _t
                 profile_id = f"profile_{int(_t.time())}"
 
+            # Profil-Name: nutzer-definiert oder auto-generiert
+            final_name = profile_name_input or dest_name
+
+            # Quellen pro Profil speichern (nicht mehr global)
+            profile_sources = [
+                {
+                    "path": p,
+                    "name": Path(p).name or "Quelle",
+                    "enabled": True,
+                }
+                for p in sources
+            ] if sources else []
+
             config_manager.save_profile({
                 "id": profile_id,
-                "name": dest_name,
+                "name": final_name,
+                "sources": profile_sources,
                 "destination": {
                     "name": dest_name,
                     "type": template_config.get("type", template_id),
@@ -285,9 +276,22 @@ def save_wizard_config(wizard_config: dict) -> None:
                 "schedule": profile_schedule,
                 "enabled": True,
             })
-            logger.info(f"Profil gespeichert: {dest_name} (ID: {profile_id})")
+            logger.info(f"Profil gespeichert: '{final_name}' (ID: {profile_id})")
 
+            # Rückwärts-Kompatibilität: destinations[]/schedules[] aus profiles[] aufbauen
             _sync_profiles_to_destinations(config_manager)
+
+        # Globale sources[] für start_backup_after_wizard() aktualisieren
+        if sources:
+            config_manager.config["sources"] = [
+                {
+                    "path": p,
+                    "name": Path(p).name or "Quelle",
+                    "enabled": True,
+                    "exclude_patterns": excludes,
+                }
+                for p in sources
+            ]
 
         config_manager.save()
         logger.info("Wizard-Konfiguration gespeichert")
@@ -789,9 +793,29 @@ def run_backup_headless() -> int:
             sched = profile.get("schedule") or {}
             frequency = sched.get("frequency", "daily")
 
+            # Quellen aus Profil (v0.3.51+) mit Fallback auf globale sources[]
+            raw_profile_sources = profile.get("sources") or []
+            if raw_profile_sources:
+                seen_p: set = set()
+                prof_sources = []
+                for s in raw_profile_sources:
+                    if not s.get("enabled", True):
+                        continue
+                    p_path = Path(s["path"]).resolve()
+                    if p_path not in seen_p:
+                        seen_p.add(p_path)
+                        prof_sources.append(p_path)
+            else:
+                prof_sources = sources  # globaler Fallback für migrierte Profile
+
+            if not prof_sources:
+                logger.error(f"Profil '{profile_name}': Keine Quellen konfiguriert – übersprungen")
+                results[profile_id] = False
+                return
+
             db_path = _get_profile_db_path(profile_id)
             backup_cfg = BackupConfig(
-                sources=sources,
+                sources=prof_sources,
                 destination_path=dest_path,
                 destination_type=dest_type,
                 password=password,

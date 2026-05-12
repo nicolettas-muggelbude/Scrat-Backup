@@ -181,31 +181,21 @@ class StartPage(QWizardPage):
         layout.addWidget(self._create_separator())
         layout.addSpacing(5)
 
-        # Option: Backup-Ziel/Zeitplan bearbeiten → ProfileSelectionPage
+        # Option: Backup bearbeiten → ProfileSelectionPage
         edit_frame = self._create_option_radio(
             "edit",
-            "⚙️ Backup-Ziel oder Zeitplan ändern",
-            "Bearbeite Ziel und Zeitplan eines bestehenden Backups",
+            "⚙️ Backup bearbeiten",
+            "Ändere Quellen, Ziel oder Zeitplan eines bestehenden Backups",
         )
         layout.addWidget(edit_frame)
 
         layout.addSpacing(15)
 
-        # Option: Quellen bearbeiten → SourceSelectionPage → FinishPage
-        sources_frame = self._create_option_radio(
-            "edit_sources",
-            "📂 Backup-Quellen bearbeiten",
-            "Ändere welche Ordner und Dateien gesichert werden sollen",
-        )
-        layout.addWidget(sources_frame)
-
-        layout.addSpacing(15)
-
-        # Option: Neues Ziel hinzufügen → DestinationPage (neues Profil)
+        # Option: Neues Backup anlegen → ProfileSelectionPage (Kopieren oder Neu)
         add_frame = self._create_option_radio(
             "add_destination",
-            "➕ Neues Backup-Ziel hinzufügen",
-            "Füge ein weiteres Backup-Ziel hinzu (z. B. USB + OneDrive parallel)",
+            "➕ Neues Backup anlegen",
+            "Neues Backup-Profil einrichten – Quellen eines bestehenden Backups als Vorlage oder ganz neu",
         )
         layout.addWidget(add_frame)
 
@@ -294,7 +284,6 @@ class StartPage(QWizardPage):
         """Bestimmt nächste Seite basierend auf Auswahl."""
         PAGE_SOURCE = 1
         PAGE_MODE = 2
-        PAGE_DESTINATION = 3
         PAGE_RESTORE = 6
         PAGE_PROFILE_SELECT = 8
 
@@ -304,17 +293,9 @@ class StartPage(QWizardPage):
         elif self.selected_action == "restore":
             return PAGE_RESTORE
 
-        elif self.selected_action == "edit":
-            # Profil-Auswahl: welches Backup-Ziel/Zeitplan soll geändert werden?
+        elif self.selected_action in ("edit", "add_destination"):
+            # Profil-Auswahl zuerst (edit: bearbeiten; add_destination: Vorlage oder Neu)
             return PAGE_PROFILE_SELECT
-
-        elif self.selected_action == "edit_sources":
-            # Nur Quellen bearbeiten
-            return PAGE_SOURCE
-
-        elif self.selected_action == "add_destination":
-            # Neues Profil direkt ab Ziel-Seite
-            return PAGE_DESTINATION
 
         return super().nextId()
 
@@ -368,105 +349,81 @@ class SourceSelectionPage(QWizardPage):
         self.registerField("excludes", self._excludes_edit)
 
     def initializePage(self):
-        """Wird aufgerufen wenn Seite angezeigt wird – bei "edit" aus Config vorbefüllen"""
+        """Wird aufgerufen wenn Seite angezeigt wird – bei edit/copy aus Profil vorbefüllen."""
         wizard = self.wizard()
         if not wizard:
             logger.warning("initializePage: Kein Wizard-Objekt")
             return
 
-        # Hole Aktion DIREKT von StartPage statt über wizard.field()
-        # (wizard.field() gibt manchmal 'None' als String zurück)
         action = None
         if hasattr(wizard, 'start_page'):
             action = wizard.start_page.selected_action
-            logger.info(f"initializePage: Aktion direkt von StartPage: '{action}'")
-        else:
-            action = wizard.field("start_action")
-            logger.info(f"initializePage: Aktion über field(): '{action}'")
 
-        # IMMER zurücksetzen (auch bei backup)
-        logger.debug("Setze alle Checkboxen zurück")
+        # IMMER zurücksetzen
         for cb in self.library_checkboxes.values():
             cb.setChecked(False)
         self.custom_sources.clear()
         self.custom_list.clear()
         self.custom_widgets.clear()
 
-        if action != "edit":
-            # Bei "backup" (Neuanlage): Nach Reset fertig
-            logger.info("Backup-Modus: Keine Vorbefüllung")
-            self._on_sources_changed()
-            return
+        # Profil-ID ermitteln (gesetzt wenn edit oder add_destination mit Vorlage)
+        selected_profile_id = None
+        if hasattr(wizard, 'profile_selection_page'):
+            selected_profile_id = wizard.profile_selection_page.selected_profile_id
 
-        # Bei "edit": Config laden und Quellen markieren
-        logger.info("Edit-Modus erkannt - lade Quellen aus Config")
+        # Nur vorbefüllen wenn ein echtes Profil gewählt wurde (nicht "Neu")
+        if action in ("edit", "add_destination") and selected_profile_id:
+            self._prefill_from_profile(selected_profile_id)
+        else:
+            logger.info(f"Aktion '{action}': Keine Vorbefüllung (leere Quellen)")
 
-        # Vorhandene Quellen aus gespeicherter Config laden
+        self._on_sources_changed()
+
+    def _prefill_from_profile(self, profile_id: str) -> None:
+        """Befüllt Quellen-Auswahl aus einem gespeicherten Profil."""
         try:
-            config_file = get_app_data_dir() / "config.json"
-            if not config_file.exists():
+            config_manager = ConfigManager(get_app_data_dir() / "config.json")
+            profiles = config_manager.get_profiles()
+            profile = next((p for p in profiles if p.get("id") == profile_id), None)
+            if not profile:
+                logger.warning(f"Profil nicht gefunden: {profile_id}")
                 return
 
-            config_manager = ConfigManager(config_file)
+            # Quellen aus Profil laden (mit Fallback auf globale sources[] für alte Profile)
+            raw_sources = profile.get("sources") or []
+            if not raw_sources:
+                raw_sources = config_manager.config.get("sources", [])
+
             existing_sources = [
-                s["path"]
-                for s in config_manager.config.get("sources", [])
-                if s.get("enabled", True)
+                s["path"] for s in raw_sources if s.get("enabled", True)
             ]
 
             if not existing_sources:
-                logger.info("Keine Quellen in Config gefunden")
+                logger.info(f"Profil '{profile_id}': Keine Quellen gespeichert")
                 return
 
-            logger.info(f"Gefunden: {len(existing_sources)} Quelle(n) in Config")
-
-            # Zuordnung: Pfad → Bibliothek-Name (für Checkbox-Matching)
-            # WICHTIG: Normalisiere Pfade für korrekten Vergleich
             std_lib_paths = {
                 str(Path(path).resolve()): name for name, path in self.standard_libraries.items()
             }
 
-            logger.info(f"Standard-Bibliotheken-Pfade ({len(std_lib_paths)}):")
-            for path, name in std_lib_paths.items():
-                logger.info(f"  - {name}: {path}")
-
-            logger.info(f"Config-Quellen:")
-            for src in existing_sources:
-                logger.info(f"  - {src}")
-
-            # Checkboxen wurden bereits am Anfang zurückgesetzt
-            # Eigene Ordner-Liste wurde bereits geleert
-
-            # Quellen zuordnen: Standard-Bibliothek → Checkbox, sonst → Eigene Ordner
             for source in existing_sources:
-                # Normalisiere auch Config-Pfad für Vergleich
-                normalized_source = str(Path(source).resolve())
-                logger.info(f"Verarbeite Quelle: {source} → normalisiert: {normalized_source}")
-
-                if normalized_source in std_lib_paths:
-                    name = std_lib_paths[normalized_source]
-                    logger.info(f"  → Gefunden als Standard-Bibliothek: '{name}'")
+                normalized = str(Path(source).resolve())
+                if normalized in std_lib_paths:
+                    name = std_lib_paths[normalized]
                     if name in self.library_checkboxes:
                         self.library_checkboxes[name].setChecked(True)
-                        logger.info(f"  → Checkbox '{name}' AKTIVIERT")
-                    else:
-                        logger.warning(f"  → Checkbox '{name}' NICHT GEFUNDEN in library_checkboxes!")
                 else:
-                    logger.info(f"  → Keine Standard-Bibliothek, füge als eigenen Ordner hinzu")
                     path = Path(source)
                     if path.exists():
                         self._add_folder_to_list(path)
-                        logger.info(f"  → Eigener Ordner hinzugefügt")
-                    else:
-                        logger.warning(f"  → Quelle existiert nicht: {source}")
 
-            self._on_sources_changed()
             logger.info(
-                f"SourceSelectionPage vorbefüllt: {len(existing_sources)} Quellen aus Config"
+                f"SourceSelectionPage aus Profil '{profile_id}' vorbefüllt: "
+                f"{len(existing_sources)} Quelle(n)"
             )
 
         except Exception as e:
-            logger.warning(f"Fehler beim Laden vorhandener Quellen: {e}")
+            logger.warning(f"Fehler beim Vorbefüllen aus Profil: {e}")
 
     def _init_ui(self):
         """Initialisiert UI"""
@@ -1180,11 +1137,5 @@ class SourceSelectionPage(QWizardPage):
         return True
 
     def nextId(self) -> int:
-        """Nächste Seite: Destination normalerweise, bei 'edit_sources' direkt Finish."""
-        PAGE_DESTINATION = 3
-        PAGE_FINISH = 5
-        wizard = self.wizard()
-        if wizard and hasattr(wizard, "start_page"):
-            if wizard.start_page.selected_action == "edit_sources":
-                return PAGE_FINISH
-        return PAGE_DESTINATION
+        """Nächste Seite: immer DestinationPage."""
+        return 3  # PAGE_DESTINATION

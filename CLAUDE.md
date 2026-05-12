@@ -92,9 +92,10 @@ src/
 - **Wizard-Änderungen aus Tray gespeichert:** `_open_settings_wizard()` speichert Config + aktualisiert OS-Zeitplan
 - **Restore-Seite scrollbar:** `QScrollArea` in `RestoreWizardPage` verhindert Quetschen beim Fortschrittsbalken
 - **StartPage zeigt Version:** `version`-Parameter in `wizard_pages.py:StartPage.__init__`
-- **Multi-Profil-Backup:** `profiles[]` in config.json – jedes Profil hat eigenes Ziel + Zeitplan; Quellen global geteilt; Migration aus altem `destinations[]`-Format automatisch; `run_backup_headless()` startet alle aktiven Profile parallel in eigenen Threads mit getrennten metadata.db-Dateien
-- **ProfileSelectionPage (PAGE_PROFILE_SELECT=8):** Zeigt alle konfigurierten Profile als Radio-Buttons; "+ Neues Backup-Ziel hinzufügen" als letzten Eintrag; wird bei "edit"-Aktion vor DestinationPage eingefügt
-- **Quellen-getrennte Bearbeitung:** "edit_sources"-Aktion (StartPage) → SourceSelectionPage → FinishPage (überspringt Destination/Schedule)
+- **Multi-Profil-Backup:** `profiles[]` in config.json – jedes Profil hat eigenes Ziel + Zeitplan + eigene Quellen; Migration aus altem `destinations[]`-Format automatisch (kopiert globale Quellen in jedes Profil); `run_backup_headless()` startet alle aktiven Profile parallel in eigenen Threads mit getrennten metadata.db-Dateien
+- **ProfileSelectionPage (PAGE_PROFILE_SELECT=8):** Kontextsensitiv (edit: alle Profile; add_destination: Profile als Vorlage + "Völlig neues Backup"); führt zu SourceSelectionPage (PAGE_SOURCE), nicht direkt zu DestinationPage
+- **Auto-generierter Backup-Name:** `_generate_profile_name()` generiert Schema `Quellen → Ziel (Frequenz)`; FinishPage zeigt editierbares Textfeld; gespeichert als `profile["name"]`
+- **Per-Profil-Quellen:** Jedes Profil hat eigene `sources[]`; SourceSelectionPage befüllt aus gewähltem Profil; kein globales sources[] mehr als primäre Quelle
 
 ---
 
@@ -119,6 +120,71 @@ src/
 - ✅ **MainWindow closeEvent:** Beendet sich korrekt ohne Tray (prüft `system_tray.is_visible()`)
 - ✅ **QProgressDialog leerer Button:** `cancelButtonText=None` + `setCancelButton(None)`
 - ✅ **isort & flake8 sauber:** Imports alphabetisch (Qt, QTime, Signal)
+
+---
+
+## Session 2026-05-12: v0.3.51 – Profil-Namen + Quellen pro Profil
+
+### Implementiert
+
+#### 1. **Quellen pro Profil (nicht mehr global)** ✅
+- Jedes Profil hat eigene `"sources": [...]` im Profil-Dict
+- `_migrate_to_profiles()` kopiert globale `sources[]` in jedes Profil beim ersten Migration-Lauf
+- `save_wizard_config()` speichert Quellen direkt ins Profil
+- `run_backup_headless()` liest aus `profile["sources"]`, Fallback auf globale `sources[]`
+- `check_first_run()` prüft Profile-Quellen + globale Quellen (Rückwärts-Kompatibilität)
+
+#### 2. **Auto-generierter Backup-Name** ✅
+- Schema: `{Quellen} → {Ziel} ({Frequenz})`
+- Beispiele: `Dokumente → USB (täglich)`, `Dokumente & Bilder → OneDrive (wöchentlich)`
+- `_generate_profile_name()` in `wizard_v2.py` (module-level)
+- FinishPage zeigt Feld mit auto-generiertem Name, frei editierbar
+- `wizard_config["profile_name"]` → `save_wizard_config()` → Profil-Name
+
+#### 3. **Wizard-Routing überarbeitet** ✅
+- `"edit_sources"`-Aktion entfernt (Quellen jetzt im normalen Edit-Flow)
+- `"edit"` → `PAGE_PROFILE_SELECT` → `PAGE_SOURCE` → `PAGE_DESTINATION` → ... → `PAGE_FINISH`
+- `"add_destination"` → `PAGE_PROFILE_SELECT` → `PAGE_SOURCE` → ... → `PAGE_FINISH`
+- `"backup"` → `PAGE_MODE` → `PAGE_SOURCE` → ... (unverändert)
+- `ProfileSelectionPage.nextId()`: `PAGE_DESTINATION` → `PAGE_SOURCE`
+
+#### 4. **ProfileSelectionPage kontextsensitiv** ✅
+- **edit-Modus**: Titel „Welches Backup möchtest du bearbeiten?", nur bestehende Profile
+- **add_destination-Modus**: Titel „Neues Backup anlegen", Profile + „Völlig neues Backup (leere Quellen)"
+- Liest `wizard.start_page.selected_action` in `initializePage()`
+
+#### 5. **SourceSelectionPage per-Profil-Vorbefüllung** ✅
+- Bei „edit" mit gewähltem Profil: Quellen aus `profile["sources"]` laden
+- Bei „add_destination" mit gewähltem Profil (Vorlage kopieren): Quellen aus Profil laden
+- Kein globales `sources[]` mehr für Vorbefüllung
+- Fallback auf `config["sources"]` für migrierte Profile ohne `profile["sources"]`
+
+#### 6. **StartPage vereinfacht** ✅
+- „Backup-Quellen bearbeiten" (edit_sources) entfernt
+- „Backup bearbeiten" = edit Quellen + Ziel + Zeitplan in einem Flow
+- „Neues Backup anlegen" = add_destination (jetzt kontextsensibler Titel)
+
+### Profil-Struktur (v0.3.51)
+```json
+{
+  "id": "profile_abc123",
+  "name": "Dokumente → USB (täglich)",
+  "sources": [
+    {"path": "/home/user/Dokumente", "name": "Dokumente", "enabled": true}
+  ],
+  "destination": {"name": "USB-Laufwerk", "type": "usb", "config": {...}},
+  "schedule": {"enabled": true, "frequency": "daily", "time": "10:00"},
+  "enabled": true
+}
+```
+
+### Wizard-Routing (v0.3.51)
+```
+"backup"         → PAGE_MODE → PAGE_SOURCE → PAGE_DESTINATION → PAGE_SCHEDULE → PAGE_ENCRYPTION → PAGE_FINISH
+"edit"           → PAGE_PROFILE_SELECT → PAGE_SOURCE (vorbefüllt) → PAGE_DESTINATION → PAGE_SCHEDULE → PAGE_ENCRYPTION → PAGE_FINISH
+"add_destination"→ PAGE_PROFILE_SELECT → PAGE_SOURCE (Vorlage oder leer) → PAGE_DESTINATION → PAGE_SCHEDULE → PAGE_ENCRYPTION → PAGE_FINISH
+"restore"        → PAGE_RESTORE
+```
 
 ---
 

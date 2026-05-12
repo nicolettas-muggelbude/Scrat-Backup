@@ -79,6 +79,32 @@ def _is_dark_mode() -> bool:
     return (bg.red() + bg.green() + bg.blue()) / 3 < 128
 
 
+def _generate_profile_name(sources: list, dest_name: str, frequency: str) -> str:
+    """Generiert automatischen Backup-Namen nach Schema: Quellen → Ziel (Frequenz)."""
+    if not sources:
+        src = "Backup"
+    elif len(sources) == 1:
+        src = Path(sources[0]).name or Path(sources[0]).parent.name or "Backup"
+    elif len(sources) == 2:
+        n1 = Path(sources[0]).name or sources[0]
+        n2 = Path(sources[1]).name or sources[1]
+        src = f"{n1} & {n2}"
+    else:
+        n1 = Path(sources[0]).name or sources[0]
+        src = f"{n1} & {len(sources) - 1} weitere"
+
+    freq_labels = {
+        "daily": "täglich",
+        "weekly": "wöchentlich",
+        "monthly": "monatlich",
+        "startup": "beim Start",
+    }
+    freq_str = freq_labels.get(frequency, "")
+    if freq_str:
+        return f"{src} → {dest_name} ({freq_str})"
+    return f"{src} → {dest_name}"
+
+
 # ============================================================================
 # PAGE IDS - Für dynamisches Routing
 # ============================================================================
@@ -828,7 +854,7 @@ class SchedulePage(QWizardPage):
 
 
 class NewFinishPage(QWizardPage):
-    """Zusammenfassung + Tray-Start + Backup-Option"""
+    """Zusammenfassung + Name + Tray-Start + Backup-Option"""
 
     def __init__(self):
         super().__init__()
@@ -842,7 +868,21 @@ class NewFinishPage(QWizardPage):
         self.summary_label.setWordWrap(True)
         layout.addWidget(self.summary_label)
 
-        layout.addSpacing(20)
+        layout.addSpacing(15)
+
+        # Backup-Name (auto-generiert, editierbar)
+        self.name_group = QGroupBox("📛 Backup-Name")
+        name_layout = QVBoxLayout(self.name_group)
+        self.profile_name_edit = QLineEdit()
+        self.profile_name_edit.setPlaceholderText("Wird automatisch erstellt (änderbar)")
+        name_layout.addWidget(self.profile_name_edit)
+        self.name_hint = QLabel(
+            "Der Name hilft dir, mehrere Backups im Tray-Menü zu unterscheiden."
+        )
+        name_layout.addWidget(self.name_hint)
+        layout.addWidget(self.name_group)
+
+        layout.addSpacing(10)
 
         # Backup jetzt starten
         self.backup_group = QGroupBox()
@@ -888,98 +928,93 @@ class NewFinishPage(QWizardPage):
         layout.addStretch()
         self.setLayout(layout)
 
+        self.registerField("profile_name", self.profile_name_edit)
         self.registerField("start_backup_now", self.start_backup_now)
         self.registerField("start_tray", self.start_tray)
 
     def initializePage(self):
-        """Wird aufgerufen wenn Seite angezeigt wird - erstellt Zusammenfassung"""
-        from gui.theme import colors, style_infobox_success, style_label_hint
+        """Wird aufgerufen wenn Seite angezeigt wird - Zusammenfassung + Auto-Name."""
+        from gui.theme import colors, style_infobox_success, style_label_hint, style_label_secondary
         c = colors()
         group_style = f"QGroupBox {{ border: 2px solid {c['group_border']}; border-radius: 5px; }}"
         self.backup_group.setStyleSheet(group_style)
         self.tray_group.setStyleSheet(group_style)
+        self.name_group.setStyleSheet(group_style)
         self.backup_info.setStyleSheet(style_label_hint())
         self.tray_info.setStyleSheet(style_label_hint())
+        self.name_hint.setStyleSheet(style_label_secondary())
         self.success_label.setStyleSheet(style_infobox_success() + " padding: 15px;")
 
         wizard = self.wizard()
+        action = wizard.field("start_action") if wizard else "backup"
+
+        # Auto-Name generieren
+        sources_str = wizard.field("sources") or "" if wizard else ""
+        sources_list = [s for s in sources_str.split(",") if s] if sources_str else []
+
+        template_id = wizard.field("template_id") or "" if wizard else ""
+        dest_display = template_id.replace("_", " ").title()
+        if wizard and hasattr(wizard, "destination_page"):
+            dest_page = wizard.destination_page
+            if hasattr(dest_page, "selected_template") and dest_page.selected_template:
+                dest_display = dest_page.selected_template.display_name
+
+        frequency = "daily"
+        if wizard and hasattr(wizard, "schedule_page"):
+            sched = wizard.schedule_page.get_schedule_config()
+            if sched:
+                frequency = sched.get("frequency", "daily")
+
+        auto_name = _generate_profile_name(sources_list, dest_display, frequency)
+        # Nur setzen wenn Feld noch leer (beim ersten Aufruf)
+        if not self.profile_name_edit.text():
+            self.profile_name_edit.setText(auto_name)
 
         summary_text = "<h3>📋 Deine Konfiguration:</h3>"
         summary_text += "<table style='margin-top: 10px; width: 100%;'>"
 
         # 1. Aktion
-        action = wizard.field("start_action")
         action_labels = {
             "backup": "🆕 Neues Backup einrichten",
             "restore": "♻️ Backup wiederherstellen",
-            "edit": "⚙️ Einstellungen ändern",
-            "add_destination": "➕ Neues Ziel hinzufügen",
+            "edit": "⚙️ Backup bearbeiten",
+            "add_destination": "➕ Neues Backup anlegen",
             "expert": "🔧 Experten-Modus",
         }
         action_label = action_labels.get(action, action)
         summary_text += "<tr><td style='padding: 8px; color: #666;'><b>Aktion:</b></td>"
         summary_text += f"<td style='padding: 8px;'>{action_label}</td></tr>"
 
-        # 2. Quellen (nur bei Backup)
-        if action == "backup":
-            sources = wizard.field("sources")
-            if sources:
-                sources_list = sources.split(",")
+        # 2. Quellen
+        if sources_list:
+            summary_text += (
+                "<tr><td style='padding: 8px; color: #666; "
+                "vertical-align: top;'><b>Quellen:</b></td>"
+            )
+            summary_text += f"<td style='padding: 8px;'>{len(sources_list)} Ordner<br>"
+            for source in sources_list[:5]:
+                source_name = Path(source).name or source
                 summary_text += (
-                    "<tr><td style='padding: 8px; color: #666; "
-                    "vertical-align: top;'><b>Quellen:</b></td>"
+                    f"<span style='color: #999; font-size: 11px;'>📁 {source_name}</span><br>"
                 )
-                summary_text += f"<td style='padding: 8px;'>{len(sources_list)} Ordner<br>"
-
-                # Erste 5 Quellen anzeigen
-                for source in sources_list[:5]:
-                    source_name = Path(source).name or source
-                    summary_text += (
-                        f"<span style='color: #999; font-size: 11px;'>📁 {source_name}</span><br>"
-                    )
-
-                if len(sources_list) > 5:
-                    remaining = len(sources_list) - 5
-                    summary_text += (
-                        "<span style='color: #999; font-size: 11px;'>"
-                        f"... und {remaining} weitere</span>"
-                    )
-
-                summary_text += "</td></tr>"
-
-            # Ausschlüsse
-            excludes = wizard.field("excludes")
-            if excludes:
-                excludes_list = excludes.split(",")
-                summary_text += (
-                    "<tr><td style='padding: 8px; color: #666;'>" "<b>Ausschlüsse:</b></td>"
-                )
-                summary_text += f"<td style='padding: 8px;'>{len(excludes_list)} Muster "
+            if len(sources_list) > 5:
                 summary_text += (
                     "<span style='color: #999; font-size: 11px;'>"
-                    "(*.tmp, *.cache, ...)</span></td></tr>"
+                    f"... und {len(sources_list) - 5} weitere</span>"
                 )
+            summary_text += "</td></tr>"
 
         # 3. Backup-Ziel
-        template_id = wizard.field("template_id")
         if template_id:
-            # Versuche Template-Info zu holen
-            template_name = template_id.replace("_", " ").title()
-
-            # Hole Icon vom Template
             template_icon = "💾"
-            template_display = template_name
-
-            # Wenn wir Zugriff auf TemplateManager haben
-            if hasattr(wizard, "destination_page"):
+            if wizard and hasattr(wizard, "destination_page"):
                 dest_page = wizard.destination_page
                 if hasattr(dest_page, "selected_template") and dest_page.selected_template:
                     template_icon = dest_page.selected_template.icon
-                    template_display = dest_page.selected_template.display_name
 
-            summary_text += "<tr><td style='padding: 8px; color: #666;'>" "<b>Backup-Ziel:</b></td>"
+            summary_text += "<tr><td style='padding: 8px; color: #666;'><b>Backup-Ziel:</b></td>"
             summary_text += (
-                f"<td style='padding: 8px;'>{template_icon} {template_display}</td></tr>"
+                f"<td style='padding: 8px;'>{template_icon} {dest_display}</td></tr>"
             )
 
         summary_text += "</table>"
@@ -1678,16 +1713,11 @@ class ProfileSelectionPage(QWizardPage):
 
     def __init__(self):
         super().__init__()
-        self.setTitle("Welches Backup möchtest du bearbeiten?")
-        self.setSubTitle(
-            "Wähle ein bestehendes Backup-Profil aus oder füge ein neues Ziel hinzu."
-        )
         self.selected_profile_id: Optional[str] = None  # None = neues Profil
 
         layout = QVBoxLayout(self)
         layout.setSpacing(12)
 
-        # Scroll-Bereich für Profile
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.Shape.NoFrame)
@@ -1697,17 +1727,34 @@ class ProfileSelectionPage(QWizardPage):
         scroll.setWidget(self._scroll_widget)
         layout.addWidget(scroll)
 
-        # Verstecktes Feld für Profil-ID (routing-unabhängig)
         self._profile_id_edit = QLineEdit()
         self._profile_id_edit.setVisible(False)
         self.registerField("selected_profile_id", self._profile_id_edit)
 
     def initializePage(self):
+        # Kontext aus StartPage lesen
+        action = "edit"
+        wizard = self.wizard()
+        if wizard and hasattr(wizard, "start_page"):
+            action = wizard.start_page.selected_action or "edit"
+
+        if action == "add_destination":
+            self.setTitle("Neues Backup anlegen")
+            self.setSubTitle(
+                "Übernimm die Quellen eines bestehenden Backups als Vorlage "
+                "oder starte mit leeren Quellen."
+            )
+        else:
+            self.setTitle("Welches Backup möchtest du bearbeiten?")
+            self.setSubTitle(
+                "Wähle das Backup-Profil, das du anpassen möchtest."
+            )
+
         self.selected_profile_id = None
         self._profile_id_edit.setText("")
-        self._load_profiles()
+        self._load_profiles(action)
 
-    def _load_profiles(self):
+    def _load_profiles(self, action: str = "edit"):
         """Löscht und befüllt die Profil-Liste neu."""
         while self._profiles_layout.count():
             item = self._profiles_layout.takeAt(0)
@@ -1762,31 +1809,28 @@ class ProfileSelectionPage(QWizardPage):
             desc.setStyleSheet(style_label_secondary() + " margin-left: 28px;")
             self._profiles_layout.addWidget(desc)
 
-        # Trennlinie vor dem "Neu hinzufügen"-Eintrag
-        if profiles:
-            sep = QFrame()
-            sep.setFrameShape(QFrame.Shape.HLine)
-            sep.setFrameShadow(QFrame.Shadow.Sunken)
-            self._profiles_layout.addWidget(sep)
+        # "Neues Backup" Option nur bei add_destination
+        if action == "add_destination":
+            if profiles:
+                sep = QFrame()
+                sep.setFrameShape(QFrame.Shape.HLine)
+                sep.setFrameShadow(QFrame.Shadow.Sunken)
+                self._profiles_layout.addWidget(sep)
 
-        # "+ Neues Backup-Ziel hinzufügen" als letzter Radio-Button
-        new_radio = QRadioButton("➕  Neues Backup-Ziel hinzufügen")
-        new_radio.setStyleSheet(
-            f"font-size: 14px; font-weight: bold; color: {ACCENT_COLOR};"
-        )
-        self._radio_group.addButton(new_radio)
-        new_radio.toggled.connect(
-            lambda checked: self._on_new_toggled(checked)
-        )
-        self._profiles_layout.addWidget(new_radio)
+            new_radio = QRadioButton("➕  Völlig neues Backup (leere Quellen)")
+            new_radio.setStyleSheet(
+                f"font-size: 14px; font-weight: bold; color: {ACCENT_COLOR};"
+            )
+            self._radio_group.addButton(new_radio)
+            new_radio.toggled.connect(lambda checked: self._on_new_toggled(checked))
+            self._profiles_layout.addWidget(new_radio)
 
-        new_desc = QLabel("    Füge ein weiteres Backup-Ziel mit eigenem Zeitplan hinzu")
-        new_desc.setStyleSheet(style_label_secondary() + " margin-left: 28px;")
-        self._profiles_layout.addWidget(new_desc)
+            new_desc = QLabel("    Starte mit einer leeren Quellen-Liste")
+            new_desc.setStyleSheet(style_label_secondary() + " margin-left: 28px;")
+            self._profiles_layout.addWidget(new_desc)
 
         self._profiles_layout.addStretch()
 
-        # Standard-Auswahl: erstes Profil (oder direkt "Neu" wenn leer)
         buttons = self._radio_group.buttons()
         if buttons:
             buttons[0].setChecked(True)
@@ -1807,7 +1851,7 @@ class ProfileSelectionPage(QWizardPage):
         return True
 
     def nextId(self) -> int:
-        return PAGE_DESTINATION
+        return PAGE_SOURCE
 
 
 # ============================================================================
@@ -1929,6 +1973,10 @@ class SetupWizardV2(QWizard):
         if hasattr(self, "profile_selection_page"):
             selected_profile_id = self.profile_selection_page.selected_profile_id or ""
 
+        profile_name = ""
+        if hasattr(self, "finish_page"):
+            profile_name = self.finish_page.profile_name_edit.text().strip()
+
         config = {
             "action": action,
             "sources": sources.split(",") if sources else [],
@@ -1938,6 +1986,7 @@ class SetupWizardV2(QWizard):
             "schedule": schedule_config,
             "password": password,
             "selected_profile_id": selected_profile_id,
+            "profile_name": profile_name,
             "start_backup_now": self.field("start_backup_now") or False,
             "start_tray": self.field("start_tray") or True,
         }

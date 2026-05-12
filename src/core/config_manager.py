@@ -322,7 +322,19 @@ class ConfigManager:
         """Erstellt profiles[] einmalig aus destinations[]/schedules[] (Rückwärts-Kompatibilität)."""
         destinations = self.config.get("destinations", [])
         schedules = self.config.get("schedules", [])
+        global_sources = self.config.get("sources", [])
         profiles = []
+
+        # Globale Quellen in kompaktes Format für Profile konvertieren
+        profile_sources = [
+            {
+                "path": s["path"],
+                "name": s.get("name", ""),
+                "enabled": s.get("enabled", True),
+            }
+            for s in global_sources
+            if isinstance(s, dict) and s.get("path")
+        ]
 
         for i, dest in enumerate(destinations):
             schedule_entry = None
@@ -340,6 +352,7 @@ class ConfigManager:
             profiles.append({
                 "id": f"profile_{i + 1}",
                 "name": dest.get("name", f"Backup {i + 1}"),
+                "sources": profile_sources,  # globale Quellen in jedes Profil kopieren
                 "destination": {
                     "name": dest.get("name", ""),
                     "type": dest.get("type", "local"),
