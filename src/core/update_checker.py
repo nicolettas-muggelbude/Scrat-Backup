@@ -57,21 +57,36 @@ def _last_check_path() -> Path:
     return get_app_data_dir() / "last_update_check"
 
 
-def _should_check() -> bool:
+def _should_check(current_version: str = "") -> bool:
     path = _last_check_path()
     if not path.exists():
         return True
     try:
-        last = date.fromisoformat(path.read_text().strip())
-        return (date.today() - last).days >= CHECK_INTERVAL_DAYS
+        content = path.read_text().strip()
+        # Format: "YYYY-MM-DD [checked_version]"
+        parts = content.split()
+        last = date.fromisoformat(parts[0])
+        if (date.today() - last).days >= CHECK_INTERVAL_DAYS:
+            return True
+        # Gleicher Tag: nochmal prüfen wenn die damals gefundene Version
+        # identisch mit der aktuellen war (könnte inzwischen ein neues Release geben)
+        if len(parts) >= 2 and current_version:
+            checked_version = parts[1]
+            if not _is_newer(checked_version, current_version):
+                # Beim letzten Check kein Update gefunden → heute nochmal prüfen
+                return True
+        return False
     except Exception:
         return True
 
 
-def _save_check_date() -> None:
+def _save_check_date(found_version: str = "") -> None:
     path = _last_check_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(date.today().isoformat())
+    content = date.today().isoformat()
+    if found_version:
+        content += f" {found_version}"
+    path.write_text(content)
 
 
 def _download_url_for_platform(assets: list) -> str:
@@ -103,8 +118,8 @@ class UpdateChecker(QThread):
         self.current_version = current_version
 
     def run(self) -> None:
-        if not _should_check():
-            logger.debug("Update-Check übersprungen (heute bereits geprüft)")
+        if not _should_check(self.current_version):
+            logger.debug("Update-Check übersprungen (heute bereits geprüft, kein neues Release erwartet)")
             return
 
         try:
@@ -133,8 +148,6 @@ class UpdateChecker(QThread):
             with urlopen(req, timeout=5, context=ssl_context) as resp:
                 releases = json.loads(resp.read())
 
-            _save_check_date()
-
             # Erstes nicht-draft Release nehmen (inkl. Pre-releases / Beta)
             data = None
             if isinstance(releases, list):
@@ -158,6 +171,9 @@ class UpdateChecker(QThread):
 
             latest_version = latest_tag.lstrip("v")
             logger.info(f"Update-Check: aktuell={self.current_version}, neueste={latest_version}")
+
+            # Datum speichern, inkl. gefundener Version (für same-day-Logik)
+            _save_check_date(latest_version)
 
             if _is_newer(latest_version, self.current_version):
                 download_url = _download_url_for_platform(assets)
