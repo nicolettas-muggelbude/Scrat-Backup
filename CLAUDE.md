@@ -12,7 +12,12 @@ Verschlüsseltes, komprimiertes Backup-Tool mit Wizard-zentrierter Architektur u
 Desktop-Starter (scrat-backup --wizard | --tray)
         ↓
 SetupWizardV2  (src/gui/wizard_v2.py)
-  StartPage → SourceSelectionPage → TemplateDestinationPage → SchedulePage → FinishPage
+  StartPage → [action] → ...
+    "backup"        → SourceSelectionPage → DestinationPage → SchedulePage → FinishPage
+    "edit"          → ProfileSelectionPage → DestinationPage → SchedulePage → FinishPage
+    "edit_sources"  → SourceSelectionPage → FinishPage
+    "add_destination" → DestinationPage → SchedulePage → FinishPage
+    "restore"       → RestorePage
         ↓
 System Tray  (Wizard öffnen | Backup starten | Hauptfenster)
 ```
@@ -87,6 +92,9 @@ src/
 - **Wizard-Änderungen aus Tray gespeichert:** `_open_settings_wizard()` speichert Config + aktualisiert OS-Zeitplan
 - **Restore-Seite scrollbar:** `QScrollArea` in `RestoreWizardPage` verhindert Quetschen beim Fortschrittsbalken
 - **StartPage zeigt Version:** `version`-Parameter in `wizard_pages.py:StartPage.__init__`
+- **Multi-Profil-Backup:** `profiles[]` in config.json – jedes Profil hat eigenes Ziel + Zeitplan; Quellen global geteilt; Migration aus altem `destinations[]`-Format automatisch; `run_backup_headless()` startet alle aktiven Profile parallel in eigenen Threads mit getrennten metadata.db-Dateien
+- **ProfileSelectionPage (PAGE_PROFILE_SELECT=8):** Zeigt alle konfigurierten Profile als Radio-Buttons; "+ Neues Backup-Ziel hinzufügen" als letzten Eintrag; wird bei "edit"-Aktion vor DestinationPage eingefügt
+- **Quellen-getrennte Bearbeitung:** "edit_sources"-Aktion (StartPage) → SourceSelectionPage → FinishPage (überspringt Destination/Schedule)
 
 ---
 
@@ -167,10 +175,12 @@ src/
 | Fortschritts-Dialog | QProgressDialog ohne Schließ-Button (`CustomizeWindowHint \| WindowTitleHint`), Fortschritt via shared dict zwischen Backup-Thread und Qt-Event-Loop |
 
 ### Wizard-Seitenfolge & Routing
-- Page-IDs: `PAGE_START=0`, `PAGE_SOURCE=1`, `PAGE_MODE=2`, `PAGE_DESTINATION=3`, `PAGE_SCHEDULE=4`, `PAGE_FINISH=5`, `PAGE_RESTORE=6`, `PAGE_ENCRYPTION=7`
+- Page-IDs: `PAGE_START=0`, `PAGE_SOURCE=1`, `PAGE_MODE=2`, `PAGE_DESTINATION=3`, `PAGE_SCHEDULE=4`, `PAGE_FINISH=5`, `PAGE_RESTORE=6`, `PAGE_ENCRYPTION=7`, `PAGE_PROFILE_SELECT=8`
 - `nextId()` routet dynamisch basierend auf StartPage-Auswahl
 - Restore-Aktion: StartPage → PAGE_RESTORE (6) → fertig
 - Normal/Experten-Modus: PAGE_SOURCE → PAGE_DESTINATION → PAGE_SCHEDULE → PAGE_ENCRYPTION → PAGE_FINISH
+- Edit-Aktion (Ziel/Zeitplan): StartPage → PAGE_PROFILE_SELECT → PAGE_DESTINATION → PAGE_SCHEDULE → PAGE_ENCRYPTION → PAGE_FINISH
+- Edit-Sources-Aktion: StartPage → PAGE_SOURCE → PAGE_FINISH
 - SchedulePage gibt `None` zurück wenn Auto-Zeitplan deaktiviert; sonst `{"enabled": True, "frequency", "time", "weekdays", "day_of_month"}`
 - EncryptionPage gibt Passwort in `get_config()["password"]` zurück; speichert optional im Keyring
 - `sourcesChanged` Signal auf SourceSelectionPage aktiviert den Weiter-Button

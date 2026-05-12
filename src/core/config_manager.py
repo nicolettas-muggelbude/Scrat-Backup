@@ -309,3 +309,79 @@ class ConfigManager:
 
         max_id = max(s.get("id", 0) for s in schedules)
         return max_id + 1
+
+    # Profil-Management
+
+    def get_profiles(self) -> list:
+        """Gibt alle Backup-Profile zurück. Migriert automatisch aus altem destinations[]-Format."""
+        if "profiles" not in self.config:
+            self._migrate_to_profiles()
+        return self.config.get("profiles", [])
+
+    def _migrate_to_profiles(self) -> None:
+        """Erstellt profiles[] einmalig aus destinations[]/schedules[] (Rückwärts-Kompatibilität)."""
+        destinations = self.config.get("destinations", [])
+        schedules = self.config.get("schedules", [])
+        profiles = []
+
+        for i, dest in enumerate(destinations):
+            schedule_entry = None
+            for s in schedules:
+                if s.get("destination_id", 0) == i:
+                    schedule_entry = {
+                        "enabled": s.get("enabled", True),
+                        "frequency": s.get("frequency", "daily"),
+                        "time": s.get("time", "03:00"),
+                        "weekdays": s.get("weekdays", []),
+                        "day_of_month": s.get("day_of_month", 1),
+                    }
+                    break
+
+            profiles.append({
+                "id": f"profile_{i + 1}",
+                "name": dest.get("name", f"Backup {i + 1}"),
+                "destination": {
+                    "name": dest.get("name", ""),
+                    "type": dest.get("type", "local"),
+                    "config": dest.get("config", {}),
+                },
+                "schedule": schedule_entry,
+                "enabled": dest.get("enabled", True),
+            })
+
+        self.config["profiles"] = profiles
+        if profiles:
+            self.save()
+            logger.info(f"Migration: {len(profiles)} Profil(e) aus Destinations erstellt")
+        else:
+            logger.info("Migration: Keine Destinations – leere Profile-Liste angelegt")
+
+    def save_profile(self, profile: dict) -> None:
+        """Erstellt oder aktualisiert ein Backup-Profil."""
+        if "profiles" not in self.config:
+            self.config["profiles"] = []
+
+        profiles = self.config["profiles"]
+        profile_id = profile.get("id")
+
+        for i, p in enumerate(profiles):
+            if p.get("id") == profile_id:
+                profiles[i] = profile
+                self.save()
+                logger.info(f"Profil aktualisiert: {profile.get('name')}")
+                return
+
+        profiles.append(profile)
+        self.save()
+        logger.info(f"Profil hinzugefügt: {profile.get('name')}")
+
+    def delete_profile(self, profile_id: str) -> bool:
+        """Löscht ein Backup-Profil. Gibt True zurück wenn gefunden und gelöscht."""
+        profiles = self.config.get("profiles", [])
+        original = len(profiles)
+        self.config["profiles"] = [p for p in profiles if p.get("id") != profile_id]
+        if len(self.config["profiles"]) < original:
+            self.save()
+            logger.info(f"Profil gelöscht: {profile_id}")
+            return True
+        return False

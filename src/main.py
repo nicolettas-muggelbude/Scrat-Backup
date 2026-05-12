@@ -24,7 +24,7 @@ from src.utils.paths import get_app_data_dir  # noqa: E402
 try:
     from src import __version__ as APP_VERSION  # noqa: E402
 except ImportError:
-    APP_VERSION = "0.3.49-beta"
+    APP_VERSION = "0.3.50"
 
 # Logging konfigurieren – immer in Datei schreiben (auch bei console=False)
 def _setup_logging() -> None:
@@ -120,13 +120,11 @@ def check_first_run() -> bool:
     try:
         config_manager = ConfigManager(config_file)
 
-        # Prüfe ob Quellen und Ziele konfiguriert sind
-        has_sources = (
-            config_manager.config.get("sources") and len(config_manager.config["sources"]) > 0
-        )
-        has_destinations = (
+        # Prüfe ob Quellen und Ziele/Profile konfiguriert sind
+        has_sources = bool(config_manager.config.get("sources"))
+        has_destinations = bool(
             config_manager.config.get("destinations")
-            and len(config_manager.config["destinations"]) > 0
+            or config_manager.config.get("profiles")
         )
 
         if not has_sources or not has_destinations:
@@ -144,151 +142,155 @@ def check_first_run() -> bool:
         return True
 
 
-def save_wizard_config(wizard_config: dict) -> None:
-    """
-    Speichert Wizard-Konfiguration in ConfigManager
+_TEMPLATE_NAMES = {
+    "usb": "USB-Laufwerk",
+    "onedrive": "OneDrive",
+    "google_drive": "Google Drive",
+    "dropbox": "Dropbox",
+    "nextcloud": "Nextcloud",
+    "synology": "Synology NAS",
+    "qnap": "QNAP NAS",
+}
 
-    Args:
-        wizard_config: Dictionary aus SetupWizardV2.get_config()
-                       Format: {
-                           "action": "backup",
-                           "sources": ["path1", "path2"],
-                           "excludes": ["*.tmp", ...],
-                           "template_id": "usb",
-                           "template_config": {...},
-                           "start_backup_now": False,
-                           "start_tray": True
-                       }
-    """
+
+def _sync_profiles_to_destinations(config_manager) -> None:
+    """Baut destinations[]/schedules[] aus profiles[] neu auf (Rückwärts-Kompatibilität)."""
+    profiles = config_manager.config.get("profiles", [])
+    config_manager.config["destinations"] = []
+    config_manager.config["schedules"] = []
+
+    for i, profile in enumerate(profiles):
+        dest = profile.get("destination", {})
+        config_manager.config["destinations"].append({
+            "name": dest.get("name", profile.get("name", "")),
+            "type": dest.get("type", "local"),
+            "config": dest.get("config", {}),
+            "enabled": profile.get("enabled", True),
+        })
+        sched = profile.get("schedule") or {}
+        if sched.get("enabled"):
+            config_manager.config["schedules"].append({
+                "id": i + 1,
+                "name": f"Automatisches Backup – {profile.get('name', '')}",
+                "enabled": True,
+                "frequency": sched.get("frequency", "daily"),
+                "time": sched.get("time", "03:00"),
+                "weekdays": sched.get("weekdays", []),
+                "day_of_month": sched.get("day_of_month", 1),
+                "source_ids": [],
+                "destination_id": i,
+                "backup_type": "incremental",
+                "retention": 3,
+            })
+
+
+def _get_profile_db_path(profile_id: str) -> Path:
+    """Gibt den Pfad zur Metadaten-DB eines Profils zurück."""
+    old_db = get_app_data_dir() / "metadata.db"
+    # profile_1 nutzt die alte DB wenn vorhanden (Rückwärts-Kompatibilität)
+    if profile_id == "profile_1" and old_db.exists():
+        return old_db
+    db_dir = get_app_data_dir() / "metadata"
+    db_dir.mkdir(parents=True, exist_ok=True)
+    return db_dir / f"{profile_id}.db"
+
+
+def save_wizard_config(wizard_config: dict) -> None:
+    """Speichert Wizard-Konfiguration als Backup-Profil."""
     config_manager = ConfigManager()
 
     try:
         action = wizard_config.get("action", "backup")
 
-        # Restore-Flow: Wizard hat die Wiederherstellung bereits durchgeführt,
-        # Config wird nicht verändert
         if action == "restore":
             logger.info("Aktion 'restore': Config wird nicht geändert")
             return
 
-        # Bei Ersteinrichtung oder Änderung: vorherige Quellen/Ziele VOLLSTÄNDIG LÖSCHEN
-        # Bei "add_destination": nur neue Destination hinzufügen
-        if action in ("backup", "edit"):
-            logger.info(f"Aktion '{action}': Lösche alte Quellen und Ziele")
-            config_manager.config["sources"] = []
-            config_manager.config["destinations"] = []
-
-            # WICHTIG: Explizit speichern damit es persistent ist
-            config_manager.save()
-            logger.info("Alte Einträge gelöscht und gespeichert")
-
-        # 1. Quellen in Config speichern
         sources = wizard_config.get("sources", [])
         excludes = wizard_config.get("excludes", [])
 
-        # Stelle sicher dass sources-Array existiert
-        if "sources" not in config_manager.config:
+        # "edit_sources": nur Quellen aktualisieren, Profile unberührt lassen
+        if action == "edit_sources":
+            config_manager.config["sources"] = [
+                {
+                    "path": p,
+                    "name": Path(p).name or "Quelle",
+                    "enabled": True,
+                    "exclude_patterns": excludes,
+                }
+                for p in sources
+            ]
+            config_manager.save()
+            logger.info(f"Backup-Quellen aktualisiert: {len(sources)} Einträge")
+            return
+
+        # "backup" (Ersteinrichtung): alles zurücksetzen
+        if action == "backup":
             config_manager.config["sources"] = []
+            config_manager.config["profiles"] = []
+            config_manager.save()
 
-        # Erstelle Source-Einträge
-        for source_path in sources:
-            path_obj = Path(source_path)
-            source_entry = {
-                "path": source_path,
-                "name": path_obj.name if path_obj.name else "Quelle",
-                "enabled": True,
-                "exclude_patterns": excludes,  # Nutze Ausschlüsse vom Wizard
-            }
-            config_manager.config["sources"].append(source_entry)
-            logger.info(f"Quelle hinzugefügt: {source_path}")
+        # Quellen speichern – nur wenn SourceSelectionPage durchlaufen wurde
+        if sources:
+            if "sources" not in config_manager.config:
+                config_manager.config["sources"] = []
+            for p in sources:
+                config_manager.config["sources"].append({
+                    "path": p,
+                    "name": Path(p).name or "Quelle",
+                    "enabled": True,
+                    "exclude_patterns": excludes,
+                })
+                logger.info(f"Quelle hinzugefügt: {p}")
 
-        # 2. Ziel in Config speichern
+        # Profil erstellen oder aktualisieren
         template_id = wizard_config.get("template_id")
         template_config = wizard_config.get("template_config", {})
 
         if template_id and template_config:
-            if not config_manager.config.get("destinations"):
-                config_manager.config["destinations"] = []
-
-            # Template-Name für bessere Anzeige
-            template_names = {
-                "usb": "USB-Laufwerk",
-                "onedrive": "OneDrive",
-                "google_drive": "Google Drive",
-                "dropbox": "Dropbox",
-                "nextcloud": "Nextcloud",
-                "synology": "Synology NAS",
-                "qnap": "QNAP NAS",
-            }
-            template_name = template_names.get(template_id, template_id.replace("_", " ").title())
-
-            destination_entry = {
-                "name": f"{template_name}",
-                "type": template_config.get("type", template_id),
-                "config": template_config,
-                "enabled": True,
-            }
-            config_manager.config["destinations"].append(destination_entry)
-            logger.info(f"Ziel hinzugefügt: {template_name} ({template_id})")
-
-        # 3. TODO: Verschlüsselung (wird in zukünftiger Version implementiert)
-        # encryption_config = wizard_config.get("encryption", {})
-
-        # 4. TODO: Zeitplan (wird in zukünftiger Version implementiert)
-        # Aktuell: Kein Zeitplan-Page im neuen Wizard
-        schedule = wizard_config.get("schedule", {})
-        if schedule and schedule.get("enabled"):
-            if not config_manager.config.get("schedules"):
-                config_manager.config["schedules"] = []
-
-            # Berechne source_ids: Indizes der gerade hinzugefügten Quellen
-            sources_count = len(config_manager.config.get("sources", []))
-            num_new_sources = len(wizard_config.get("sources", []))
-            # Die neuen Quellen wurden ans Ende der Liste angehängt
-            source_ids = list(range(sources_count - num_new_sources, sources_count))
-
-            # destination_id: Index des gerade hinzugefügten Ziels (letztes Element)
-            destinations_count = len(config_manager.config.get("destinations", []))
-            destination_id = destinations_count - 1 if destinations_count > 0 else 0
-
-            # Konvertiere interval-String zu frequency
-            interval_str = schedule.get("interval", "Täglich")
-            frequency_map = {
-                "Täglich": "daily",
-                "Wöchentlich": "weekly",
-                "Monatlich": "monthly",
-            }
-            frequency = frequency_map.get(interval_str, "daily")
-
-            # Berechne ID für Zeitplan (nächste freie ID)
-            existing_schedules = config_manager.config.get("schedules", [])
-            next_id = max([s.get("id", 0) for s in existing_schedules], default=0) + 1
-
-            # Erstelle Zeitplan im Scheduler-Format
-            schedule_entry = {
-                "id": next_id,
-                "name": "Automatisches Backup",
-                "enabled": True,
-                "frequency": frequency,
-                "time": "03:00",  # Default: 3:00 Uhr
-                "weekdays": [1, 2, 3, 4, 5],  # Mo-Fr für wöchentlich
-                "day_of_month": 1,  # 1. Tag des Monats für monatlich
-                "source_ids": source_ids,
-                "destination_id": destination_id,
-                "backup_type": "incremental",  # Default: Incremental
-                "retention": schedule.get("retention", 3),
-                "created_at": datetime.now().isoformat(),
-            }
-            config_manager.config["schedules"].append(schedule_entry)
-            logger.info(
-                f"Zeitplan hinzugefügt: {frequency} um 03:00 Uhr, "
-                f"{len(source_ids)} Quellen, Ziel-ID {destination_id}"
+            dest_name = _TEMPLATE_NAMES.get(
+                template_id, template_id.replace("_", " ").title()
             )
 
-        # 5. Speichere Konfiguration
-        config_manager.save()
+            # Schedule aus Wizard-SchedulePage (gibt "frequency" in Englisch zurück)
+            schedule_raw = wizard_config.get("schedule") or {}
+            profile_schedule = None
+            if schedule_raw.get("enabled"):
+                profile_schedule = {
+                    "enabled": True,
+                    "frequency": schedule_raw.get("frequency", "daily"),
+                    "time": schedule_raw.get("time", "03:00"),
+                    "weekdays": schedule_raw.get("weekdays", []),
+                    "day_of_month": schedule_raw.get("day_of_month", 1),
+                }
 
-        logger.info("Wizard-Konfiguration erfolgreich gespeichert")
+            # Profil-ID: bestehend (edit) oder neu (backup/add_destination)
+            selected_profile_id = wizard_config.get("selected_profile_id", "")
+            if selected_profile_id:
+                profile_id = selected_profile_id
+            elif action == "backup":
+                profile_id = "profile_1"
+            else:
+                import time as _t
+                profile_id = f"profile_{int(_t.time())}"
+
+            config_manager.save_profile({
+                "id": profile_id,
+                "name": dest_name,
+                "destination": {
+                    "name": dest_name,
+                    "type": template_config.get("type", template_id),
+                    "config": template_config,
+                },
+                "schedule": profile_schedule,
+                "enabled": True,
+            })
+            logger.info(f"Profil gespeichert: {dest_name} (ID: {profile_id})")
+
+            _sync_profiles_to_destinations(config_manager)
+
+        config_manager.save()
+        logger.info("Wizard-Konfiguration gespeichert")
 
     except Exception as e:
         logger.error(f"Fehler beim Speichern der Wizard-Config: {e}", exc_info=True)
@@ -706,19 +708,34 @@ def _activate_os_schedule(schedule: dict | None) -> None:
 
 def run_backup_headless() -> int:
     """
-    Führt ein Backup ohne GUI aus (für OS-Scheduler-Aufrufe via --backup).
-    Liest Konfiguration aus config.json und startet BackupEngine direkt.
+    Führt Backups für alle aktiven Profile ohne GUI aus (OS-Scheduler via --backup).
+    Profile laufen sequenziell (SQLite-Kompatibilität; jedes Profil hat eigene metadata.db).
     """
     import threading
 
     from src.core.backup_engine import BackupConfig, BackupEngine
     from src.core.metadata_manager import MetadataManager
+    from src.utils.notifications import send_notification
 
     logger.info("=== Headless-Backup gestartet (--backup) ===")
 
     config_manager = ConfigManager()
 
-    # Quellen
+    # Passwort aus Keyring (geteilt über alle Profile)
+    password = ""
+    try:
+        from src.utils.credential_manager import get_credential_manager
+        cm = get_credential_manager()
+        if cm.available:
+            password = cm.get_password() or ""
+    except Exception:
+        pass
+
+    if not password:
+        logger.error("Headless-Backup: Kein Passwort im Keyring – abgebrochen")
+        return 1
+
+    # Quellen (geteilt über alle Profile, Duplikate entfernen)
     seen: set = set()
     sources = []
     for s in config_manager.config.get("sources", []):
@@ -733,76 +750,100 @@ def run_backup_headless() -> int:
         logger.error("Headless-Backup: Keine Quellen konfiguriert")
         return 1
 
-    # Ziel
-    destinations = config_manager.config.get("destinations", [])
-    if not destinations:
-        logger.error("Headless-Backup: Kein Ziel konfiguriert")
+    # Profile laden
+    profiles = config_manager.get_profiles()
+    enabled_profiles = [p for p in profiles if p.get("enabled", True)]
+
+    if not enabled_profiles:
+        logger.error("Headless-Backup: Keine aktiven Profile konfiguriert")
         return 1
 
-    destination = destinations[-1]
-    dest_config = destination.get("config", {})
-    dest_type = destination.get("type", "local")
-
-    if dest_type in ("local", "usb"):
-        drive = dest_config.get("drive", "")
-        sub_path = dest_config.get("path", "")
-        dest_path = Path(drive) / sub_path if drive and sub_path else (
-            Path(drive) if drive else Path(dest_config.get("path", str(Path.home() / "scrat-backups")))
-        )
-    else:
-        dest_path = Path.home() / "scrat-backup" / "Backup"
-
-    # Passwort aus Keyring
-    password = ""
-    try:
-        from src.utils.credential_manager import get_credential_manager
-        cm = get_credential_manager()
-        if cm.available:
-            password = cm.get_password() or ""
-    except Exception:
-        pass
-
-    if not password:
-        logger.error("Headless-Backup: Kein Passwort im Keyring – Backup abgebrochen")
-        return 1
-
-    # Frequenz aus erstem aktivem Zeitplan
-    _schedules = config_manager.config.get("schedules", [])
-    _headless_freq = "daily"
-    for _s in _schedules:
-        if _s.get("enabled", True):
-            _headless_freq = _s.get("frequency", "daily")
-            break
-
-    db_path = get_app_data_dir() / "metadata.db"
-    backup_config = BackupConfig(
-        sources=sources,
-        destination_path=dest_path,
-        destination_type=dest_type,
-        password=password,
-        compression_level=1,
-        auto_rotate=True,
+    logger.info(f"Headless-Backup: {len(enabled_profiles)} Profil(e)")
+    send_notification(
+        "Scrat-Backup",
+        f"Automatisches Backup wird gestartet… ({len(enabled_profiles)} Ziel(e))",
     )
 
-    from src.utils.notifications import send_notification
+    results: dict[str, bool] = {}
 
-    send_notification("Scrat-Backup", "Automatisches Backup wird gestartet…")
+    def _run_profile(profile: dict) -> None:
+        profile_id = profile["id"]
+        profile_name = profile.get("name", profile_id)
+        try:
+            dest = profile.get("destination", {})
+            dest_cfg = dest.get("config", {})
+            dest_type = dest.get("type", "local")
 
-    try:
-        metadata_manager = MetadataManager(db_path)
-        engine = BackupEngine(metadata_manager=metadata_manager, config=backup_config)
-        backup_type = _decide_backup_type(metadata_manager, _headless_freq)
-        if backup_type == "incremental":
-            result = engine.create_incremental_backup()
-        else:
-            result = engine.create_full_backup()
-        logger.info(f"Headless-Backup erfolgreich: {result}")
-        metadata_manager.disconnect()
-        send_notification("Scrat-Backup – Erfolgreich", "Das automatische Backup wurde abgeschlossen.")
+            if dest_type in ("local", "usb"):
+                drive = dest_cfg.get("drive", "")
+                sub_path = dest_cfg.get("path", "")
+                if drive and sub_path:
+                    dest_path = Path(drive) / sub_path
+                elif drive:
+                    dest_path = Path(drive)
+                else:
+                    dest_path = Path(dest_cfg.get("path", str(Path.home() / "scrat-backups")))
+            else:
+                dest_path = Path.home() / "scrat-backup" / profile_name
+
+            sched = profile.get("schedule") or {}
+            frequency = sched.get("frequency", "daily")
+
+            db_path = _get_profile_db_path(profile_id)
+            backup_cfg = BackupConfig(
+                sources=sources,
+                destination_path=dest_path,
+                destination_type=dest_type,
+                password=password,
+                compression_level=1,
+                auto_rotate=True,
+            )
+            metadata_manager = MetadataManager(db_path)
+            engine = BackupEngine(metadata_manager=metadata_manager, config=backup_cfg)
+            backup_type = _decide_backup_type(metadata_manager, frequency)
+            if backup_type == "incremental":
+                engine.create_incremental_backup()
+            else:
+                engine.create_full_backup()
+            metadata_manager.disconnect()
+            results[profile_id] = True
+            logger.info(f"Profil '{profile_name}' erfolgreich gesichert → {dest_path}")
+        except Exception as e:
+            results[profile_id] = False
+            logger.error(f"Profil '{profile_name}' fehlgeschlagen: {e}", exc_info=True)
+
+    # Alle Profile in eigenen Threads (jedes Profil hat eigene DB → kein SQLite-Konflikt)
+    threads = [
+        threading.Thread(target=_run_profile, args=(p,), daemon=False)
+        for p in enabled_profiles
+    ]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    success = sum(1 for v in results.values() if v)
+    fail = len(results) - success
+
+    if fail == 0:
+        send_notification(
+            "Scrat-Backup – Erfolgreich",
+            f"Alle {len(enabled_profiles)} Backup(s) abgeschlossen.",
+        )
         return 0
-    except Exception as e:
-        logger.error(f"Headless-Backup fehlgeschlagen: {e}", exc_info=True)
-        send_notification("Scrat-Backup – Fehler", f"Backup fehlgeschlagen: {e}", urgent=True)
+    elif success > 0:
+        send_notification(
+            "Scrat-Backup – Teilweise erfolgreich",
+            f"{success}/{len(enabled_profiles)} Backup(s) erfolgreich, {fail} fehlgeschlagen.",
+            urgent=True,
+        )
+        return 1
+    else:
+        send_notification(
+            "Scrat-Backup – Fehler",
+            f"Alle {len(enabled_profiles)} Backup(s) fehlgeschlagen.",
+            urgent=True,
+        )
         return 1
 
 

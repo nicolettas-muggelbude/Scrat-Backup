@@ -14,6 +14,7 @@ from PySide6.QtCore import Qt, QTime, Signal
 from PySide6.QtGui import QIcon, QPalette, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
+    QButtonGroup,
     QCheckBox,
     QComboBox,
     QFileDialog,
@@ -90,6 +91,7 @@ PAGE_SCHEDULE = 4
 PAGE_FINISH = 5
 PAGE_RESTORE = 6
 PAGE_ENCRYPTION = 7
+PAGE_PROFILE_SELECT = 8
 
 
 # ============================================================================
@@ -1667,6 +1669,148 @@ class RestoreWizardPage(QWizardPage):
 
 
 # ============================================================================
+# PROFIL-AUSWAHL-SEITE  (für "Backup-Ziel ändern")
+# ============================================================================
+
+
+class ProfileSelectionPage(QWizardPage):
+    """Zeigt alle konfigurierten Backup-Profile zur Auswahl an."""
+
+    def __init__(self):
+        super().__init__()
+        self.setTitle("Welches Backup möchtest du bearbeiten?")
+        self.setSubTitle(
+            "Wähle ein bestehendes Backup-Profil aus oder füge ein neues Ziel hinzu."
+        )
+        self.selected_profile_id: Optional[str] = None  # None = neues Profil
+
+        layout = QVBoxLayout(self)
+        layout.setSpacing(12)
+
+        # Scroll-Bereich für Profile
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        self._scroll_widget = QWidget()
+        self._profiles_layout = QVBoxLayout(self._scroll_widget)
+        self._profiles_layout.setSpacing(8)
+        scroll.setWidget(self._scroll_widget)
+        layout.addWidget(scroll)
+
+        # Verstecktes Feld für Profil-ID (routing-unabhängig)
+        self._profile_id_edit = QLineEdit()
+        self._profile_id_edit.setVisible(False)
+        self.registerField("selected_profile_id", self._profile_id_edit)
+
+    def initializePage(self):
+        self.selected_profile_id = None
+        self._profile_id_edit.setText("")
+        self._load_profiles()
+
+    def _load_profiles(self):
+        """Löscht und befüllt die Profil-Liste neu."""
+        while self._profiles_layout.count():
+            item = self._profiles_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        from core.config_manager import ConfigManager
+        from utils.paths import get_app_data_dir
+
+        cfg = ConfigManager(get_app_data_dir() / "config.json")
+        profiles = cfg.get_profiles()
+
+        self._radio_group = QButtonGroup(self)
+
+        _ICONS = {
+            "usb": "💾",
+            "onedrive": "☁️",
+            "google_drive": "🗂️",
+            "dropbox": "📦",
+            "nextcloud": "🌐",
+            "synology": "🖧",
+            "qnap": "🖧",
+        }
+
+        for profile in profiles:
+            dest_type = profile.get("destination", {}).get("type", "local")
+            icon = _ICONS.get(dest_type, "📂")
+
+            radio = QRadioButton(f"{icon}  {profile['name']}")
+            radio.setStyleSheet("font-size: 14px; font-weight: bold;")
+            radio.setProperty("profile_id", profile["id"])
+            self._radio_group.addButton(radio)
+            radio.toggled.connect(
+                lambda checked, p=profile: self._on_profile_toggled(checked, p)
+            )
+            self._profiles_layout.addWidget(radio)
+
+            sched = profile.get("schedule") or {}
+            if sched.get("enabled"):
+                freq_labels = {
+                    "daily": "Täglich",
+                    "weekly": "Wöchentlich",
+                    "monthly": "Monatlich",
+                    "startup": "Beim Start",
+                }
+                freq_str = freq_labels.get(sched.get("frequency", "daily"), "Täglich")
+                desc_text = f"    {freq_str} um {sched.get('time', '03:00')} Uhr"
+            else:
+                desc_text = "    Kein automatischer Zeitplan"
+
+            desc = QLabel(desc_text)
+            desc.setStyleSheet(style_label_secondary() + " margin-left: 28px;")
+            self._profiles_layout.addWidget(desc)
+
+        # Trennlinie vor dem "Neu hinzufügen"-Eintrag
+        if profiles:
+            sep = QFrame()
+            sep.setFrameShape(QFrame.Shape.HLine)
+            sep.setFrameShadow(QFrame.Shadow.Sunken)
+            self._profiles_layout.addWidget(sep)
+
+        # "+ Neues Backup-Ziel hinzufügen" als letzter Radio-Button
+        new_radio = QRadioButton("➕  Neues Backup-Ziel hinzufügen")
+        new_radio.setStyleSheet(
+            f"font-size: 14px; font-weight: bold; color: {ACCENT_COLOR};"
+        )
+        self._radio_group.addButton(new_radio)
+        new_radio.toggled.connect(
+            lambda checked: self._on_new_toggled(checked)
+        )
+        self._profiles_layout.addWidget(new_radio)
+
+        new_desc = QLabel("    Füge ein weiteres Backup-Ziel mit eigenem Zeitplan hinzu")
+        new_desc.setStyleSheet(style_label_secondary() + " margin-left: 28px;")
+        self._profiles_layout.addWidget(new_desc)
+
+        self._profiles_layout.addStretch()
+
+        # Standard-Auswahl: erstes Profil (oder direkt "Neu" wenn leer)
+        buttons = self._radio_group.buttons()
+        if buttons:
+            buttons[0].setChecked(True)
+
+    def _on_profile_toggled(self, checked: bool, profile: dict):
+        if checked:
+            self.selected_profile_id = profile["id"]
+            self._profile_id_edit.setText(profile["id"])
+            self.completeChanged.emit()
+
+    def _on_new_toggled(self, checked: bool):
+        if checked:
+            self.selected_profile_id = None
+            self._profile_id_edit.setText("")
+            self.completeChanged.emit()
+
+    def isComplete(self) -> bool:
+        return True
+
+    def nextId(self) -> int:
+        return PAGE_DESTINATION
+
+
+# ============================================================================
 # WIZARD V2
 # ============================================================================
 
@@ -1731,6 +1875,10 @@ class SetupWizardV2(QWizard):
         self.encryption_page = EncryptionPage()
         self.setPage(PAGE_ENCRYPTION, self.encryption_page)
 
+        # Page 8: Profil-Auswahl (für "Backup-Ziel ändern")
+        self.profile_selection_page = ProfileSelectionPage()
+        self.setPage(PAGE_PROFILE_SELECT, self.profile_selection_page)
+
         # Start-Seite
         self.setStartId(PAGE_START)
 
@@ -1761,23 +1909,25 @@ class SetupWizardV2(QWizard):
 
     def get_config(self) -> dict:
         """Gibt Wizard-Config zurück"""
-        # Hole Werte von verschiedenen Seiten
         action = self.field("start_action")
         sources = self.field("sources")
         excludes = self.field("excludes")
         template_id = self.field("template_id")
 
-        # Template-Config von DestinationPage
         template_config = {}
         if hasattr(self.destination_page, "get_template_config"):
             template_config = self.destination_page.get_template_config()
 
-        # Zeitplan von SchedulePage
         schedule_config = None
         if hasattr(self, "schedule_page"):
             schedule_config = self.schedule_page.get_schedule_config()
 
         password = self.field("backup_password") or ""
+
+        # Profil-ID vom Auswahlschritt (leer = neues Profil anlegen)
+        selected_profile_id = ""
+        if hasattr(self, "profile_selection_page"):
+            selected_profile_id = self.profile_selection_page.selected_profile_id or ""
 
         config = {
             "action": action,
@@ -1787,11 +1937,15 @@ class SetupWizardV2(QWizard):
             "template_config": template_config,
             "schedule": schedule_config,
             "password": password,
+            "selected_profile_id": selected_profile_id,
             "start_backup_now": self.field("start_backup_now") or False,
             "start_tray": self.field("start_tray") or True,
         }
 
-        logger.info(f"Wizard-Config erstellt: {len(config['sources'])} Quellen")
+        logger.info(
+            f"Wizard-Config erstellt: {len(config['sources'])} Quellen, "
+            f"Profil-ID: '{selected_profile_id or 'neu'}'"
+        )
         return config
 
 

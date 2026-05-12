@@ -138,12 +138,10 @@ class StartPage(QWizardPage):
         try:
             config_manager = ConfigManager(config_file)
 
-            has_sources = (
-                config_manager.config.get("sources") and len(config_manager.config["sources"]) > 0
-            )
-            has_destinations = (
+            has_sources = bool(config_manager.config.get("sources"))
+            has_destinations = bool(
                 config_manager.config.get("destinations")
-                and len(config_manager.config["destinations"]) > 0
+                or config_manager.config.get("profiles")
             )
 
             return has_sources and has_destinations
@@ -180,25 +178,34 @@ class StartPage(QWizardPage):
         """Erstellt zusätzliche Optionen wenn Config vorhanden"""
 
         layout.addSpacing(15)
-
-        # Trennlinie
         layout.addWidget(self._create_separator())
-
         layout.addSpacing(5)
 
-        # Option: Einstellungen ändern
+        # Option: Backup-Ziel/Zeitplan bearbeiten → ProfileSelectionPage
         edit_frame = self._create_option_radio(
-            "edit", "⚙️ Backup-Einstellungen ändern", "Ändere Quellen, Ziele oder Zeitplan"
+            "edit",
+            "⚙️ Backup-Ziel oder Zeitplan ändern",
+            "Bearbeite Ziel und Zeitplan eines bestehenden Backups",
         )
         layout.addWidget(edit_frame)
 
         layout.addSpacing(15)
 
-        # Option: Neues Ziel hinzufügen
+        # Option: Quellen bearbeiten → SourceSelectionPage → FinishPage
+        sources_frame = self._create_option_radio(
+            "edit_sources",
+            "📂 Backup-Quellen bearbeiten",
+            "Ändere welche Ordner und Dateien gesichert werden sollen",
+        )
+        layout.addWidget(sources_frame)
+
+        layout.addSpacing(15)
+
+        # Option: Neues Ziel hinzufügen → DestinationPage (neues Profil)
         add_frame = self._create_option_radio(
             "add_destination",
             "➕ Neues Backup-Ziel hinzufügen",
-            "Füge ein weiteres Backup-Ziel hinzu",
+            "Füge ein weiteres Backup-Ziel hinzu (z. B. USB + OneDrive parallel)",
         )
         layout.addWidget(add_frame)
 
@@ -284,34 +291,31 @@ class StartPage(QWizardPage):
         return True
 
     def nextId(self) -> int:
-        """
-        Bestimmt nächste Seite basierend auf Auswahl
-
-        Returns:
-            ID der nächsten Seite
-        """
-        # Page-IDs (korrespondieren zu wizard_v2.py)
+        """Bestimmt nächste Seite basierend auf Auswahl."""
+        PAGE_SOURCE = 1
         PAGE_MODE = 2
         PAGE_DESTINATION = 3
         PAGE_RESTORE = 6
+        PAGE_PROFILE_SELECT = 8
 
         if self.selected_action == "backup":
-            # Backup einrichten → Erst Modus wählen (Normal/Experten)
             return PAGE_MODE
 
         elif self.selected_action == "restore":
             return PAGE_RESTORE
 
         elif self.selected_action == "edit":
-            # Bei "edit": Quellen anzeigen (vorbefüllt aus Config)
-            PAGE_SOURCE = 1
+            # Profil-Auswahl: welches Backup-Ziel/Zeitplan soll geändert werden?
+            return PAGE_PROFILE_SELECT
+
+        elif self.selected_action == "edit_sources":
+            # Nur Quellen bearbeiten
             return PAGE_SOURCE
 
         elif self.selected_action == "add_destination":
-            # Nur neues Ziel hinzufügen – Quellen überspringen
+            # Neues Profil direkt ab Ziel-Seite
             return PAGE_DESTINATION
 
-        # Fallback
         return super().nextId()
 
 
@@ -1176,6 +1180,11 @@ class SourceSelectionPage(QWizardPage):
         return True
 
     def nextId(self) -> int:
-        """Nächste Seite: Destination (Ziel-Auswahl)"""
+        """Nächste Seite: Destination normalerweise, bei 'edit_sources' direkt Finish."""
         PAGE_DESTINATION = 3
+        PAGE_FINISH = 5
+        wizard = self.wizard()
+        if wizard and hasattr(wizard, "start_page"):
+            if wizard.start_page.selected_action == "edit_sources":
+                return PAGE_FINISH
         return PAGE_DESTINATION
