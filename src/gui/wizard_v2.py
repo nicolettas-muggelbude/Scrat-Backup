@@ -1935,7 +1935,7 @@ class ProfileSelectionPage(QWizardPage):
         answer = QMessageBox.question(
             self,
             "Profil löschen",
-            f"Profil „{profile['name']}" wirklich löschen?",
+            f"Profil \"{profile['name']}\" wirklich loeschen?",
             QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             QMessageBox.StandardButton.No,
         )
