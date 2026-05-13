@@ -111,12 +111,10 @@ class StartPage(QWizardPage):
         self.selected_action = None
         self.radio_buttons = {}  # Speichert Radio-Buttons für späteren Zugriff
 
-        # Immer: Grundoptionen
-        self._create_first_run_options(layout)
-
-        # Zusätzlich: Bearbeitungs-Optionen wenn Config existiert
         if self.has_config:
             self._create_existing_system_options(layout)
+        else:
+            self._create_first_run_options(layout)
 
         layout.addStretch()
 
@@ -124,28 +122,14 @@ class StartPage(QWizardPage):
         self.registerField("start_action*", self, "selectedAction")
 
     def _check_config_exists(self) -> bool:
-        """
-        Prüft ob gültige Config existiert
-
-        Returns:
-            True wenn Config vorhanden und gültig
-        """
+        """Gibt True zurück wenn mindestens ein konfiguriertes Backup-Profil existiert."""
         config_file = get_app_data_dir() / "config.json"
-
         if not config_file.exists():
             return False
-
         try:
             config_manager = ConfigManager(config_file)
-
-            has_sources = bool(config_manager.config.get("sources"))
-            has_destinations = bool(
-                config_manager.config.get("destinations")
-                or config_manager.config.get("profiles")
-            )
-
-            return has_sources and has_destinations
-
+            profiles = config_manager.get_profiles()
+            return bool(profiles)
         except Exception as e:
             logger.warning(f"Fehler beim Laden der Config: {e}")
             return False
@@ -175,13 +159,17 @@ class StartPage(QWizardPage):
             self.selected_action = "backup"
 
     def _create_existing_system_options(self, layout: QVBoxLayout):
-        """Erstellt zusätzliche Optionen wenn Config vorhanden"""
+        """Optionen wenn bereits Backup-Profile vorhanden sind."""
+
+        restore_frame = self._create_option_radio(
+            "restore",
+            "♻️ Backup wiederherstellen",
+            "Stelle Dateien aus einem vorhandenen Backup wieder her",
+        )
+        layout.addWidget(restore_frame)
 
         layout.addSpacing(15)
-        layout.addWidget(self._create_separator())
-        layout.addSpacing(5)
 
-        # Option: Backup bearbeiten → ProfileSelectionPage
         edit_frame = self._create_option_radio(
             "edit",
             "⚙️ Backup bearbeiten",
@@ -191,13 +179,16 @@ class StartPage(QWizardPage):
 
         layout.addSpacing(15)
 
-        # Option: Neues Backup anlegen → ProfileSelectionPage (Kopieren oder Neu)
         add_frame = self._create_option_radio(
             "add_destination",
             "➕ Neues Backup anlegen",
             "Neues Backup-Profil einrichten – Quellen eines bestehenden Backups als Vorlage oder ganz neu",
         )
         layout.addWidget(add_frame)
+
+        # Standard-Auswahl: Wiederherstellen
+        self.radio_buttons["restore"].setChecked(True)
+        self.selected_action = "restore"
 
     def _create_option_radio(self, action_id: str, title: str, description: str) -> QWidget:
         """

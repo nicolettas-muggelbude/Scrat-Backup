@@ -818,6 +818,52 @@ class SchedulePage(QWizardPage):
         self.weekdays_group.setVisible(freq == "weekly")
         self.monthly_group.setVisible(freq == "monthly")
 
+    def initializePage(self):
+        """Lädt bestehenden Zeitplan aus dem gewählten Profil (Edit-Modus)."""
+        wizard = self.wizard()
+        if not wizard or not hasattr(wizard, "profile_selection_page"):
+            return
+        profile_id = wizard.profile_selection_page.selected_profile_id
+        if not profile_id:
+            return
+
+        from core.config_manager import ConfigManager
+        from utils.paths import get_app_data_dir
+
+        cfg = ConfigManager(get_app_data_dir() / "config.json")
+        profile = next(
+            (p for p in cfg.get_profiles() if p.get("id") == profile_id), None
+        )
+        if not profile:
+            return
+
+        sched = profile.get("schedule") or {}
+        if not sched or not sched.get("enabled"):
+            self.auto_checkbox.setChecked(False)
+            return
+
+        self.auto_checkbox.setChecked(True)
+
+        freq = sched.get("frequency", "daily")
+        for i in range(self.frequency_combo.count()):
+            if self.frequency_combo.itemData(i) == freq:
+                self.frequency_combo.setCurrentIndex(i)
+                break
+
+        time_str = sched.get("time", "")
+        if time_str:
+            t = QTime.fromString(time_str, "HH:mm")
+            if t.isValid():
+                self.time_edit.setTime(t)
+
+        if freq == "weekly":
+            weekdays = sched.get("weekdays", [])
+            for day_num, cb in self.weekday_checkboxes.items():
+                cb.setChecked(day_num in weekdays)
+
+        if freq == "monthly":
+            self.day_spin.setValue(sched.get("day_of_month", 1))
+
     # ── Navigation ─────────────────────────────────────────────────────────
     def nextId(self) -> int:
         return PAGE_ENCRYPTION
@@ -858,17 +904,23 @@ class NewFinishPage(QWizardPage):
 
     def __init__(self):
         super().__init__()
-        self.setFinalPage(True)
         self.setTitle("Einrichtung abgeschlossen! 🎉")
         self.setSubTitle("Scrat-Backup ist jetzt konfiguriert und bereit.")
 
-        layout = QVBoxLayout()
+        outer_layout = QVBoxLayout(self)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.Shape.NoFrame)
+        content = QWidget()
+        layout = QVBoxLayout(content)
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(10)
 
         self.summary_label = QLabel()
         self.summary_label.setWordWrap(True)
         layout.addWidget(self.summary_label)
-
-        layout.addSpacing(15)
 
         # Backup-Name (auto-generiert, editierbar)
         self.name_group = QGroupBox("📛 Backup-Name")
@@ -882,41 +934,29 @@ class NewFinishPage(QWizardPage):
         name_layout.addWidget(self.name_hint)
         layout.addWidget(self.name_group)
 
-        layout.addSpacing(10)
-
         # Backup jetzt starten
         self.backup_group = QGroupBox()
         backup_layout = QVBoxLayout(self.backup_group)
-
         self.start_backup_now = QCheckBox("🚀 Backup jetzt starten")
         self.start_backup_now.setStyleSheet("font-size: 14px; font-weight: bold;")
         backup_layout.addWidget(self.start_backup_now)
-
         self.backup_info = QLabel("   Führt sofort ein erstes vollständiges Backup durch")
         backup_layout.addWidget(self.backup_info)
-
         layout.addWidget(self.backup_group)
-
-        layout.addSpacing(10)
 
         # Tray starten
         self.tray_group = QGroupBox()
         tray_layout = QVBoxLayout(self.tray_group)
-
         self.start_tray = QCheckBox("📍 Scrat-Backup im Hintergrund starten (Tray)")
         self.start_tray.setChecked(True)
         self.start_tray.setStyleSheet("font-size: 14px; font-weight: bold;")
         tray_layout.addWidget(self.start_tray)
-
         self.tray_info = QLabel(
             "   Startet Scrat-Backup im System-Tray für schnellen Zugriff\n"
             "   und automatische Backups"
         )
         tray_layout.addWidget(self.tray_info)
-
         layout.addWidget(self.tray_group)
-
-        layout.addSpacing(20)
 
         self.success_label = QLabel(
             "✅ Du kannst den Assistenten jederzeit über das Tray-Menü\n"
@@ -926,14 +966,44 @@ class NewFinishPage(QWizardPage):
         layout.addWidget(self.success_label)
 
         layout.addStretch()
-        self.setLayout(layout)
+        scroll.setWidget(content)
+        outer_layout.addWidget(scroll)
 
         self.registerField("profile_name", self.profile_name_edit)
         self.registerField("start_backup_now", self.start_backup_now)
         self.registerField("start_tray", self.start_tray)
 
+    def nextId(self) -> int:
+        return -1
+
+    def validatePage(self) -> bool:
+        name = self.profile_name_edit.text().strip()
+        if not name:
+            return True
+        from core.config_manager import ConfigManager
+        from utils.paths import get_app_data_dir
+
+        cfg = ConfigManager(get_app_data_dir() / "config.json")
+        wizard = self.wizard()
+        selected_id = ""
+        if wizard and hasattr(wizard, "profile_selection_page"):
+            selected_id = wizard.profile_selection_page.selected_profile_id or ""
+        for p in cfg.get_profiles():
+            if p.get("name") == name and p.get("id") != selected_id:
+                QMessageBox.warning(
+                    self,
+                    "Name bereits vergeben",
+                    f'Ein Backup mit dem Namen „{name}" existiert bereits.\n'
+                    "Bitte wähle einen anderen Namen.",
+                )
+                self.profile_name_edit.setFocus()
+                self.profile_name_edit.selectAll()
+                return False
+        return True
+
     def initializePage(self):
         """Wird aufgerufen wenn Seite angezeigt wird - Zusammenfassung + Auto-Name."""
+        self.setFinalPage(True)
         from gui.theme import colors, style_infobox_success, style_label_hint, style_label_secondary
         c = colors()
         group_style = f"QGroupBox {{ border: 2px solid {c['group_border']}; border-radius: 5px; }}"
@@ -1790,7 +1860,25 @@ class ProfileSelectionPage(QWizardPage):
             radio.toggled.connect(
                 lambda checked, p=profile: self._on_profile_toggled(checked, p)
             )
-            self._profiles_layout.addWidget(radio)
+
+            del_btn = QPushButton("🗑")
+            del_btn.setFixedSize(28, 28)
+            del_btn.setToolTip("Profil löschen")
+            del_btn.setStyleSheet(
+                "QPushButton { border: none; background: transparent; font-size: 14px; }"
+                "QPushButton:hover { background: #c0392b; border-radius: 4px; }"
+            )
+            del_btn.clicked.connect(
+                lambda _, p=profile: self._delete_profile(p)
+            )
+
+            row = QHBoxLayout()
+            row.setContentsMargins(0, 0, 0, 0)
+            row.addWidget(radio, stretch=1)
+            row.addWidget(del_btn)
+            row_widget = QWidget()
+            row_widget.setLayout(row)
+            self._profiles_layout.addWidget(row_widget)
 
             sched = profile.get("schedule") or {}
             if sched.get("enabled"):
@@ -1801,7 +1889,12 @@ class ProfileSelectionPage(QWizardPage):
                     "startup": "Beim Start",
                 }
                 freq_str = freq_labels.get(sched.get("frequency", "daily"), "Täglich")
-                desc_text = f"    {freq_str} um {sched.get('time', '03:00')} Uhr"
+                time_part = (
+                    f" um {sched['time']} Uhr"
+                    if sched.get("frequency") != "startup" and sched.get("time")
+                    else ""
+                )
+                desc_text = f"    {freq_str}{time_part}"
             else:
                 desc_text = "    Kein automatischer Zeitplan"
 
@@ -1834,6 +1927,36 @@ class ProfileSelectionPage(QWizardPage):
         buttons = self._radio_group.buttons()
         if buttons:
             buttons[0].setChecked(True)
+
+    def _delete_profile(self, profile: dict):
+        """Löscht ein Profil nach Bestätigung und lädt die Liste neu."""
+        from PySide6.QtWidgets import QMessageBox
+
+        answer = QMessageBox.question(
+            self,
+            "Profil löschen",
+            f"Profil „{profile['name']}" wirklich löschen?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+
+        from core.config_manager import ConfigManager
+        from utils.paths import get_app_data_dir
+
+        cfg = ConfigManager(get_app_data_dir() / "config.json")
+        cfg.delete_profile(profile["id"])
+
+        if self.selected_profile_id == profile["id"]:
+            self.selected_profile_id = None
+            self._profile_id_edit.setText("")
+
+        wizard = self.wizard()
+        action = "edit"
+        if wizard and hasattr(wizard, "start_page"):
+            action = wizard.start_page.selected_action or "edit"
+        self._load_profiles(action)
 
     def _on_profile_toggled(self, checked: bool, profile: dict):
         if checked:
