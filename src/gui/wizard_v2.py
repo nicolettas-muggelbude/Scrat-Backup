@@ -677,6 +677,63 @@ class TemplateDestinationPage(QWizardPage):
         self.template_config = values
         logger.debug(f"Template-Config geändert: {values}")
 
+    def initializePage(self):
+        """Vorbefüllen wenn ein Profil bearbeitet wird"""
+        wizard = self.wizard()
+        if not wizard:
+            return
+
+        action = (
+            wizard.start_page.selected_action
+            if hasattr(wizard, "start_page") and wizard.start_page.selected_action
+            else "backup"
+        )
+        if action not in ("edit", "add_destination"):
+            return
+
+        selected_profile_id = ""
+        if hasattr(wizard, "profile_selection_page"):
+            selected_profile_id = wizard.profile_selection_page.selected_profile_id or ""
+        if not selected_profile_id:
+            return
+
+        try:
+            from src.core.config_manager import ConfigManager
+            cfg = ConfigManager()
+            profiles = cfg.get_profiles()
+            profile = next((p for p in profiles if p.get("id") == selected_profile_id), None)
+            if not profile:
+                return
+
+            dest = profile.get("destination", {})
+            template_id = dest.get("type") or dest.get("template_id", "")
+            dest_config = dest.get("config", {})
+            if not template_id:
+                return
+
+            templates = self.template_manager.get_all_templates()
+            match = next((t for t in templates if t.id == template_id), None)
+            if not match:
+                return
+
+            # Alle Kacheln deselektieren
+            for card in self.findChildren(TemplateCard):
+                card.setChecked(False)
+
+            # Template setzen, Handler laden, Formular anzeigen
+            self.selected_template = match
+            self._template_id_edit.setText(match.id)
+            self._load_handler(match)
+            self._show_template_form()
+
+            # Gespeicherte Werte ins Formular eintragen
+            if self.dynamic_form and dest_config:
+                self.dynamic_form.set_values(dest_config)
+                self.template_config = self.dynamic_form.get_values()
+
+        except Exception as e:
+            logger.warning(f"Ziel-Vorbefüllung fehlgeschlagen: {e}")
+
     def nextId(self) -> int:
         return PAGE_SCHEDULE
 
@@ -2086,7 +2143,11 @@ class SetupWizardV2(QWizard):
 
     def get_config(self) -> dict:
         """Gibt Wizard-Config zurück"""
-        action = self.field("start_action")
+        action = (
+            self.start_page.selected_action
+            if hasattr(self, "start_page") and self.start_page.selected_action
+            else "backup"
+        )
         sources = self.field("sources")
         excludes = self.field("excludes")
         template_id = self.field("template_id")
