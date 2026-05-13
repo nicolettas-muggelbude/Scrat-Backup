@@ -123,6 +123,50 @@ src/
 
 ---
 
+## Session 2026-05-13: v0.3.52–v0.3.55 – Profil-Verwaltung Fixes
+
+### Implementiert
+
+#### 1. **Zeitanzeige in Profilliste korrigiert** ✅
+- Falscher 03:00-Fallback entfernt; zeigt jetzt die gespeicherte Uhrzeit
+
+#### 2. **SchedulePage-Vorbefüllung beim Bearbeiten** ✅
+- `SchedulePage.initializePage()` lädt Zeitplan aus gewähltem Profil (Uhrzeit, Frequenz, Wochentage)
+
+#### 3. **Profil löschen** ✅
+- Lösch-Button pro Profil in `ProfileSelectionPage` mit Bestätigungsdialog
+- Fix: `cfg.get_profiles()` vor `cfg.delete_profile()` aufrufen (Migration abwarten)
+- Fix: `selected_profile_id` explizit nach `setChecked(True)` setzen (Signal nicht zuverlässig)
+
+#### 4. **StartPage zeigt nur relevante Optionen** ✅
+- Bei vorhandenen Profilen kein "Backup einrichten" mehr, nur: Wiederherstellen, Bearbeiten, Neues anlegen
+
+#### 5. **FinishPage überarbeitet** ✅
+- `QScrollArea` verhindert Quetschen bei kleinen Fenstern
+- `nextId()=-1` entfernt den überflüssigen Weiter-Button
+- Doppelte Backup-Namen werden in `validatePage()` abgefangen
+
+#### 6. **Backup bearbeiten aktualisiert Profil** ✅ (v0.3.55)
+- `get_config()`: `action` direkt von `start_page.selected_action` lesen statt QField (war unzuverlässig)
+- Ergebnis: "edit"-Aktion schreibt in bestehendes Profil statt neues anzulegen
+
+#### 7. **Ziel-Vorbefüllung beim Bearbeiten** ✅ (v0.3.55)
+- `TemplateDestinationPage.initializePage()`: lädt gespeicherte Template-ID und Formular-Werte aus dem Profil
+- Ruft `_show_template_form()` + `dynamic_form.set_values(dest_config)` auf
+
+### Technische Erkenntnisse
+- `registerField` mit Python `@property` ist unzuverlässig → immer direkt auf `self.start_page.selected_action` zugreifen
+- `ConfigManager.delete_profile()` ohne vorheriges `get_profiles()` schlägt lautlos fehl (Config-Migration nicht ausgelöst)
+- Typografische Anführungszeichen `„"` (U+201E/U+201C) verursachen SyntaxError auf Windows cp1252 → immer ASCII-Quotes `\"` verwenden
+
+### Releases
+- v0.3.52 – StartPage, FinishPage, Profil-löschen, SchedulePage-Vorbefüllung
+- v0.3.53 – Hotfix: SyntaxError durch Unicode-Anführungszeichen
+- v0.3.54 – Hotfix: Profil-löschen Migration-Fix + selected_profile_id-Fallback
+- v0.3.55 – Backup bearbeiten aktualisiert Profil, Ziel-Vorbefüllung
+
+---
+
 ## Session 2026-05-12: v0.3.51 – Profil-Namen + Quellen pro Profil
 
 ### Implementiert
