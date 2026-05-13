@@ -1927,6 +1927,12 @@ class ProfileSelectionPage(QWizardPage):
         buttons = self._radio_group.buttons()
         if buttons:
             buttons[0].setChecked(True)
+            # Explizit setzen als Fallback falls Signal nicht feuert
+            if not self.selected_profile_id:
+                pid = buttons[0].property("profile_id")
+                if pid:
+                    self.selected_profile_id = pid
+                    self._profile_id_edit.setText(pid)
 
     def _delete_profile(self, profile: dict):
         """Löscht ein Profil nach Bestätigung und lädt die Liste neu."""
@@ -1946,7 +1952,11 @@ class ProfileSelectionPage(QWizardPage):
         from utils.paths import get_app_data_dir
 
         cfg = ConfigManager(get_app_data_dir() / "config.json")
-        cfg.delete_profile(profile["id"])
+        cfg.get_profiles()  # Migration sicherstellen, damit profiles[] in config ist
+        deleted = cfg.delete_profile(profile["id"])
+        if not deleted:
+            logger.warning(f"Profil konnte nicht geloescht werden: {profile['id']}")
+            return
 
         if self.selected_profile_id == profile["id"]:
             self.selected_profile_id = None
