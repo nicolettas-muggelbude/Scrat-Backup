@@ -168,9 +168,10 @@ class LinuxCronScheduler(PlatformScheduler):
                 ["crontab", "-l"], capture_output=True, text=True, check=False
             )
             current = result.stdout if result.returncode == 0 else ""
+            tag = f"{self.cron_comment} {task_name}"
             lines = [
                 line for line in current.split("\n")
-                if f"{self.cron_comment} {task_name}" not in line
+                if not line.rstrip().endswith(tag)
             ]
             lines.append(cron_line)
 
@@ -195,9 +196,10 @@ class LinuxCronScheduler(PlatformScheduler):
             if result.returncode != 0:
                 return True
 
+            tag = f"{self.cron_comment} {task_name}"
             lines = [
                 line for line in result.stdout.split("\n")
-                if f"{self.cron_comment} {task_name}" not in line
+                if not line.rstrip().endswith(tag)
             ]
             process = subprocess.Popen(["crontab", "-"], stdin=subprocess.PIPE, text=True)
             process.communicate(input="\n".join(lines) + "\n")
