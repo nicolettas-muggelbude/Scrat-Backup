@@ -148,11 +148,11 @@ class UpdateChecker(QThread):
             with urlopen(req, timeout=5, context=ssl_context) as resp:
                 releases = json.loads(resp.read())
 
-            # Erstes nicht-draft Release nehmen (inkl. Pre-releases / Beta)
+            # Erstes stabiles Release nehmen (kein Draft, kein Pre-release)
             data = None
             if isinstance(releases, list):
                 for r in releases:
-                    if not r.get("draft", False):
+                    if not r.get("draft", False) and not r.get("prerelease", False):
                         data = r
                         break
             else:

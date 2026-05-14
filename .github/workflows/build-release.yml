@@ -54,7 +54,7 @@ jobs:
       - name: Zum Release hochladen
         uses: softprops/action-gh-release@v2
         with:
-          draft: true
+          prerelease: true
           files: ${{ env.SETUP_NAME }}
 
   # ── Linux AppImage ──────────────────────────────────────────────────────
@@ -167,7 +167,7 @@ jobs:
       - name: Zum Release hochladen
         uses: softprops/action-gh-release@v2
         with:
-          draft: true
+          prerelease: true
           files: |
             ${{ env.APPIMAGE_NAME }}
             ScratBackup-x86_64.AppImage
