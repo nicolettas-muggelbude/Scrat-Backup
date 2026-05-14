@@ -278,6 +278,9 @@ def save_wizard_config(wizard_config: dict) -> None:
             })
             logger.info(f"Profil gespeichert: '{final_name}' (ID: {profile_id})")
 
+            # Profil-ID zurückschreiben damit start_backup_after_wizard() das richtige Profil lädt
+            wizard_config["_saved_profile_id"] = profile_id
+
             # Rückwärts-Kompatibilität: destinations[]/schedules[] aus profiles[] aufbauen
             _sync_profiles_to_destinations(config_manager)
 
@@ -342,38 +345,57 @@ def start_backup_after_wizard(wizard_config: dict) -> bool:
             )
             return False
 
-    # Quellen aus gespeicherter Config lesen
+    # Profil aus gespeicherter Config laden (save_wizard_config schreibt _saved_profile_id zurück)
+    profile_id = wizard_config.get("_saved_profile_id", "")
     config_manager = ConfigManager()
-    seen: set = set()
-    sources = []
-    for s in config_manager.config.get("sources", []):
-        if not s.get("enabled", True):
-            continue
-        resolved = Path(s["path"]).resolve()
-        if resolved not in seen:
-            seen.add(resolved)
-            sources.append(resolved)
+    profile = None
+    if profile_id:
+        profiles = config_manager.get_profiles()
+        profile = next((p for p in profiles if p.get("id") == profile_id), None)
+
+    if profile:
+        # Profil-eigene Quellen
+        seen: set = set()
+        sources = []
+        for s in profile.get("sources", []):
+            if not s.get("enabled", True):
+                continue
+            resolved = Path(s["path"]).resolve()
+            if resolved not in seen:
+                seen.add(resolved)
+                sources.append(resolved)
+        dest = profile.get("destination", {})
+        dest_config = dest.get("config", {})
+        dest_type = dest.get("type", "local")
+        sched = profile.get("schedule") or {}
+        db_path = _get_profile_db_path(profile_id)
+    else:
+        # Fallback: globale sources[] + letztes Ziel (Rückwärts-Kompatibilität)
+        seen = set()
+        sources = []
+        for s in config_manager.config.get("sources", []):
+            if not s.get("enabled", True):
+                continue
+            resolved = Path(s["path"]).resolve()
+            if resolved not in seen:
+                seen.add(resolved)
+                sources.append(resolved)
+        destinations = config_manager.config.get("destinations", [])
+        if not destinations:
+            QMessageBox.warning(None, "Fehler", "Kein Backup-Ziel konfiguriert.")
+            return False
+        dest = destinations[-1]
+        dest_config = dest.get("config", {})
+        dest_type = dest.get("type", "local")
+        sched = wizard_config.get("schedule") or {}
+        db_path = get_app_data_dir() / "metadata.db"
 
     if not sources:
         QMessageBox.warning(None, "Fehler", "Keine Backup-Quellen konfiguriert.")
         return False
 
-    # Ziel aus gespeicherter Config (letztes = soeben vom Wizard gespeichertes)
-    destinations = config_manager.config.get("destinations", [])
-    if not destinations:
-        QMessageBox.warning(None, "Fehler", "Kein Backup-Ziel konfiguriert.")
-        return False
-
-    destination = destinations[-1]
-    dest_config = destination.get("config", {})
-    dest_type = destination.get("type", "local")
-
     # Zielpfad zusammenbauen
-    # Für Remote-Backups (WebDAV, SFTP): Lokalen Temp-Pfad nutzen, Upload später
-    # Für lokale Backups (local, usb): Finalen Pfad direkt nutzen
-
     if dest_type in ("local", "usb"):
-        # Lokale Backups: Finaler Dateisystem-Pfad
         drive = dest_config.get("drive", "")
         if drive:
             sub_path = dest_config.get("path", "")
@@ -381,8 +403,6 @@ def start_backup_after_wizard(wizard_config: dict) -> bool:
         else:
             dest_path = Path(dest_config.get("path", str(Path.home() / "scrat-backups")))
     else:
-        # Remote-Backups: Lokaler Temp-Pfad für BackupEngine
-        # (BackupEngine arbeitet nur lokal, Upload erfolgt danach)
         dest_path = Path.home() / "scrat-backup" / "Backup"
         logger.info(f"Remote-Backup ({dest_type}): Nutze lokalen Temp-Pfad {dest_path}")
 
@@ -390,13 +410,9 @@ def start_backup_after_wizard(wizard_config: dict) -> bool:
     excludes = set(wizard_config.get("excludes", []))
 
     # Frequenz aus Zeitplan (bestimmt Full/Inkrementell-Zyklus)
-    sched = wizard_config.get("schedule") or {}
     _freq_raw = sched.get("frequency") or sched.get("interval", "Täglich")
     _freq_map = {"Täglich": "daily", "Wöchentlich": "weekly", "Monatlich": "monthly"}
     backup_frequency = _freq_map.get(_freq_raw, _freq_raw if _freq_raw in ("daily", "weekly", "monthly") else "daily")
-
-    # Metadaten-DB Pfad
-    db_path = get_app_data_dir() / "metadata.db"
 
     backup_config = BackupConfig(
         sources=sources,
@@ -650,10 +666,11 @@ def _upload_to_remote(backup_result, dest_type: str, dest_config: dict, local_de
         return False
 
 
-def _activate_os_schedule(schedule: dict | None) -> None:
+def _activate_os_schedule(schedule: dict | None, profile_id: str = "") -> None:
     """
     Aktiviert den konfigurierten Zeitplan im Betriebssystem.
-    Wird nach dem Wizard aufgerufen wenn ein Zeitplan eingerichtet wurde.
+    Pro Profil wird ein eigener Task registriert (task_name = ScratBackup_<profile_id>),
+    damit mehrere Profile unterschiedliche Zeitpläne haben können.
     """
     if not schedule or not schedule.get("enabled"):
         logger.info("Kein Zeitplan aktiviert – OS-Scheduler bleibt unverändert")
@@ -667,27 +684,23 @@ def _activate_os_schedule(schedule: dict | None) -> None:
             logger.warning("Kein OS-Scheduler verfügbar")
             return
 
-        # Eigenen Prozess als Kommando verwenden
         import os as _os
         if getattr(sys, "frozen", False):
             if sys.platform == "linux":
-                # AppImage setzt $APPIMAGE auf den echten Dateipfad.
-                # sys.argv[0] zeigt auf den internen temp-Pfad (/tmp/.mount_XXX/...)
-                # der nach dem Beenden des AppImage nicht mehr existiert!
                 command = _os.environ.get("APPIMAGE", sys.argv[0])
             else:
                 command = sys.argv[0]
         else:
-            # Entwicklungsumgebung: python main.py
             command = sys.executable
 
         args = ["--backup"]
         if not getattr(sys, "frozen", False):
             args = [str(Path(__file__).resolve())] + args
 
-        # Linux: D-Bus-Session für Keyring-Zugriff in Cron mitgeben.
-        # Cron hat keine D-Bus-Session → keyring schlägt fehl → kein Passwort.
-        # Lösung: env-Wrapper mit DBUS_SESSION_BUS_ADDRESS um den Befehl wrappen.
+        # Profil-ID als Argument übergeben damit run_backup_headless() nur dieses Profil läuft
+        if profile_id:
+            args += ["--profile-id", profile_id]
+
         if sys.platform == "linux":
             uid = _os.getuid()
             dbus_path = f"/run/user/{uid}/bus"
@@ -695,16 +708,22 @@ def _activate_os_schedule(schedule: dict | None) -> None:
                 dbus_addr = f"unix:path={dbus_path}"
                 command = f"env DBUS_SESSION_BUS_ADDRESS={dbus_addr} {command}"
 
+        # Pro Profil eigener Task-Name → kein gegenseitiges Überschreiben
+        task_name = f"AutoBackup_{profile_id}" if profile_id else "AutoBackup"
+
         ok = scheduler.register_task(
-            task_name="AutoBackup",
+            task_name=task_name,
             schedule=schedule,
             command=command,
             args=args,
         )
         if ok:
-            logger.info(f"OS-Zeitplan aktiviert: {schedule.get('frequency')} um {schedule.get('time', '')}")
+            logger.info(
+                f"OS-Zeitplan aktiviert: Task '{task_name}', "
+                f"{schedule.get('frequency')} um {schedule.get('time', '')}"
+            )
         else:
-            logger.warning("OS-Zeitplan konnte nicht aktiviert werden")
+            logger.warning(f"OS-Zeitplan für Task '{task_name}' konnte nicht aktiviert werden")
 
     except Exception as e:
         logger.error(f"Fehler beim Aktivieren des OS-Zeitplans: {e}", exc_info=True)
@@ -722,6 +741,15 @@ def run_backup_headless() -> int:
     from src.utils.notifications import send_notification
 
     logger.info("=== Headless-Backup gestartet (--backup) ===")
+
+    # Optionaler Filter: nur ein bestimmtes Profil ausführen (--profile-id <id>)
+    profile_id_filter = ""
+    for i, arg in enumerate(sys.argv):
+        if arg == "--profile-id" and i + 1 < len(sys.argv):
+            profile_id_filter = sys.argv[i + 1]
+            break
+    if profile_id_filter:
+        logger.info(f"Profil-Filter aktiv: nur Profil '{profile_id_filter}' wird ausgeführt")
 
     config_manager = ConfigManager()
 
@@ -757,6 +785,13 @@ def run_backup_headless() -> int:
     # Profile laden
     profiles = config_manager.get_profiles()
     enabled_profiles = [p for p in profiles if p.get("enabled", True)]
+
+    # Auf angefordertes Profil filtern wenn --profile-id übergeben wurde
+    if profile_id_filter:
+        enabled_profiles = [p for p in enabled_profiles if p.get("id") == profile_id_filter]
+        if not enabled_profiles:
+            logger.error(f"Headless-Backup: Profil '{profile_id_filter}' nicht gefunden oder deaktiviert")
+            return 1
 
     if not enabled_profiles:
         logger.error("Headless-Backup: Keine aktiven Profile konfiguriert")
@@ -987,7 +1022,7 @@ def run_gui() -> int:
             )
 
         # Zeitplan im OS aktivieren (falls konfiguriert)
-        _activate_os_schedule(config.get("schedule"))
+        _activate_os_schedule(config.get("schedule"), config.get("_saved_profile_id", ""))
 
         # Backup starten wenn gewünscht
         if config.get("start_backup_now"):
@@ -1031,7 +1066,7 @@ def run_gui() -> int:
                         logger.info("Einstellungen aus Tray-Wizard gespeichert")
                     except Exception as e:
                         logger.error(f"Fehler beim Speichern der Tray-Wizard-Config: {e}")
-                    _activate_os_schedule(new_config.get("schedule"))
+                    _activate_os_schedule(new_config.get("schedule"), new_config.get("_saved_profile_id", ""))
 
             def _open_restore_wizard():
                 from gui.wizard_v2 import PAGE_RESTORE, SetupWizardV2
