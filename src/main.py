@@ -811,10 +811,14 @@ def run_backup_headless() -> int:
         return 1
 
     logger.info(f"Headless-Backup: {len(enabled_profiles)} Profil(e)")
-    send_notification(
-        "Scrat-Backup",
-        f"Automatisches Backup wird gestartet… ({len(enabled_profiles)} Ziel(e))",
-    )
+    if len(enabled_profiles) == 1:
+        _notif_name = enabled_profiles[0].get("name", "Backup")
+        send_notification("Scrat-Backup", f"Backup gestartet: {_notif_name}")
+    else:
+        send_notification(
+            "Scrat-Backup",
+            f"Automatisches Backup wird gestartet… ({len(enabled_profiles)} Profile)",
+        )
 
     results: dict[str, bool] = {}
 
@@ -907,23 +911,25 @@ def run_backup_headless() -> int:
     success = sum(1 for v in results.values() if v)
     fail = len(results) - success
 
+    _single = len(enabled_profiles) == 1
+    _pname = enabled_profiles[0].get("name", "Backup") if _single else ""
     if fail == 0:
         send_notification(
             "Scrat-Backup – Erfolgreich",
-            f"Alle {len(enabled_profiles)} Backup(s) abgeschlossen.",
+            f"Backup abgeschlossen: {_pname}" if _single else f"Alle {len(enabled_profiles)} Backups abgeschlossen.",
         )
         return 0
     elif success > 0:
         send_notification(
             "Scrat-Backup – Teilweise erfolgreich",
-            f"{success}/{len(enabled_profiles)} Backup(s) erfolgreich, {fail} fehlgeschlagen.",
+            f"Backup fehlgeschlagen: {_pname}" if _single else f"{success}/{len(enabled_profiles)} Backups erfolgreich, {fail} fehlgeschlagen.",
             urgent=True,
         )
         return 1
     else:
         send_notification(
             "Scrat-Backup – Fehler",
-            f"Alle {len(enabled_profiles)} Backup(s) fehlgeschlagen.",
+            f"Backup fehlgeschlagen: {_pname}" if _single else f"Alle {len(enabled_profiles)} Backups fehlgeschlagen.",
             urgent=True,
         )
         return 1
