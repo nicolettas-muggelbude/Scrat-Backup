@@ -444,7 +444,12 @@ def start_backup_after_wizard(wizard_config: dict) -> bool:
                 config=backup_config,
                 progress_callback=_progress_callback,
             )
-            backup_type = _decide_backup_type(metadata_manager, backup_frequency)
+            # Zielordner existiert nicht → immer Vollbackup
+            if not dest_path.exists():
+                logger.info(f"Zielordner existiert nicht, erzwinge Vollbackup: {dest_path}")
+                backup_type = "full"
+            else:
+                backup_type = _decide_backup_type(metadata_manager, backup_frequency)
             if backup_type == "incremental":
                 shared["result"] = engine.create_incremental_backup()
             else:
@@ -867,7 +872,17 @@ def run_backup_headless() -> int:
             )
             metadata_manager = MetadataManager(db_path)
             engine = BackupEngine(metadata_manager=metadata_manager, config=backup_cfg)
-            backup_type = _decide_backup_type(metadata_manager, frequency)
+
+            # Zielordner existiert nicht → immer Vollbackup (neue Destination oder
+            # Laufwerk frisch angesteckt; DB-Stand gilt dann nicht mehr)
+            if not dest_path.exists():
+                logger.info(
+                    f"Zielordner existiert nicht, erzwinge Vollbackup: {dest_path}"
+                )
+                backup_type = "full"
+            else:
+                backup_type = _decide_backup_type(metadata_manager, frequency)
+
             if backup_type == "incremental":
                 engine.create_incremental_backup()
             else:
