@@ -123,6 +123,54 @@ src/
 
 ---
 
+## Session 2026-05-14: v0.3.56–v0.3.60 – Multi-Profil-Backup Fixes + Release-Workflow
+
+### Implementiert
+
+#### 1. **Pro-Profil OS-Tasks** ✅ (v0.3.56)
+- **Problem:** Alle 4 Profile liefen zur gleichen Zeit in denselben Ordner
+- **Root Cause:** `_activate_os_schedule()` registrierte immer Task `"AutoBackup"` → jeder Wizard-Aufruf überschrieb vorherigen
+- **Fix:** Task-Name = `f"AutoBackup_{profile_id}"` (Windows: schtasks, Linux: cron mit `# Scrat-Backup: AutoBackup_<id>`)
+- **Fix:** `--profile-id <id>` im Task-Argument → `run_backup_headless()` startet nur dieses eine Profil
+- **Fix:** Legacy-Task `"AutoBackup"` wird beim Registrieren des ersten profil-spezifischen Tasks entfernt
+
+#### 2. **Korrektes Backup-Ziel nach Wizard** ✅ (v0.3.56)
+- **Problem:** Alle Backups schrieben in denselben Ordner (letztes Ziel aus `destinations[-1]`)
+- **Fix:** `save_wizard_config()` schreibt `wizard_config["_saved_profile_id"]`; `start_backup_after_wizard()` liest Profil via `_saved_profile_id` und nutzt profil-spezifische Quellen + Ziel
+
+#### 3. **Profil-Name-Duplikat beim Bearbeiten** ✅ (v0.3.57)
+- **Problem:** `FinishPage.initializePage()` generierte neuen Auto-Namen der mit dem bestehenden kollidierte
+- **Fix:** Bei `action="edit"` bestehenden Profil-Namen aus ConfigManager laden statt neuen generieren
+
+#### 4. **Zielordner wird angelegt** ✅ (v0.3.58)
+- **Problem:** Zielordner existierte nicht (neue Destination, vorherige Backups in falschem Pfad) → DB kannte Dateien als gesichert, obwohl Ziel leer → ewig "Keine Änderungen"
+- **Fix:** `dest_path.exists()` prüfen vor Backup-Typ-Entscheidung; wenn nicht vorhanden → Vollbackup erzwingen (ignoriert DB-Stand)
+
+#### 5. **Release-Workflow: Draft statt Pre-release** ✅ (v0.3.60)
+- **Problem:** Pre-release (`prerelease: true`) wird von GitHub API zurückgegeben → alte Clients ohne Filter sahen es als normales Update
+- **Richtige Lösung:** `draft: true` – Drafts gibt GitHub API gar nicht zurück (auch nicht für alte Clients ohne Filter)
+- **Zusatz:** `update_checker.py` filtert jetzt zusätzlich auch `prerelease: true` heraus (defense in depth)
+- **Workflow:** Test-Build als Draft → testen → auf GitHub "Publish release" klicken → wird stabile Version
+
+### Technische Erkenntnisse
+- GitHub API `/releases`: Drafts werden **nie** zurückgegeben (auch nicht unauthentifiziert) → sicherste Option für Test-Builds
+- GitHub API `/releases`: Pre-releases werden zurückgegeben → alte Clients ohne Filter sehen sie als Update
+- Drafts sind nur für eingeloggte Repo-Besitzer sichtbar → ausgeloggt = 404 auf Draft-URL
+- `_activate_os_schedule()` braucht `profile_id` als Parameter für eindeutige Task-Namen
+
+### Releases
+- v0.3.56 – Pro-Profil OS-Tasks + korrektes Backup-Ziel
+- v0.3.57 – Profil-Name-Duplikat beim Bearbeiten behoben
+- v0.3.58 – Vollbackup erzwingen wenn Zielordner nicht existiert
+- v0.3.59 – (Pre-release, Fehler) CI-Umstellung auf prerelease: true + Pre-release-Filter im Update-Checker
+- v0.3.60 – Zurück auf draft: true (korrekte Lösung)
+
+### Windows-Test-Ergebnis ✅
+- 4 Profile mit unterschiedlichen Zeiten und Ordnern → jedes Backup läuft einzeln in eigenen Ordner
+- Parallel-Backup (mehrere Profile gleichzeitig) funktioniert korrekt
+
+---
+
 ## Session 2026-05-13: v0.3.52–v0.3.55 – Profil-Verwaltung Fixes
 
 ### Implementiert
