@@ -711,6 +711,11 @@ def _activate_os_schedule(schedule: dict | None, profile_id: str = "") -> None:
         # Pro Profil eigener Task-Name → kein gegenseitiges Überschreiben
         task_name = f"AutoBackup_{profile_id}" if profile_id else "AutoBackup"
 
+        # Legacy-Task "AutoBackup" entfernen wenn wir auf Pro-Profil-Tasks umsteigen
+        # (verhindert Doppelausführung aller Profile bei bestehenden Installationen)
+        if profile_id:
+            scheduler.unregister_task("AutoBackup")
+
         ok = scheduler.register_task(
             task_name=task_name,
             schedule=schedule,
@@ -778,10 +783,6 @@ def run_backup_headless() -> int:
             seen.add(p)
             sources.append(p)
 
-    if not sources:
-        logger.error("Headless-Backup: Keine Quellen konfiguriert")
-        return 1
-
     # Profile laden
     profiles = config_manager.get_profiles()
     enabled_profiles = [p for p in profiles if p.get("enabled", True)]
@@ -795,6 +796,13 @@ def run_backup_headless() -> int:
 
     if not enabled_profiles:
         logger.error("Headless-Backup: Keine aktiven Profile konfiguriert")
+        return 1
+
+    # Globale Quellen nur als Fallback für Profile ohne eigene sources[]
+    # Wenn alle Profile eigene Quellen haben, ist diese Prüfung optional
+    has_profile_sources = all(p.get("sources") for p in enabled_profiles)
+    if not sources and not has_profile_sources:
+        logger.error("Headless-Backup: Keine Quellen konfiguriert")
         return 1
 
     logger.info(f"Headless-Backup: {len(enabled_profiles)} Profil(e)")
