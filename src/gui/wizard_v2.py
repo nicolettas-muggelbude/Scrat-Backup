@@ -1073,29 +1073,46 @@ class NewFinishPage(QWizardPage):
         self.success_label.setStyleSheet(style_infobox_success() + " padding: 15px;")
 
         wizard = self.wizard()
-        action = wizard.field("start_action") if wizard else "backup"
+        action = (
+            wizard.start_page.selected_action
+            if wizard and hasattr(wizard, "start_page") and wizard.start_page.selected_action
+            else "backup"
+        )
 
-        # Auto-Name generieren
-        sources_str = wizard.field("sources") or "" if wizard else ""
-        sources_list = [s for s in sources_str.split(",") if s] if sources_str else []
+        # Bei "edit": bestehenden Profilnamen laden statt neuen generieren
+        if action == "edit" and not self.profile_name_edit.text():
+            selected_id = ""
+            if wizard and hasattr(wizard, "profile_selection_page"):
+                selected_id = wizard.profile_selection_page.selected_profile_id or ""
+            if selected_id:
+                from core.config_manager import ConfigManager
+                from utils.paths import get_app_data_dir
+                cfg = ConfigManager(get_app_data_dir() / "config.json")
+                profile = next((p for p in cfg.get_profiles() if p.get("id") == selected_id), None)
+                if profile and profile.get("name"):
+                    self.profile_name_edit.setText(profile["name"])
 
-        template_id = wizard.field("template_id") or "" if wizard else ""
-        dest_display = template_id.replace("_", " ").title()
-        if wizard and hasattr(wizard, "destination_page"):
-            dest_page = wizard.destination_page
-            if hasattr(dest_page, "selected_template") and dest_page.selected_template:
-                dest_display = dest_page.selected_template.display_name
-
-        frequency = "daily"
-        if wizard and hasattr(wizard, "schedule_page"):
-            sched = wizard.schedule_page.get_schedule_config()
-            if sched:
-                frequency = sched.get("frequency", "daily")
-
-        auto_name = _generate_profile_name(sources_list, dest_display, frequency)
-        # Nur setzen wenn Feld noch leer (beim ersten Aufruf)
+        # Auto-Name generieren (für neue Profile oder wenn Feld noch leer)
         if not self.profile_name_edit.text():
-            self.profile_name_edit.setText(auto_name)
+            sources_str = wizard.field("sources") or "" if wizard else ""
+            sources_list = [s for s in sources_str.split(",") if s] if sources_str else []
+
+            template_id = wizard.field("template_id") or "" if wizard else ""
+            dest_display = template_id.replace("_", " ").title()
+            if wizard and hasattr(wizard, "destination_page"):
+                dest_page = wizard.destination_page
+                if hasattr(dest_page, "selected_template") and dest_page.selected_template:
+                    dest_display = dest_page.selected_template.display_name
+
+            frequency = "daily"
+            if wizard and hasattr(wizard, "schedule_page"):
+                sched = wizard.schedule_page.get_schedule_config()
+                if sched:
+                    frequency = sched.get("frequency", "daily")
+
+            self.profile_name_edit.setText(
+                _generate_profile_name(sources_list, dest_display, frequency)
+            )
 
         summary_text = "<h3>📋 Deine Konfiguration:</h3>"
         summary_text += "<table style='margin-top: 10px; width: 100%;'>"
