@@ -123,6 +123,40 @@ src/
 
 ---
 
+## Session 2026-06-28: v0.3.63 – USB-Laufwerks-Identifikation per UUID
+
+### Problem
+Scrat-Backup schrieb Backups auf jedes angeschlossene USB-Laufwerk – unabhängig davon, ob es das beim Einrichten konfigurierte Laufwerk war.
+
+### Implementiert
+
+#### 1. **UUID-basierte Laufwerks-Identifikation** ✅ (v0.3.63)
+- **Beim Einrichten (Wizard):** `TemplateDestinationPage.validatePage()` ruft `UsbHandler.write_drive_identity()` auf → schreibt `.scrat-backup-id` mit eindeutiger UUID ins Wurzelverzeichnis des Laufwerks
+- **Vorhandene UUID** wird beibehalten (Laufwerk bleibt nach erneutem Einrichten dieselbe ID)
+- **Config speichert** `drive_uuid` und `drive_label` zusätzlich zu Pfad und Unterordner
+
+#### 2. **UUID-Suche beim Backup** ✅ (v0.3.63)
+- `UsbHandler.find_drive_by_uuid(uuid, last_known_path)`: Prüft zuerst letzten bekannten Pfad (schnell), scannt dann alle angesteckten Laufwerke
+- `UsbHandler.resolve_backup_path(config)`: Gibt aktuellen Zielpfad zurück oder Fehlermeldung wenn Laufwerk nicht angeschlossen
+- `_resolve_dest_path()` (neu in `main.py`): zentrale Hilfsfunktion für beide Backup-Einstiegspunkte
+
+#### 3. **Klare Fehlermeldung** ✅ (v0.3.63)
+- GUI-Backup: `QMessageBox.warning` mit `USB-Laufwerk "MeinStick" nicht angeschlossen`
+- Headless/Cron-Backup: `logger.error` → taucht in Fehler-Benachrichtigung auf
+
+#### 4. **Rückwärtskompatibel** ✅ (v0.3.63)
+- Profile ohne `drive_uuid` (alte Konfigurationen) nutzen weiterhin den gespeicherten Pfad
+
+### Geänderte Dateien
+- `src/templates/handlers/usb_handler.py` – `write_drive_identity()`, `read_drive_uuid()`, `find_drive_by_uuid()`, `resolve_backup_path()`, erweitertes `validate()`
+- `src/gui/wizard_v2.py` – `_stamp_usb_identity()` in `TemplateDestinationPage.validatePage()`
+- `src/main.py` – `_resolve_dest_path()` (neu), beide Backup-Einstiegspunkte nutzen UUID-Auflösung
+
+### Releases
+- v0.3.63 – USB-Laufwerks-Identifikation per UUID
+
+---
+
 ## Session 2026-05-14: v0.3.56–v0.3.60 – Multi-Profil-Backup Fixes + Release-Workflow
 
 ### Implementiert

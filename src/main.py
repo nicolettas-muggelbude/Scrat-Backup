@@ -7,7 +7,7 @@ import logging
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Optional, Tuple
 
 # Projekt-Root zum Python-Path hinzufügen (damit 'from src.…' funktioniert
 # unabhängig davon, ob das Skript direkt oder als Modul gestartet wird)
@@ -155,6 +155,29 @@ _TEMPLATE_NAMES = {
     "synology": "Synology NAS",
     "qnap": "QNAP NAS",
 }
+
+
+def _resolve_dest_path(dest_cfg: dict, dest_type: str) -> Tuple[Optional[Path], Optional[str]]:
+    """
+    Bestimmt den Backup-Zielpfad aus der Destination-Config.
+    Für USB-Laufwerke: UUID-basierte Erkennung wenn vorhanden.
+
+    Returns:
+        (Path, None) bei Erfolg, (None, Fehlermeldung) wenn Laufwerk nicht gefunden.
+    """
+    if dest_type in ("local", "usb"):
+        if dest_type == "usb" and dest_cfg.get("drive_uuid"):
+            from src.templates.handlers.usb_handler import UsbHandler
+            return UsbHandler().resolve_backup_path(dest_cfg)
+        drive = dest_cfg.get("drive", "")
+        sub_path = dest_cfg.get("path", "")
+        if drive:
+            dest = Path(drive) / sub_path if sub_path else Path(drive)
+        else:
+            dest = Path(dest_cfg.get("path", str(Path.home() / "scrat-backups")))
+        return (dest, None)
+    # Remote-Typen nutzen lokalen Temp-Pfad
+    return (Path.home() / "scrat-backup" / "Backup", None)
 
 
 def _sync_profiles_to_destinations(config_manager) -> None:
@@ -395,15 +418,11 @@ def start_backup_after_wizard(wizard_config: dict) -> bool:
         return False
 
     # Zielpfad zusammenbauen
-    if dest_type in ("local", "usb"):
-        drive = dest_config.get("drive", "")
-        if drive:
-            sub_path = dest_config.get("path", "")
-            dest_path = Path(drive) / sub_path if sub_path else Path(drive)
-        else:
-            dest_path = Path(dest_config.get("path", str(Path.home() / "scrat-backups")))
-    else:
-        dest_path = Path.home() / "scrat-backup" / "Backup"
+    dest_path, path_error = _resolve_dest_path(dest_config, dest_type)
+    if path_error:
+        QMessageBox.warning(None, "Laufwerk nicht gefunden", path_error)
+        return False
+    if dest_type not in ("local", "usb"):
         logger.info(f"Remote-Backup ({dest_type}): Nutze lokalen Temp-Pfad {dest_path}")
 
     # Ausschluss-Muster
@@ -830,16 +849,12 @@ def run_backup_headless() -> int:
             dest_cfg = dest.get("config", {})
             dest_type = dest.get("type", "local")
 
-            if dest_type in ("local", "usb"):
-                drive = dest_cfg.get("drive", "")
-                sub_path = dest_cfg.get("path", "")
-                if drive and sub_path:
-                    dest_path = Path(drive) / sub_path
-                elif drive:
-                    dest_path = Path(drive)
-                else:
-                    dest_path = Path(dest_cfg.get("path", str(Path.home() / "scrat-backups")))
-            else:
+            dest_path, path_error = _resolve_dest_path(dest_cfg, dest_type)
+            if path_error:
+                logger.error(f"Profil '{profile_name}': {path_error}")
+                results[profile_id] = False
+                return
+            if dest_type not in ("local", "usb"):
                 dest_path = Path.home() / "scrat-backup" / profile_name
 
             sched = profile.get("schedule") or {}

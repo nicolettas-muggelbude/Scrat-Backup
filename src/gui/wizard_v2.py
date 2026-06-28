@@ -758,7 +758,32 @@ class TemplateDestinationPage(QWizardPage):
             # Hole finale Werte
             self.template_config = self.dynamic_form.get_values()
 
+            # USB-Laufwerk: eindeutige ID auf das Laufwerk schreiben
+            if self.selected_template and self.selected_template.id == "usb":
+                self._stamp_usb_identity()
+
         return True
+
+    def _stamp_usb_identity(self):
+        """Schreibt .scrat-backup-id auf das gewählte USB-Laufwerk und speichert UUID in template_config."""
+        drive = self.template_config.get("drive", "")
+        if not drive:
+            return
+        try:
+            from src.templates.handlers.usb_handler import UsbHandler
+            handler = UsbHandler()
+            existing_uuid = handler.read_drive_uuid(drive)
+            if existing_uuid:
+                drive_uuid = existing_uuid
+                logger.debug(f"Vorhandene Laufwerks-UUID beibehalten: {drive_uuid}")
+            else:
+                drive_uuid = handler.write_drive_identity(drive)
+            drive_label = handler._get_drive_label(drive)
+            self.template_config["drive_uuid"] = drive_uuid
+            self.template_config["drive_label"] = drive_label
+            logger.info(f"USB-Laufwerks-ID gesetzt: {drive_label} = {drive_uuid}")
+        except Exception as e:
+            logger.warning(f"Konnte USB-Laufwerks-ID nicht setzen: {e}")
 
     # Property für wizard field
     @property

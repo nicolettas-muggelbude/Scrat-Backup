@@ -7,10 +7,13 @@ import logging
 import os
 import platform
 import shutil
+import uuid as uuid_mod
 from pathlib import Path
 from typing import List, Optional, Tuple
 
 from .base import TemplateHandler
+
+DRIVE_IDENTITY_FILE = ".scrat-backup-id"
 
 logger = logging.getLogger(__name__)
 
@@ -89,25 +92,113 @@ class UsbHandler(TemplateHandler):
         return (True, result_config, None)
 
     def validate(self, config: dict) -> Tuple[bool, Optional[str]]:
-        """Validiert USB-Config"""
-        path = config.get("path")
+        """Validiert USB-Config – prüft auch Drive-Identität wenn UUID vorhanden."""
+        drive_uuid = config.get("drive_uuid")
+        if drive_uuid:
+            current_path = self.find_drive_by_uuid(drive_uuid, config.get("drive", ""))
+            if current_path is None:
+                label = config.get("drive_label", "USB-Laufwerk")
+                return (False, f"Das konfigurierte USB-Laufwerk \"{label}\" ist nicht angeschlossen.")
+            # Backup-Unterordner im aktuell gemounteten Pfad
+            sub_path = config.get("path", "")
+            full_path = Path(current_path) / sub_path if sub_path else Path(current_path)
+            if not os.access(str(full_path.parent if not full_path.exists() else full_path), os.W_OK):
+                return (False, f"Kein Schreibzugriff auf {full_path}")
+            return (True, None)
 
+        # Fallback: altes Verhalten ohne UUID
+        path = config.get("path")
         if not path:
             return (False, "Kein Pfad angegeben")
-
         path_obj = Path(path)
-
         if not path_obj.exists():
             return (False, f"Pfad existiert nicht: {path}")
-
         if not path_obj.is_dir():
             return (False, f"Pfad ist kein Verzeichnis: {path}")
-
-        # Prüfe Schreibzugriff
         if not os.access(path, os.W_OK):
             return (False, f"Kein Schreibzugriff auf {path}")
-
         return (True, None)
+
+    # ========================================================================
+    # Laufwerks-Identität (UUID-basierte Erkennung)
+    # ========================================================================
+
+    def write_drive_identity(self, drive_path: str) -> str:
+        """
+        Schreibt eine eindeutige UUID-Datei auf das Laufwerk.
+        Wird beim Einrichten aufgerufen; gibt die UUID zurück.
+        """
+        identity_file = Path(drive_path) / DRIVE_IDENTITY_FILE
+        new_uuid = str(uuid_mod.uuid4())
+        try:
+            identity_file.write_text(new_uuid, encoding="utf-8")
+            logger.info(f"Laufwerks-ID geschrieben: {identity_file} ({new_uuid})")
+        except Exception as e:
+            logger.warning(f"Konnte Laufwerks-ID nicht schreiben: {e}")
+        return new_uuid
+
+    def read_drive_uuid(self, drive_path: str) -> Optional[str]:
+        """Liest die UUID-Datei vom Laufwerk, gibt None zurück wenn nicht vorhanden."""
+        try:
+            identity_file = Path(drive_path) / DRIVE_IDENTITY_FILE
+            if identity_file.exists():
+                return identity_file.read_text(encoding="utf-8").strip()
+        except Exception:
+            pass
+        return None
+
+    def find_drive_by_uuid(self, drive_uuid: str, last_known_path: str = "") -> Optional[str]:
+        """
+        Sucht das Laufwerk mit der gegebenen UUID unter allen angeschlossenen Drives.
+        Prüft zuerst den zuletzt bekannten Pfad (schnell), danach alle anderen.
+
+        Returns:
+            Mount-Pfad des Laufwerks (z.B. "/media/user/MyDrive" oder "E:\\") oder None.
+        """
+        # 1. Schnell-Prüfung: letzter bekannter Pfad
+        if last_known_path and self.read_drive_uuid(last_known_path) == drive_uuid:
+            logger.info(f"USB-Laufwerk am bekannten Pfad gefunden: {last_known_path}")
+            return last_known_path
+
+        # 2. Alle verbundenen Laufwerke durchsuchen
+        for drive in self.detect_usb_drives():
+            drive_path = drive["path"]
+            if drive_path == last_known_path:
+                continue  # bereits geprüft
+            if self.read_drive_uuid(drive_path) == drive_uuid:
+                logger.info(f"USB-Laufwerk mit UUID {drive_uuid} gefunden unter: {drive_path}")
+                return drive_path
+
+        logger.warning(f"USB-Laufwerk mit UUID {drive_uuid} nicht gefunden.")
+        return None
+
+    def resolve_backup_path(self, config: dict) -> Tuple[Optional[Path], Optional[str]]:
+        """
+        Bestimmt den aktuellen Backup-Zielpfad für eine USB-Config.
+        Berücksichtigt UUID-Erkennung falls vorhanden.
+
+        Returns:
+            (dest_path, error_message) – dest_path ist None bei Fehler.
+        """
+        drive_uuid = config.get("drive_uuid")
+        sub_path = config.get("path", "")
+
+        if drive_uuid:
+            current_drive = self.find_drive_by_uuid(drive_uuid, config.get("drive", ""))
+            if current_drive is None:
+                label = config.get("drive_label", "USB-Laufwerk")
+                return (None, f"USB-Laufwerk \"{label}\" nicht angeschlossen. "
+                              f"Bitte Laufwerk einstecken und erneut versuchen.")
+            dest = Path(current_drive) / sub_path if sub_path else Path(current_drive)
+            return (dest, None)
+
+        # Fallback: path aus Config
+        drive = config.get("drive", "")
+        if drive:
+            dest = Path(drive) / sub_path if sub_path else Path(drive)
+        else:
+            dest = Path(config.get("path", str(Path.home() / "scrat-backups")))
+        return (dest, None)
 
     # ========================================================================
     # USB-Laufwerks-Erkennung (Plattformspezifisch)
