@@ -23,7 +23,7 @@
 </div>
 
 ---
-
+ 
 ## 📋 Übersicht
 
 **Scrat-Backup** ist ein **plattformübergreifendes Open-Source-Backup-Tool** für **Privatnutzer**. Wie ein Eichhörnchen seine Eicheln für den Winter sichert, schützt Scrat-Backup deine wertvollen Daten mit **verschlüsselten, komprimierten Backups**.
