@@ -2057,6 +2057,16 @@ class ProfileSelectionPage(QWizardPage):
             logger.warning(f"Profil konnte nicht geloescht werden: {profile['id']}")
             return
 
+        # Geplante OS-Tasks (regulär + Nachholen) und Nachhol-Status entfernen
+        try:
+            from core.backup_retry import clear as clear_retry
+            from core.platform_scheduler import remove_profile_tasks
+
+            remove_profile_tasks(profile["id"])
+            clear_retry(profile["id"])
+        except Exception as e:
+            logger.warning(f"OS-Tasks fuer geloeschtes Profil nicht entfernt: {e}")
+
         if self.selected_profile_id == profile["id"]:
             self.selected_profile_id = None
             self._profile_id_edit.setText("")

@@ -690,14 +690,97 @@ def _upload_to_remote(backup_result, dest_type: str, dest_config: dict, local_de
         return False
 
 
+def _build_task_command(profile_id: str = "", extra_args: Optional[list] = None) -> Tuple[str, list]:
+    """Baut Befehl + Argumente für einen OS-Task (Headless-Backup)"""
+    import os as _os
+    if getattr(sys, "frozen", False):
+        if sys.platform == "linux":
+            command = _os.environ.get("APPIMAGE", sys.argv[0])
+        else:
+            command = sys.argv[0]
+    else:
+        command = sys.executable
+
+    args = ["--backup"]
+    if not getattr(sys, "frozen", False):
+        args = [str(Path(__file__).resolve())] + args
+
+    # Profil-ID als Argument übergeben damit run_backup_headless() nur dieses Profil läuft
+    if profile_id:
+        args += ["--profile-id", profile_id]
+    if extra_args:
+        args += extra_args
+
+    if sys.platform == "linux":
+        uid = _os.getuid()
+        dbus_path = f"/run/user/{uid}/bus"
+        if _os.path.exists(dbus_path):
+            dbus_addr = f"unix:path={dbus_path}"
+            command = f"env DBUS_SESSION_BUS_ADDRESS={dbus_addr} {command}"
+
+    return command, args
+
+
+def _sync_retry_task(scheduler, schedule: dict | None, profile_id: str) -> None:
+    """
+    Registriert/entfernt den täglichen Nachhol-Task eines Profils.
+    Nur bei wöchentlichen/monatlichen Zeitplänen nötig (siehe backup_retry).
+    """
+    from src.core.backup_retry import needs_retry_task, retry_task_name
+
+    task_name = retry_task_name(profile_id)
+    if not needs_retry_task(schedule):
+        scheduler.unregister_task(task_name)
+        return
+
+    command, args = _build_task_command(profile_id, ["--retry"])
+    retry_schedule = {"frequency": "daily", "time": schedule.get("time", "03:00")}
+    if scheduler.register_task(task_name=task_name, schedule=retry_schedule, command=command, args=args):
+        logger.info(f"Nachhol-Task '{task_name}' aktiv (täglich um {retry_schedule['time']})")
+    else:
+        logger.warning(f"Nachhol-Task '{task_name}' konnte nicht registriert werden")
+
+
+def _ensure_retry_tasks() -> None:
+    """
+    Stellt beim App-Start sicher, dass alle wöchentlichen/monatlichen Profile
+    einen Nachhol-Task haben (für Installationen, die vor dieser Funktion
+    eingerichtet wurden). Nur in gebauten Versionen, nicht im Dev-Modus.
+    """
+    if not getattr(sys, "frozen", False):
+        return
+    try:
+        from src.core.platform_scheduler import get_platform_scheduler
+
+        scheduler = get_platform_scheduler()
+        if not scheduler:
+            return
+        for profile in ConfigManager().get_profiles():
+            sched = profile.get("schedule")
+            if profile.get("enabled", True) and sched and sched.get("enabled"):
+                _sync_retry_task(scheduler, sched, profile["id"])
+    except Exception as e:
+        logger.warning(f"Nachhol-Tasks konnten nicht geprüft werden: {e}")
+
+
 def _activate_os_schedule(schedule: dict | None, profile_id: str = "") -> None:
     """
     Aktiviert den konfigurierten Zeitplan im Betriebssystem.
     Pro Profil wird ein eigener Task registriert (task_name = ScratBackup_<profile_id>),
     damit mehrere Profile unterschiedliche Zeitpläne haben können.
+    Zusätzlich wird bei Bedarf ein täglicher Nachhol-Task registriert.
     """
     if not schedule or not schedule.get("enabled"):
-        logger.info("Kein Zeitplan aktiviert – OS-Scheduler bleibt unverändert")
+        if profile_id:
+            # Automatisches Backup wurde für dieses Profil abgeschaltet
+            from src.core.backup_retry import clear
+            from src.core.platform_scheduler import remove_profile_tasks
+
+            remove_profile_tasks(profile_id)
+            clear(profile_id)
+            logger.info(f"Zeitplan für Profil '{profile_id}' deaktiviert – OS-Tasks entfernt")
+        else:
+            logger.info("Kein Zeitplan aktiviert – OS-Scheduler bleibt unverändert")
         return
 
     try:
@@ -708,29 +791,7 @@ def _activate_os_schedule(schedule: dict | None, profile_id: str = "") -> None:
             logger.warning("Kein OS-Scheduler verfügbar")
             return
 
-        import os as _os
-        if getattr(sys, "frozen", False):
-            if sys.platform == "linux":
-                command = _os.environ.get("APPIMAGE", sys.argv[0])
-            else:
-                command = sys.argv[0]
-        else:
-            command = sys.executable
-
-        args = ["--backup"]
-        if not getattr(sys, "frozen", False):
-            args = [str(Path(__file__).resolve())] + args
-
-        # Profil-ID als Argument übergeben damit run_backup_headless() nur dieses Profil läuft
-        if profile_id:
-            args += ["--profile-id", profile_id]
-
-        if sys.platform == "linux":
-            uid = _os.getuid()
-            dbus_path = f"/run/user/{uid}/bus"
-            if _os.path.exists(dbus_path):
-                dbus_addr = f"unix:path={dbus_path}"
-                command = f"env DBUS_SESSION_BUS_ADDRESS={dbus_addr} {command}"
+        command, args = _build_task_command(profile_id)
 
         # Pro Profil eigener Task-Name → kein gegenseitiges Überschreiben
         task_name = f"AutoBackup_{profile_id}" if profile_id else "AutoBackup"
@@ -753,6 +814,9 @@ def _activate_os_schedule(schedule: dict | None, profile_id: str = "") -> None:
             )
         else:
             logger.warning(f"OS-Zeitplan für Task '{task_name}' konnte nicht aktiviert werden")
+
+        if profile_id:
+            _sync_retry_task(scheduler, schedule, profile_id)
 
     except Exception as e:
         logger.error(f"Fehler beim Aktivieren des OS-Zeitplans: {e}", exc_info=True)
@@ -780,7 +844,36 @@ def run_backup_headless() -> int:
     if profile_id_filter:
         logger.info(f"Profil-Filter aktiv: nur Profil '{profile_id_filter}' wird ausgeführt")
 
+    from src.core import backup_retry
+
+    # --retry: Nachhol-Lauf (täglicher Task). Läuft nur, wenn ein Backup
+    # fehlgeschlagen ist und heute kein regulärer Termin ansteht.
+    is_retry = "--retry" in sys.argv
+
     config_manager = ConfigManager()
+
+    if is_retry:
+        if not profile_id_filter:
+            logger.error("Nachhol-Lauf ohne --profile-id – abgebrochen")
+            return 1
+        profile = next(
+            (p for p in config_manager.get_profiles() if p.get("id") == profile_id_filter), None
+        )
+        if profile is None:
+            # Profil gelöscht, Task aber noch vorhanden → aufräumen
+            logger.info(f"Nachhol-Lauf: Profil '{profile_id_filter}' existiert nicht mehr – Tasks entfernt")
+            from src.core.platform_scheduler import remove_profile_tasks
+
+            remove_profile_tasks(profile_id_filter)
+            backup_retry.clear(profile_id_filter)
+            return 0
+        if not backup_retry.is_pending(profile_id_filter):
+            logger.info("Nachhol-Lauf: nichts nachzuholen")
+            return 0
+        if backup_retry.is_regular_day(profile.get("schedule"), datetime.now().date()):
+            logger.info("Nachhol-Lauf: heute ist ein regulärer Termin – reguläres Backup übernimmt")
+            return 0
+        logger.info(f"Nachhol-Lauf: fehlgeschlagenes Backup für '{profile.get('name')}' wird nachgeholt")
 
     # Passwort aus Keyring (geteilt über alle Profile)
     password = ""
@@ -832,7 +925,8 @@ def run_backup_headless() -> int:
     logger.info(f"Headless-Backup: {len(enabled_profiles)} Profil(e)")
     if len(enabled_profiles) == 1:
         _notif_name = enabled_profiles[0].get("name", "Backup")
-        send_notification("Scrat-Backup", f"Backup gestartet: {_notif_name}")
+        _verb = "Nachholen gestartet" if is_retry else "Backup gestartet"
+        send_notification("Scrat-Backup", f"{_verb}: {_notif_name}")
     else:
         send_notification(
             "Scrat-Backup",
@@ -840,6 +934,7 @@ def run_backup_headless() -> int:
         )
 
     results: dict[str, bool] = {}
+    reasons: dict[str, str] = {}
 
     def _run_profile(profile: dict) -> None:
         profile_id = profile["id"]
@@ -852,6 +947,7 @@ def run_backup_headless() -> int:
             dest_path, path_error = _resolve_dest_path(dest_cfg, dest_type)
             if path_error:
                 logger.error(f"Profil '{profile_name}': {path_error}")
+                reasons[profile_id] = path_error
                 results[profile_id] = False
                 return
             if dest_type not in ("local", "usb"):
@@ -877,6 +973,7 @@ def run_backup_headless() -> int:
 
             if not prof_sources:
                 logger.error(f"Profil '{profile_name}': Keine Quellen konfiguriert – übersprungen")
+                reasons[profile_id] = "Keine Quellen konfiguriert"
                 results[profile_id] = False
                 return
 
@@ -910,6 +1007,7 @@ def run_backup_headless() -> int:
             results[profile_id] = True
             logger.info(f"Profil '{profile_name}' erfolgreich gesichert → {dest_path}")
         except Exception as e:
+            reasons[profile_id] = str(e)
             results[profile_id] = False
             logger.error(f"Profil '{profile_name}' fehlgeschlagen: {e}", exc_info=True)
 
@@ -923,28 +1021,51 @@ def run_backup_headless() -> int:
     for t in threads:
         t.join()
 
+    # Nachhol-Status aktualisieren: Erfolg löscht, Fehlschlag merkt vor
+    for p in enabled_profiles:
+        pid = p["id"]
+        try:
+            if results.get(pid):
+                backup_retry.clear(pid)
+            else:
+                backup_retry.mark_failed(pid, reasons.get(pid, "unbekannter Fehler"))
+        except Exception as e:
+            logger.warning(f"Nachhol-Status für '{pid}' nicht gespeichert: {e}")
+
     success = sum(1 for v in results.values() if v)
     fail = len(results) - success
 
     _single = len(enabled_profiles) == 1
     _pname = enabled_profiles[0].get("name", "Backup") if _single else ""
+
+    def _fail_text() -> str:
+        """Fehlertext für ein einzelnes Profil inkl. Grund und nächstem Versuch"""
+        pid = enabled_profiles[0]["id"]
+        lines = [f"Backup fehlgeschlagen: {_pname}"]
+        if reasons.get(pid):
+            lines.append(reasons[pid])
+        lines.append(backup_retry.retry_hint(enabled_profiles[0].get("schedule")))
+        return "\n".join(lines)
+
     if fail == 0:
+        _done = "Nachgeholtes Backup abgeschlossen" if is_retry else "Backup abgeschlossen"
         send_notification(
             "Scrat-Backup – Erfolgreich",
-            f"Backup abgeschlossen: {_pname}" if _single else f"Alle {len(enabled_profiles)} Backups abgeschlossen.",
+            f"{_done}: {_pname}" if _single else f"Alle {len(enabled_profiles)} Backups abgeschlossen.",
         )
         return 0
     elif success > 0:
         send_notification(
             "Scrat-Backup – Teilweise erfolgreich",
-            f"Backup fehlgeschlagen: {_pname}" if _single else f"{success}/{len(enabled_profiles)} Backups erfolgreich, {fail} fehlgeschlagen.",
+            f"{success}/{len(enabled_profiles)} Backups erfolgreich, {fail} fehlgeschlagen. "
+            "Fehlgeschlagene werden nachgeholt.",
             urgent=True,
         )
         return 1
     else:
         send_notification(
             "Scrat-Backup – Fehler",
-            f"Backup fehlgeschlagen: {_pname}" if _single else f"Alle {len(enabled_profiles)} Backups fehlgeschlagen.",
+            _fail_text() if _single else f"Alle {len(enabled_profiles)} Backups fehlgeschlagen.",
             urgent=True,
         )
         return 1
@@ -1037,6 +1158,9 @@ def run_gui() -> int:
 
     app.aboutToQuit.connect(_stop_update_checker)
     _update_checker.start()
+
+    # Nachhol-Tasks für bestehende wöchentliche/monatliche Profile sicherstellen
+    _ensure_retry_tasks()
 
     # WIZARD IST IMMER DER EINSTIEGSPUNKT
     # (Im Wizard wird dann zwischen Normal-Modus und Experten-Modus gewählt)

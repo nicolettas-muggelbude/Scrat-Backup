@@ -34,6 +34,7 @@ hidden_imports = [
     'src.core.scheduler_worker',
     'src.core.autostart',
     'src.core.platform_scheduler',
+    'src.core.backup_retry',
     'src.core.template_manager',
 
     'src.storage.usb_storage',

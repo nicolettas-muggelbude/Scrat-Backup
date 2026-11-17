@@ -155,6 +155,29 @@ Bei Quelle "Home" unter Windows wurden AppData, versteckte Systemordner und Junc
 - Konfiguration bleibt gesichert: `.ssh`, `.config`, `.gitconfig`, `.vscode/argv.json`, `.docker/config.json`,
   `.claude/projects`, `.scrat-backup/templates`; Projekt-`.vscode`-Ordner (z. B. `Projekte/x/.vscode`) unberührt
 
+### Fehlgeschlagene automatische Backups nachholen
+**Anforderung:** Nutzer schließen die ext. Festplatte nicht immer rechtzeitig an → Backup soll
+täglich zur gleichen Uhrzeit nachgeholt werden, bis es klappt; nicht bei Überschneidung mit dem
+nächsten regulären Termin.
+
+- Neu: `src/core/backup_retry.py` – Status in `<app_data>/retry_state.json` (nicht config.json,
+  damit Headless nicht mit GUI kollidiert); `mark_failed()`, `clear()`, `is_pending()`,
+  `is_regular_day()`, `needs_retry_task()`, `retry_hint()`
+- Zweiter OS-Task pro Profil: `AutoBackupRetry_<id>` täglich zur Profil-Uhrzeit mit
+  `--backup --profile-id <id> --retry` – **nur bei weekly (nicht alle 7 Tage) und monthly**;
+  bei daily/startup wäre jeder Nachholtermin zugleich regulär → kein Task
+- `run_backup_headless()`: `--retry` beendet sich still (Exit 0), wenn nichts vorgemerkt ist oder
+  heute ein regulärer Termin ist; nach jedem Lauf: Erfolg → `clear`, Fehlschlag → `mark_failed`
+- Fehler-Benachrichtigung nennt Grund (z. B. „USB-Laufwerk … nicht angeschlossen") + nächsten Versuch
+- `_activate_os_schedule()`: registriert/entfernt Retry-Task; bei deaktiviertem Zeitplan werden
+  jetzt **beide** Tasks des Profils entfernt (vorher blieb der reguläre Task stehen)
+- `_ensure_retry_tasks()` beim GUI-Start (nur frozen): legt Retry-Tasks für bestehende Profile an
+- Profil löschen (`wizard_v2._delete_profile`) entfernt OS-Tasks + Nachhol-Status
+  (`platform_scheduler.remove_profile_tasks()`); verwaiste Retry-Tasks räumen sich selbst auf
+- `notifications._notify_windows`: `-EncodedCommand` statt `-Command`, `'` korrekt verdoppelt
+  (vorher Backtick-Escaping → kaputt bei Apostroph/Anführungszeichen)
+- `schtasks /delete`: deutsche Meldung „nicht finden" als „nicht vorhanden" gewertet
+
 ### Bekannte, schon vorher fehlschlagende Tests
 - `test_scanner.py::TestFileInfo` (fehlendes `source_dir`), `test_compressor.py::test_default_init` (erwartet Level 5)
 

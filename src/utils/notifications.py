@@ -73,8 +73,11 @@ def _notify_linux(title: str, message: str, urgent: bool = False) -> bool:
 def _notify_windows(title: str, message: str, urgent: bool = False) -> bool:
     """Sendet Desktop-Notification via PowerShell NotifyIcon (Windows)."""
     try:
-        title_esc = title.replace("'", "`'")
-        message_esc = message.replace("'", "`'")
+        import base64
+
+        # In PowerShell-Strings mit einfachen Anführungszeichen wird ' verdoppelt
+        title_esc = title.replace("'", "''")
+        message_esc = message.replace("'", "''")
         ps_script = (
             "Add-Type -AssemblyName System.Windows.Forms; "
             "$n = New-Object System.Windows.Forms.NotifyIcon; "
@@ -85,8 +88,11 @@ def _notify_windows(title: str, message: str, urgent: bool = False) -> bool:
             "Start-Sleep -Seconds 6; "
             "$n.Dispose()"
         )
+        # -EncodedCommand (UTF-16LE, Base64): Anführungszeichen, Umlaute und
+        # Zeilenumbrüche überstehen so die Windows-Kommandozeile unverändert
+        encoded = base64.b64encode(ps_script.encode("utf-16-le")).decode("ascii")
         subprocess.Popen(
-            ["powershell", "-NoProfile", "-WindowStyle", "Hidden", "-Command", ps_script],
+            ["powershell", "-NoProfile", "-WindowStyle", "Hidden", "-EncodedCommand", encoded],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),

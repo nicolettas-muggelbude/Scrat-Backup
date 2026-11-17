@@ -107,7 +107,8 @@ class WindowsTaskScheduler(PlatformScheduler):
             logger.info(f"Windows Task '{task_name}' entfernt")
             return True
         except subprocess.CalledProcessError as e:
-            if "cannot find" in e.stderr.lower() or "nicht gefunden" in e.stderr.lower():
+            err = (e.stderr or "").lower()
+            if "cannot find" in err or "nicht gefunden" in err or "nicht finden" in err:
                 return True
             logger.warning(f"Fehler beim Entfernen von Windows Task: {e.stderr}")
             return False
@@ -231,6 +232,23 @@ class MacOSLaunchdScheduler(PlatformScheduler):
 
     def is_available(self) -> bool:
         return sys.platform == "darwin"
+
+
+def remove_profile_tasks(profile_id: str) -> None:
+    """
+    Entfernt alle OS-Tasks eines Profils (regulär + Nachholen).
+    Fehler werden nur protokolliert.
+    """
+    if not profile_id:
+        return
+    scheduler = get_platform_scheduler()
+    if not scheduler:
+        return
+    for name in (f"AutoBackup_{profile_id}", f"AutoBackupRetry_{profile_id}"):
+        try:
+            scheduler.unregister_task(name)
+        except Exception as e:
+            logger.warning(f"Task '{name}' konnte nicht entfernt werden: {e}")
 
 
 def get_platform_scheduler() -> Optional[PlatformScheduler]:
