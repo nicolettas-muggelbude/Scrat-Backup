@@ -572,6 +572,9 @@ class SourceSelectionPage(QWizardPage):
                     "desktop.ini",
                     "~$*",  # Office temporäre Dateien
                     "$RECYCLE.BIN/",
+                    # Programmdaten (gesperrte Dateien, Berechtigungsprobleme)
+                    "AppData/",
+                    "NTUSER.DAT*",
                     # Cache & Temp
                     "AppData/Local/Temp/",
                     "AppData/Local/Microsoft/Windows/Explorer/",  # Thumbnails

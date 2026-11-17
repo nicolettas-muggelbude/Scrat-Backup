@@ -382,6 +382,81 @@ class TestExcludePatterns:
         assert "backup.bak" not in relative_paths
         assert "file.txt" in relative_paths
 
+    def test_path_patterns_from_wizard(self, temp_source_dir):
+        """Test: Pfad-Patterns mit '/' (wie vom Wizard geliefert) greifen"""
+        (temp_source_dir / "AppData" / "Local" / "Temp").mkdir(parents=True)
+        (temp_source_dir / "AppData" / "Local" / "Temp" / "x.dat").write_text("x")
+        (temp_source_dir / "AppData" / "Local" / "Foo" / "Cache").mkdir(parents=True)
+        (temp_source_dir / "AppData" / "Local" / "Foo" / "Cache" / "c.bin").write_text("c")
+        (temp_source_dir / "AppData" / "Local" / "Foo" / "keep.cfg").write_text("k")
+        (temp_source_dir / "node_modules").mkdir()
+        (temp_source_dir / "node_modules" / "a.js").write_text("a")
+        (temp_source_dir / "doc.txt").write_text("d")
+
+        scanner = Scanner(
+            exclude_patterns={"AppData/Local/Temp/", "AppData/Local/*/Cache/", "node_modules/"}
+        )
+        files = [
+            f.relative_path.as_posix() for f in scanner.scan_directory(temp_source_dir).new_files
+        ]
+
+        assert "doc.txt" in files
+        assert "AppData/Local/Foo/keep.cfg" in files
+        assert "AppData/Local/Temp/x.dat" not in files
+        assert "AppData/Local/Foo/Cache/c.bin" not in files
+        assert "node_modules/a.js" not in files
+
+    def test_home_junk_excluded_only_at_source_root(self, temp_source_dir):
+        """Test: Caches/Erweiterungen im Home weg, Konfiguration + Projekt-.vscode bleiben"""
+        files_to_create = [
+            ".vscode/extensions/ext/package.json",
+            ".vscode/argv.json",
+            ".cache/x.bin",
+            ".ssh/id_ed25519",
+            ".scrat-backup/metadata.db",
+            ".scrat-backup/templates/t.json",
+            "Projekte/app/.vscode/extensions/keep.json",
+        ]
+        for rel in files_to_create:
+            p = temp_source_dir / rel
+            p.parent.mkdir(parents=True, exist_ok=True)
+            p.write_text("x")
+
+        scanner = Scanner()
+        files = [
+            f.relative_path.as_posix() for f in scanner.scan_directory(temp_source_dir).new_files
+        ]
+
+        assert ".vscode/argv.json" in files
+        assert ".ssh/id_ed25519" in files
+        assert ".scrat-backup/templates/t.json" in files
+        assert "Projekte/app/.vscode/extensions/keep.json" in files
+        assert ".vscode/extensions/ext/package.json" not in files
+        assert ".cache/x.bin" not in files
+        assert ".scrat-backup/metadata.db" not in files
+
+    def test_unreadable_file_skipped_not_deleted(self, temp_source_dir, monkeypatch):
+        """Test: Gesperrte Datei wird übersprungen, aber nicht als gelöscht gemeldet"""
+        (temp_source_dir / "ok.txt").write_text("ok")
+        (temp_source_dir / "locked.txt").write_text("locked")
+
+        scanner = Scanner()
+        first = scanner.scan_directory(temp_source_dir)
+        previous = {str(f.relative_path): f for f in first.new_files}
+
+        (temp_source_dir / "locked.txt").write_text("locked, aber geändert")
+
+        def fake_check(path):
+            if path.name == "locked.txt":
+                raise PermissionError("gesperrt")
+
+        monkeypatch.setattr(Scanner, "_check_readable", staticmethod(fake_check))
+        result = scanner.scan_directory(temp_source_dir, previous_files=previous)
+
+        assert result.modified_files == []
+        assert result.deleted_files == []
+        assert any("locked.txt" in e for e in result.errors)
+
 
 class TestScanResult:
     """Tests für ScanResult-Klasse"""

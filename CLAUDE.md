@@ -123,6 +123,43 @@ src/
 
 ---
 
+## Session 2026-11-17: Windows-Home-Backup ohne AppData / versteckte Ordner
+
+### Problem
+Bei Quelle "Home" unter Windows wurden AppData, versteckte Systemordner und Junctions
+(„Anwendungsdaten", „Eigene Dateien" …) mitgesichert → Berechtigungsfehler, gesperrte Dateien
+(NTUSER.DAT, Browser-DBs) brachen das Backup ab.
+
+### Root Causes
+- `Scanner._is_excluded()` verglich nur Dateinamen → Wizard-Muster wie `AppData/Local/Temp/`
+  oder `node_modules/` (mit `/`) griffen **nie**
+- Headless-/Tray-Backups übergeben gar keine Wizard-Excludes (nur Scanner-Defaults)
+- `_walk_directory()` fing nur `PermissionError` beim `iterdir()`; andere `OSError` brachen den Scan ab
+- Kompressor: `archive.write()` auf gesperrte Datei → Exception → ganzes Backup fehlgeschlagen
+
+### Fix
+- `src/core/scanner.py`:
+  - Unter Windows werden **immer** übersprungen (unabhängig von Excludes, gilt also auch für alte Configs/Cron):
+    `AppData`, Elemente mit Attribut Versteckt/System, Junctions/Symlinks auf Verzeichnisse
+    (Reparse-Tags MOUNT_POINT/SYMLINK – OneDrive-Cloud-Platzhalter bleiben erhalten)
+  - `_is_excluded(path, source_root)`: fnmatch-basiert; Ordner-Muster mit `/`, Pfad-Muster segmentweise (`AppData/Local/*/Cache/`)
+  - `os.scandir` + `OSError` pro Eintrag abgefangen → Fehler in `ScanResult.errors`
+  - Neue/geänderte Dateien werden auf Lesbarkeit geprüft (`_check_readable`); gesperrte Dateien
+    übersprungen, aber **nicht** als gelöscht gewertet (beim nächsten Lauf erneut versucht)
+- `src/core/compressor.py`: nicht lesbare Dateien werden übersprungen statt Abbruch
+- `src/gui/wizard_pages.py`: Windows-Excludes um `AppData/` und `NTUSER.DAT*` ergänzt (Anzeige)
+- `_HOME_JUNK_PATHS` in `scanner.py` (alle Plattformen, am Quell-Ordner verankert → greift nur bei Quelle "Home"):
+  schließt Caches, Editor-Erweiterungen (`.vscode/extensions`, `.cursor/extensions` …), Docker-Binaries/-Modelle,
+  Paket-Caches/Toolchains (`.npm`, `.cargo/registry`, `.m2/repository` …), KI-Modelle (`.ollama/models`),
+  `.claude/cache|debug|downloads` und die eigenen Scrat-DBs/Logs aus
+- Konfiguration bleibt gesichert: `.ssh`, `.config`, `.gitconfig`, `.vscode/argv.json`, `.docker/config.json`,
+  `.claude/projects`, `.scrat-backup/templates`; Projekt-`.vscode`-Ordner (z. B. `Projekte/x/.vscode`) unberührt
+
+### Bekannte, schon vorher fehlschlagende Tests
+- `test_scanner.py::TestFileInfo` (fehlendes `source_dir`), `test_compressor.py::test_default_init` (erwartet Level 5)
+
+---
+
 ## Session 2026-06-28: v0.3.63 – USB-Laufwerks-Identifikation per UUID
 
 ### Problem

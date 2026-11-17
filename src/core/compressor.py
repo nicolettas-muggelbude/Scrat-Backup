@@ -166,6 +166,15 @@ class Compressor:
                 else:
                     arcname = file_path.name
 
+                # Gesperrte/nicht lesbare Dateien überspringen statt Backup abzubrechen
+                # (z.B. von Windows oder einer laufenden Anwendung gesperrt)
+                try:
+                    with open(file_path, "rb"):
+                        pass
+                except OSError as e:
+                    logger.warning(f"Datei nicht lesbar, überspringe: {file_path} ({e})")
+                    continue
+
                 # Füge Datei zum Archiv hinzu
                 archive.write(file_path, arcname=arcname)
 
