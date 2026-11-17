@@ -123,7 +123,7 @@ src/
 
 ---
 
-## Session 2026-11-17: Windows-Home-Backup ohne AppData / versteckte Ordner
+## Session 2026-11-17: v0.3.64 – Windows-Home-Backup ohne AppData + Backups nachholen
 
 ### Problem
 Bei Quelle "Home" unter Windows wurden AppData, versteckte Systemordner und Junctions
